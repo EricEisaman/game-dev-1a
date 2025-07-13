@@ -43,6 +43,14 @@ const CONFIG = {
     // Debug Settings
     DEBUG: {
         CAPSULE_VISIBLE: false
+    },
+    
+    // Sky Settings
+    SKY: {
+        TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/refs/heads/main/assets/cartoon-river-with-orange-sky.jpg",
+        ROTATION_Y: 0,
+        BLUR: 0.3,
+        TYPE: "SPHERE" // "BOX" or "SPHERE"
     }
 } as const;
 
@@ -76,6 +84,165 @@ type CharacterState = typeof CHARACTER_STATES[keyof typeof CHARACTER_STATES];
 
 // Animation Groups
 const playerAnimations: Record<string, BABYLON.AnimationGroup | undefined> = {};
+
+// ============================================================================
+// SKY MANAGER
+// ============================================================================
+
+class SkyManager {
+    private static sky: BABYLON.Mesh | null = null;
+    private static skyTexture: BABYLON.Texture | null = null;
+    
+    /**
+     * Creates and applies a sky to the scene
+     * @param scene The Babylon.js scene
+     * @param textureUrl URL of the sky texture
+     * @param rotationY Y-axis rotation in radians
+     * @param blur Blur amount (0-1)
+     * @param type Type of sky ("BOX" or "SPHERE")
+     * @returns The created sky mesh
+     */
+    public static createSky(
+        scene: BABYLON.Scene, 
+        textureUrl: string = CONFIG.SKY.TEXTURE_URL,
+        rotationY: number = CONFIG.SKY.ROTATION_Y,
+        blur: number = CONFIG.SKY.BLUR,
+        type: string = CONFIG.SKY.TYPE
+    ): BABYLON.Mesh {
+        // Remove existing sky if present
+        this.removeSky(scene);
+        
+        // Create sky texture
+        this.skyTexture = new BABYLON.Texture(textureUrl, scene);
+        
+        // Apply blur if specified
+        if (blur > 0) {
+            this.skyTexture.level = blur;
+        }
+        
+        // Create sky based on type
+        if (type.toUpperCase() === "SPHERE") {
+            this.createSkySphere(scene, rotationY);
+        } else {
+            this.createSkyBox(scene, rotationY);
+        }
+        
+        return this.sky!;
+    }
+    
+    /**
+     * Creates a sky sphere (360-degree sphere)
+     * @param scene The Babylon.js scene
+     * @param rotationY Y-axis rotation in radians
+     */
+    private static createSkySphere(scene: BABYLON.Scene, rotationY: number): void {
+        // Create sphere mesh
+        this.sky = BABYLON.MeshBuilder.CreateSphere("skySphere", { 
+            diameter: 1000.0,
+            segments: 32
+        }, scene);
+        
+        // Create sky material for sphere
+        const skyMaterial = new BABYLON.StandardMaterial("skySphere", scene);
+        skyMaterial.backFaceCulling = false;
+        skyMaterial.diffuseTexture = this.skyTexture;
+        skyMaterial.disableLighting = true;
+        skyMaterial.emissiveTexture = this.skyTexture;
+        skyMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        
+        // Apply material to sky
+        this.sky.material = skyMaterial;
+        
+        // Fix upside-down issue by rotating 180 degrees around X-axis
+        this.sky.rotation.x = Math.PI;
+        
+        // Apply additional rotation
+        if (rotationY !== 0) {
+            this.sky.rotation.y = rotationY;
+        }
+    }
+    
+    /**
+     * Creates a sky box (standard cube skybox)
+     * @param scene The Babylon.js scene
+     * @param rotationY Y-axis rotation in radians
+     */
+    private static createSkyBox(scene: BABYLON.Scene, rotationY: number): void {
+        // Set texture coordinates mode for cube skybox
+        this.skyTexture!.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+        
+        // Create box mesh
+        this.sky = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
+        
+        // Create sky material for box
+        const skyMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+        skyMaterial.backFaceCulling = false;
+        skyMaterial.diffuseTexture = this.skyTexture;
+        skyMaterial.disableLighting = true;
+        skyMaterial.emissiveTexture = this.skyTexture;
+        skyMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        
+        // Apply material to sky
+        this.sky.material = skyMaterial;
+        
+        // Apply rotation
+        if (rotationY !== 0) {
+            this.sky.rotation.y = rotationY;
+        }
+    }
+    
+    /**
+     * Removes the sky from the scene
+     * @param scene The Babylon.js scene
+     */
+    public static removeSky(scene: BABYLON.Scene): void {
+        if (this.sky) {
+            this.sky.dispose();
+            this.sky = null;
+        }
+        
+        if (this.skyTexture) {
+            this.skyTexture.dispose();
+            this.skyTexture = null;
+        }
+    }
+    
+    /**
+     * Updates the sky rotation
+     * @param rotationY Y-axis rotation in radians
+     */
+    public static setRotation(rotationY: number): void {
+        if (this.sky) {
+            this.sky.rotation.y = rotationY;
+        }
+    }
+    
+    /**
+     * Updates the sky blur
+     * @param blur Blur amount (0-1)
+     */
+    public static setBlur(blur: number): void {
+        if (this.skyTexture) {
+            this.skyTexture.level = blur;
+        }
+    }
+    
+    /**
+     * Gets the current sky mesh
+     * @returns The sky mesh or null if not created
+     */
+    public static getSky(): BABYLON.Mesh | null {
+        return this.sky;
+    }
+    
+    /**
+     * Checks if a sky exists
+     * @returns True if sky exists, false otherwise
+     */
+    public static hasSky(): boolean {
+        return this.sky !== null;
+    }
+}
 
 // ============================================================================
 // SMOOTH FOLLOW CAMERA CONTROLLER
@@ -712,6 +879,7 @@ class SceneManager {
     private initializeScene(): void {
         this.setupLighting();
         this.setupPhysics();
+        this.setupSky();
         this.loadLevel();
     }
 
@@ -723,6 +891,14 @@ class SceneManager {
     private setupPhysics(): void {
         const hk = new BABYLON.HavokPlugin(false);
         this.scene.enablePhysics(CONFIG.PHYSICS.GRAVITY, hk);
+    }
+
+    private setupSky(): void {
+        try {
+            SkyManager.createSky(this.scene);
+        } catch (error) {
+            console.warn("Failed to create sky:", error);
+        }
     }
 
     private loadLevel(): void {
