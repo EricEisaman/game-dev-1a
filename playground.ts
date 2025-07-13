@@ -99,6 +99,13 @@ class SmoothFollowCameraController {
     private isTwoFingerPanning = false;
     private lastPanPositions: [number, number, number, number] | null = null;
     private canvas: HTMLCanvasElement | null = null;
+    
+    // Character rotation lerp variables
+    public isRotatingCharacter = false;
+    private characterRotationStartY = 0;
+    private characterRotationTargetY = 0;
+    private characterRotationStartTime = 0;
+    private characterRotationDuration = 0.9; // 0.9 seconds
 
     constructor(
         scene: BABYLON.Scene,
@@ -143,6 +150,8 @@ class SmoothFollowCameraController {
                 this.isDragging = false;
                 this.dragDeltaX = 0;
                 this.dragDeltaZ = 0;
+                // Start character rotation lerp when drag ends
+                this.startCharacterRotationLerp();
                 break;
                 
             case BABYLON.PointerEventTypes.POINTERMOVE:
@@ -241,9 +250,17 @@ class SmoothFollowCameraController {
         } else {
             this.updateOffsetY();
         }
+        
+        // Update character rotation lerp
+        this.updateCharacterRotationLerp();
     };
 
     private smoothFollowTarget(): void {
+        // If character is rotating, pause the smooth follow camera
+        if (this.isRotatingCharacter) {
+            return;
+        }
+        
         const yRot = BABYLON.Quaternion.FromEulerAngles(0, this.target.rotation.y, 0);
         const rotatedOffset = this.offset.rotateByQuaternionToRef(yRot, new BABYLON.Vector3());
         const desiredPos = this.target.position.add(rotatedOffset);
@@ -266,6 +283,59 @@ class SmoothFollowCameraController {
 
     private updateOffsetY(): void {
         this.offset.y = this.camera.position.y - this.target.position.y;
+    }
+
+    private startCharacterRotationLerp(): void {
+        // Calculate direction from character to camera
+        const toCamera = this.camera.position.subtract(this.target.position).normalize();
+        
+        // Calculate the desired Y rotation (yaw) to face AWAY from the camera
+        const targetYaw = Math.atan2(-toCamera.x, -toCamera.z);
+        
+        // Start the lerp
+        this.isRotatingCharacter = true;
+        this.characterRotationStartY = this.target.rotation.y;
+        this.characterRotationTargetY = targetYaw;
+        this.characterRotationStartTime = Date.now();
+    }
+
+    private updateCharacterRotationLerp(): void {
+        if (!this.isRotatingCharacter) return;
+        
+        const currentTime = Date.now();
+        const elapsed = (currentTime - this.characterRotationStartTime) / 1000; // Convert to seconds
+        const progress = Math.min(elapsed / this.characterRotationDuration, 1.0);
+        
+        // Use smooth easing function
+        const easedProgress = this.easeInOutCubic(progress);
+        
+        // Lerp the rotation
+        const currentRotation = BABYLON.Scalar.Lerp(
+            this.characterRotationStartY, 
+            this.characterRotationTargetY, 
+            easedProgress
+        );
+        
+        this.target.rotation.y = currentRotation;
+        
+        // Update quaternion if needed
+        if (this.target.rotationQuaternion) {
+            BABYLON.Quaternion.FromEulerAnglesToRef(
+                this.target.rotation.x,
+                currentRotation,
+                this.target.rotation.z,
+                this.target.rotationQuaternion
+            );
+        }
+        
+        // Stop lerping when complete
+        if (progress >= 1.0) {
+            this.isRotatingCharacter = false;
+        }
+    }
+
+    private easeInOutCubic(t: number): number {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     public dispose(): void {
@@ -296,6 +366,7 @@ class CharacterController {
     private inputDirection = new BABYLON.Vector3(0, 0, 0);
     private targetRotationY = 0;
     private keysDown = new Set<string>();
+    private cameraController: SmoothFollowCameraController | null = null;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
@@ -393,7 +464,14 @@ class CharacterController {
     };
 
     private updateRotation(): void {
-        // Handle rotation based on input or camera dragging
+        // If camera is controlling rotation, don't interfere
+        if (this.cameraController && this.cameraController.isRotatingCharacter) {
+            // Update target rotation to match current rotation to prevent jerking
+            this.targetRotationY = this.displayCapsule.rotation.y;
+            return;
+        }
+        
+        // Handle rotation based on input
         if (this.keysDown.has('a') || this.keysDown.has('arrowleft')) {
             this.targetRotationY -= CONFIG.CHARACTER.ROTATION_SPEED;
         }
@@ -585,6 +663,10 @@ class CharacterController {
     public getDisplayCapsule(): BABYLON.Mesh {
         return this.displayCapsule;
     }
+
+    public setCameraController(cameraController: SmoothFollowCameraController): void {
+        this.cameraController = cameraController;
+    }
 }
 
 // ============================================================================
@@ -710,6 +792,9 @@ class SceneManager {
                 this.camera,
                 this.characterController.getDisplayCapsule()
             );
+            
+            // Connect the character controller to the camera controller
+            this.characterController.setCameraController(this.smoothFollowController);
         }
     }
 
