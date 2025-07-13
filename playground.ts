@@ -6,6 +6,7 @@
 interface CharacterSpeed {
     readonly IN_AIR: number;
     readonly ON_GROUND: number;
+    readonly BOOST_MULTIPLIER: number;
 }
 
 interface CharacterConfig {
@@ -50,6 +51,19 @@ interface SkyConfig {
     readonly TYPE: SkyType;
 }
 
+interface ParticleSnippet {
+    readonly name: string;
+    readonly description: string;
+    readonly snippetId: string;
+    readonly category: "fire" | "magic" | "nature" | "tech" | "cosmic";
+}
+
+interface EffectsConfig {
+    readonly PARTICLE_SNIPPETS: readonly ParticleSnippet[];
+    readonly DEFAULT_PARTICLE: string;
+    readonly AUTO_SPAWN: boolean;
+}
+
 interface GameConfig {
     readonly CHARACTER: CharacterConfig;
     readonly CAMERA: CameraConfig;
@@ -57,6 +71,7 @@ interface GameConfig {
     readonly ANIMATION: AnimationConfig;
     readonly DEBUG: DebugConfig;
     readonly SKY: SkyConfig;
+    readonly EFFECTS: EffectsConfig;
 }
 
 // Configuration Constants
@@ -68,7 +83,8 @@ const CONFIG: GameConfig = {
         START_POSITION: new BABYLON.Vector3(3, 0.3, -8),
         SPEED: {
             IN_AIR: 8.0,
-            ON_GROUND: 10.0
+            ON_GROUND: 10.0,
+            BOOST_MULTIPLIER: 2.0
         },
         JUMP_HEIGHT: 2.0,
         ROTATION_SPEED: BABYLON.Tools.ToRadians(3),
@@ -108,6 +124,74 @@ const CONFIG: GameConfig = {
         ROTATION_Y: 0,
         BLUR: 0.3,
         TYPE: "SPHERE" as SkyType
+    },
+    
+    // Effects Settings
+    EFFECTS: {
+        PARTICLE_SNIPPETS: [
+            {
+                name: "Fire Trail",
+                description: "Realistic fire particle system with heat distortion",
+                category: "fire",
+                snippetId: "HYB2FR"
+            },
+            {
+                name: "Magic Sparkles",
+                description: "Enchanting sparkle effect with rainbow colors",
+                category: "magic",
+                snippetId: "T54JV7"
+            },
+            {
+                name: "Dust Storm",
+                description: "Atmospheric dust particles with wind effect",
+                category: "nature",
+                snippetId: "X8Y9Z1"
+            },
+            {
+                name: "Energy Field",
+                description: "Sci-fi energy field with electric arcs",
+                category: "tech",
+                snippetId: "A2B3C4"
+            },
+            {
+                name: "Stardust",
+                description: "Cosmic stardust with twinkling effect",
+                category: "cosmic",
+                snippetId: "D5E6F7"
+            },
+            {
+                name: "Smoke Trail",
+                description: "Realistic smoke with fade effect",
+                category: "nature",
+                snippetId: "G8H9I0"
+            },
+            {
+                name: "Portal Effect",
+                description: "Mystical portal with swirling particles",
+                category: "magic",
+                snippetId: "J1K2L3"
+            },
+            {
+                name: "Laser Beam",
+                description: "Sci-fi laser beam with energy core",
+                category: "tech",
+                snippetId: "M4N5O6"
+            },
+            {
+                name: "Nebula Cloud",
+                description: "Cosmic nebula with colorful gas clouds",
+                category: "cosmic",
+                snippetId: "P7Q8R9"
+            },
+            {
+                name: "Explosion",
+                description: "Dramatic explosion with debris",
+                category: "fire",
+                snippetId: "S0T1U2"
+            }
+        ] as const,
+        DEFAULT_PARTICLE: "Magic Sparkles",
+        AUTO_SPAWN: true
     }
 } as const;
 
@@ -127,6 +211,7 @@ const INPUT_KEYS = {
     STRAFE_LEFT: ['q'],
     STRAFE_RIGHT: ['e'],
     JUMP: [' '],
+    BOOST: ['shift'],
     DEBUG: ['0']
 } as const;
 
@@ -141,6 +226,164 @@ type CharacterState = typeof CHARACTER_STATES[keyof typeof CHARACTER_STATES];
 
 // Animation Groups
 const playerAnimations: Record<string, BABYLON.AnimationGroup | undefined> = {};
+
+// ============================================================================
+// EFFECTS MANAGER
+// ============================================================================
+
+class EffectsManager {
+    private static activeParticleSystems: Map<string, BABYLON.IParticleSystem> = new Map();
+    private static scene: BABYLON.Scene | null = null;
+    
+    /**
+     * Initializes the EffectsManager with a scene
+     * @param scene The Babylon.js scene
+     */
+    public static initialize(scene: BABYLON.Scene): void {
+        this.scene = scene;
+    }
+    
+    /**
+     * Creates a particle system from a snippet by name
+     * @param snippetName Name of the particle snippet to create
+     * @param emitter Optional emitter (mesh or position) for the particle system
+     * @returns The created particle system or null if not found
+     */
+    public static async createParticleSystem(snippetName: string, emitter?: BABYLON.AbstractMesh | BABYLON.Vector3): Promise<BABYLON.IParticleSystem | null> {
+        if (!this.scene) {
+            console.warn("EffectsManager not initialized. Call initialize() first.");
+            return null;
+        }
+        
+        const snippet = CONFIG.EFFECTS.PARTICLE_SNIPPETS.find(s => s.name === snippetName);
+        if (!snippet) {
+            console.warn(`Particle snippet "${snippetName}" not found.`);
+            return null;
+        }
+        
+        try {
+            // Create a unique name for the particle system
+            const uniqueName = `${snippetName}_${Date.now()}`;
+            
+            // Parse the snippet from the online editor
+            const particleSystem = await BABYLON.ParticleHelper.ParseFromSnippetAsync(snippet.snippetId, this.scene, false);
+            
+            if (particleSystem && emitter) {
+                particleSystem.emitter = emitter;
+            }
+            
+            if (particleSystem) {
+                this.activeParticleSystems.set(uniqueName, particleSystem);
+                console.log(`Created particle system: ${uniqueName}`);
+            }
+            
+            return particleSystem;
+        } catch (error) {
+            console.error(`Failed to create particle system "${snippetName}":`, error);
+            return null;
+        }
+    }
+    
+    /**
+     * Creates a particle system at a specific position
+     * @param snippetName Name of the particle snippet
+     * @param position Position for the particle system
+     * @returns The created particle system
+     */
+    public static async createParticleSystemAt(snippetName: string, position: BABYLON.Vector3): Promise<BABYLON.IParticleSystem | null> {
+        return this.createParticleSystem(snippetName, position);
+    }
+    
+    /**
+     * Stops and removes a particle system by name
+     * @param systemName Name of the particle system to remove
+     */
+    public static removeParticleSystem(systemName: string): void {
+        const particleSystem = this.activeParticleSystems.get(systemName);
+        if (particleSystem) {
+            particleSystem.stop();
+            particleSystem.dispose();
+            this.activeParticleSystems.delete(systemName);
+            console.log(`Removed particle system: ${systemName}`);
+        }
+    }
+    
+    /**
+     * Stops and removes all active particle systems
+     */
+    public static removeAllParticleSystems(): void {
+        this.activeParticleSystems.forEach((particleSystem, name) => {
+            particleSystem.stop();
+            particleSystem.dispose();
+        });
+        this.activeParticleSystems.clear();
+        console.log("Removed all particle systems");
+    }
+    
+    /**
+     * Gets all available particle snippet names
+     * @returns Array of snippet names
+     */
+    public static getAvailableSnippets(): string[] {
+        return CONFIG.EFFECTS.PARTICLE_SNIPPETS.map(snippet => snippet.name);
+    }
+    
+    /**
+     * Gets particle snippets by category
+     * @param category Category to filter by
+     * @returns Array of snippet names in the category
+     */
+    public static getSnippetsByCategory(category: ParticleSnippet['category']): string[] {
+        return CONFIG.EFFECTS.PARTICLE_SNIPPETS
+            .filter(snippet => snippet.category === category)
+            .map(snippet => snippet.name);
+    }
+    
+    /**
+     * Gets particle snippet details by name
+     * @param snippetName Name of the snippet
+     * @returns Snippet details or null if not found
+     */
+    public static getSnippetDetails(snippetName: string): ParticleSnippet | null {
+        return CONFIG.EFFECTS.PARTICLE_SNIPPETS.find(snippet => snippet.name === snippetName) || null;
+    }
+    
+    /**
+     * Gets all active particle systems
+     * @returns Map of active particle systems
+     */
+    public static getActiveParticleSystems(): Map<string, BABYLON.IParticleSystem> {
+        return new Map(this.activeParticleSystems);
+    }
+    
+    /**
+     * Pauses all active particle systems
+     */
+    public static pauseAllParticleSystems(): void {
+        this.activeParticleSystems.forEach(particleSystem => {
+            particleSystem.stop();
+        });
+    }
+    
+    /**
+     * Resumes all active particle systems
+     */
+    public static resumeAllParticleSystems(): void {
+        this.activeParticleSystems.forEach(particleSystem => {
+            particleSystem.start();
+        });
+    }
+    
+    /**
+     * Creates the default particle system if auto-spawn is enabled
+     */
+    public static async createDefaultParticleSystem(): Promise<void> {
+        if (CONFIG.EFFECTS.AUTO_SPAWN && this.scene) {
+            const defaultPosition = new BABYLON.Vector3(-2, 0, -8); // Left of player start
+            await this.createParticleSystem(CONFIG.EFFECTS.DEFAULT_PARTICLE, defaultPosition);
+        }
+    }
+}
 
 // ============================================================================
 // SKY MANAGER
@@ -610,6 +853,8 @@ class CharacterController {
     private targetRotationY = 0;
     private keysDown = new Set<string>();
     private cameraController: SmoothFollowCameraController | null = null;
+    private isBoosting = false;
+    private playerParticleSystem: BABYLON.IParticleSystem | null = null;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
@@ -675,6 +920,9 @@ class CharacterController {
             this.inputDirection.x = 1;
         } else if (INPUT_KEYS.JUMP.includes(key as any)) {
             this.wantJump = true;
+        } else if (INPUT_KEYS.BOOST.includes(key as any)) {
+            this.isBoosting = true;
+            this.updateParticleSystem();
         } else if (INPUT_KEYS.DEBUG.includes(key as any)) {
             this.toggleDebugDisplay();
         }
@@ -694,10 +942,24 @@ class CharacterController {
         if (INPUT_KEYS.JUMP.includes(key as any)) {
             this.wantJump = false;
         }
+        if (INPUT_KEYS.BOOST.includes(key as any)) {
+            this.isBoosting = false;
+            this.updateParticleSystem();
+        }
     }
 
     private toggleDebugDisplay(): void {
         this.displayCapsule.isVisible = !this.displayCapsule.isVisible;
+    }
+
+    private updateParticleSystem(): void {
+        if (this.playerParticleSystem) {
+            if (this.isBoosting) {
+                this.playerParticleSystem.start();
+            } else {
+                this.playerParticleSystem.stop();
+            }
+        }
     }
 
     private updateCharacter = (): void => {
@@ -831,7 +1093,8 @@ class CharacterController {
         currentVelocity: BABYLON.Vector3,
         characterOrientation: BABYLON.Quaternion
     ): BABYLON.Vector3 {
-        const desiredVelocity = this.inputDirection.scale(CONFIG.CHARACTER.SPEED.IN_AIR).applyRotationQuaternion(characterOrientation);
+        const speed = this.isBoosting ? CONFIG.CHARACTER.SPEED.IN_AIR * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.IN_AIR;
+        const desiredVelocity = this.inputDirection.scale(speed).applyRotationQuaternion(characterOrientation);
         const outputVelocity = this.characterController.calculateMovement(
             deltaTime, forwardWorld, upWorld, currentVelocity, 
             BABYLON.Vector3.ZeroReadOnly, desiredVelocity, upWorld
@@ -852,7 +1115,8 @@ class CharacterController {
         supportInfo: BABYLON.CharacterSurfaceInfo,
         characterOrientation: BABYLON.Quaternion
     ): BABYLON.Vector3 {
-        const desiredVelocity = this.inputDirection.scale(CONFIG.CHARACTER.SPEED.ON_GROUND).applyRotationQuaternion(characterOrientation);
+        const speed = this.isBoosting ? CONFIG.CHARACTER.SPEED.ON_GROUND * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.ON_GROUND;
+        const desiredVelocity = this.inputDirection.scale(speed).applyRotationQuaternion(characterOrientation);
         const outputVelocity = this.characterController.calculateMovement(
             deltaTime, forwardWorld, supportInfo.averageSurfaceNormal, currentVelocity,
             supportInfo.averageSurfaceVelocity, desiredVelocity, upWorld
@@ -914,6 +1178,12 @@ class CharacterController {
     public setCameraController(cameraController: SmoothFollowCameraController): void {
         this.cameraController = cameraController;
     }
+
+    public setPlayerParticleSystem(particleSystem: BABYLON.IParticleSystem): void {
+        this.playerParticleSystem = particleSystem;
+        // Start with particle system stopped
+        particleSystem.stop();
+    }
 }
 
 // ============================================================================
@@ -930,13 +1200,16 @@ class SceneManager {
         this.scene = new BABYLON.Scene(engine);
         this.camera = new BABYLON.TargetCamera("camera1", CONFIG.CAMERA.START_POSITION, this.scene);
         
-        this.initializeScene();
+        this.initializeScene().catch(error => {
+            console.error("Failed to initialize scene:", error);
+        });
     }
 
-    private initializeScene(): void {
+    private async initializeScene(): Promise<void> {
         this.setupLighting();
         this.setupPhysics();
         this.setupSky();
+        await this.setupEffects();
         this.loadLevel();
     }
 
@@ -955,6 +1228,15 @@ class SceneManager {
             SkyManager.createSky(this.scene);
         } catch (error) {
             console.warn("Failed to create sky:", error);
+        }
+    }
+
+    private async setupEffects(): Promise<void> {
+        try {
+            EffectsManager.initialize(this.scene);
+            await EffectsManager.createDefaultParticleSystem();
+        } catch (error) {
+            console.warn("Failed to setup effects:", error);
         }
     }
 
@@ -1056,7 +1338,7 @@ class SceneManager {
 
     private loadCharacterModel(): void {
         BABYLON.ImportMeshAsync(ASSETS.CHARACTER_MODEL, this.scene)
-            .then(result => {
+            .then(async result => {
                 if (this.characterController && result.meshes[0]) {
                     this.characterController.setPlayerMesh(result.meshes[0]);
                     
@@ -1067,6 +1349,12 @@ class SceneManager {
                     // Stop animations initially
                     playerAnimations.walk?.stop();
                     playerAnimations.idle?.stop();
+                    
+                    // Create particle system attached to player mesh
+                    const playerParticleSystem = await EffectsManager.createParticleSystem(CONFIG.EFFECTS.DEFAULT_PARTICLE, result.meshes[0]);
+                    if (playerParticleSystem && this.characterController) {
+                        this.characterController.setPlayerParticleSystem(playerParticleSystem);
+                    }
                 }
             })
             .catch(error => {
