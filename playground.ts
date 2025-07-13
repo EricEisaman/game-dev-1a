@@ -58,10 +58,18 @@ interface ParticleSnippet {
     readonly category: "fire" | "magic" | "nature" | "tech" | "cosmic";
 }
 
+interface SoundEffect {
+    readonly name: string;
+    readonly url: string;
+    readonly volume: number;
+    readonly loop: boolean;
+}
+
 interface EffectsConfig {
     readonly PARTICLE_SNIPPETS: readonly ParticleSnippet[];
     readonly DEFAULT_PARTICLE: string;
     readonly AUTO_SPAWN: boolean;
+    readonly SOUND_EFFECTS: readonly SoundEffect[];
 }
 
 interface GameConfig {
@@ -191,7 +199,15 @@ const CONFIG: GameConfig = {
             }
         ] as const,
         DEFAULT_PARTICLE: "Magic Sparkles",
-        AUTO_SPAWN: true
+        AUTO_SPAWN: true,
+        SOUND_EFFECTS: [
+            {
+                name: "Thruster",
+                url: "https://cdn.jsdelivr.net/gh/EricEisaman/game-dev-1a@main/assets/sounds/thruster.m4a",
+                volume: 0.5,
+                loop: true
+            }
+        ] as const
     }
 } as const;
 
@@ -233,6 +249,7 @@ const playerAnimations: Record<string, BABYLON.AnimationGroup | undefined> = {};
 
 class EffectsManager {
     private static activeParticleSystems: Map<string, BABYLON.IParticleSystem> = new Map();
+    private static activeSounds: Map<string, BABYLON.Sound> = new Map();
     private static scene: BABYLON.Scene | null = null;
     
     /**
@@ -382,6 +399,86 @@ class EffectsManager {
             const defaultPosition = new BABYLON.Vector3(-2, 0, -8); // Left of player start
             await this.createParticleSystem(CONFIG.EFFECTS.DEFAULT_PARTICLE, defaultPosition);
         }
+    }
+
+    /**
+     * Creates a sound effect by name
+     * @param soundName Name of the sound effect to create
+     * @returns The created sound or null if not found
+     */
+    public static async createSound(soundName: string): Promise<BABYLON.Sound | null> {
+        if (!this.scene) {
+            console.warn("EffectsManager not initialized. Call initialize() first.");
+            return null;
+        }
+        
+        const soundConfig = CONFIG.EFFECTS.SOUND_EFFECTS.find(s => s.name === soundName);
+        if (!soundConfig) {
+            console.warn(`Sound effect "${soundName}" not found.`);
+            return null;
+        }
+        
+        try {
+            const sound = new BABYLON.Sound(soundName, soundConfig.url, this.scene, null, {
+                volume: soundConfig.volume,
+                loop: soundConfig.loop
+            });
+            
+            // Add basic sound event handling
+            sound.onended = () => {
+                console.log(`Sound "${soundName}" ended`);
+            };
+            
+            this.activeSounds.set(soundName, sound);
+            console.log(`Created sound: ${soundName}`);
+            return sound;
+        } catch (error) {
+            console.error(`Failed to create sound "${soundName}":`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Plays a sound effect by name
+     * @param soundName Name of the sound effect to play
+     */
+    public static playSound(soundName: string): void {
+        const sound = this.activeSounds.get(soundName);
+        if (sound && !sound.isPlaying) {
+            sound.play();
+        }
+    }
+
+    /**
+     * Stops a sound effect by name
+     * @param soundName Name of the sound effect to stop
+     */
+    public static stopSound(soundName: string): void {
+        const sound = this.activeSounds.get(soundName);
+        if (sound && sound.isPlaying) {
+            sound.stop();
+        }
+    }
+
+    /**
+     * Gets a sound effect by name
+     * @param soundName Name of the sound effect
+     * @returns The sound or null if not found
+     */
+    public static getSound(soundName: string): BABYLON.Sound | null {
+        return this.activeSounds.get(soundName) || null;
+    }
+
+    /**
+     * Stops and removes all active sounds
+     */
+    public static removeAllSounds(): void {
+        this.activeSounds.forEach((sound, name) => {
+            sound.stop();
+            sound.dispose();
+        });
+        this.activeSounds.clear();
+        console.log("Removed all sounds");
     }
 }
 
@@ -855,6 +952,7 @@ class CharacterController {
     private cameraController: SmoothFollowCameraController | null = null;
     private isBoosting = false;
     private playerParticleSystem: BABYLON.IParticleSystem | null = null;
+    private thrusterSound: BABYLON.Sound | null = null;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
@@ -958,6 +1056,19 @@ class CharacterController {
                 this.playerParticleSystem.start();
             } else {
                 this.playerParticleSystem.stop();
+            }
+        }
+        
+        // Update thruster sound
+        if (this.thrusterSound) {
+            if (this.isBoosting) {
+                if (!this.thrusterSound.isPlaying) {
+                    this.thrusterSound.play();
+                }
+            } else {
+                if (this.thrusterSound.isPlaying) {
+                    this.thrusterSound.stop();
+                }
             }
         }
     }
@@ -1184,6 +1295,12 @@ class CharacterController {
         // Start with particle system stopped
         particleSystem.stop();
     }
+
+    public setThrusterSound(sound: BABYLON.Sound): void {
+        this.thrusterSound = sound;
+        // Start with sound stopped
+        sound.stop();
+    }
 }
 
 // ============================================================================
@@ -1235,6 +1352,9 @@ class SceneManager {
         try {
             EffectsManager.initialize(this.scene);
             await EffectsManager.createDefaultParticleSystem();
+            
+            // Create thruster sound
+            await EffectsManager.createSound("Thruster");
         } catch (error) {
             console.warn("Failed to setup effects:", error);
         }
@@ -1354,6 +1474,12 @@ class SceneManager {
                     const playerParticleSystem = await EffectsManager.createParticleSystem(CONFIG.EFFECTS.DEFAULT_PARTICLE, result.meshes[0]);
                     if (playerParticleSystem && this.characterController) {
                         this.characterController.setPlayerParticleSystem(playerParticleSystem);
+                    }
+                    
+                    // Set up thruster sound for character controller
+                    const thrusterSound = EffectsManager.getSound("Thruster");
+                    if (thrusterSound && this.characterController) {
+                        this.characterController.setThrusterSound(thrusterSound);
                     }
                 }
             })
