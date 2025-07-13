@@ -1251,7 +1251,8 @@ class CharacterController {
     }
 
     private calculateJumpVelocity(currentVelocity: BABYLON.Vector3, upWorld: BABYLON.Vector3): BABYLON.Vector3 {
-        const u = Math.sqrt(2 * CONFIG.PHYSICS.CHARACTER_GRAVITY.length() * CONFIG.CHARACTER.JUMP_HEIGHT);
+        const jumpHeight = this.isBoosting ? 10.0 : CONFIG.CHARACTER.JUMP_HEIGHT;
+        const u = Math.sqrt(2 * CONFIG.PHYSICS.CHARACTER_GRAVITY.length() * jumpHeight);
         const curRelVel = currentVelocity.dot(upWorld);
         return currentVelocity.add(upWorld.scale(u - curRelVel));
     }
