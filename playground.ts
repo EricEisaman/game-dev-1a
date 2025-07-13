@@ -2,8 +2,65 @@
 // BABYLON.JS PLAYGROUND - CHARACTER CONTROLLER WITH PHYSICS
 // ============================================================================
 
+// Configuration Type Definitions
+interface CharacterSpeed {
+    readonly IN_AIR: number;
+    readonly ON_GROUND: number;
+}
+
+interface CharacterConfig {
+    readonly HEIGHT: number;
+    readonly RADIUS: number;
+    readonly START_POSITION: BABYLON.Vector3;
+    readonly SPEED: CharacterSpeed;
+    readonly JUMP_HEIGHT: number;
+    readonly ROTATION_SPEED: number;
+    readonly ROTATION_SMOOTHING: number;
+}
+
+interface CameraConfig {
+    readonly START_POSITION: BABYLON.Vector3;
+    readonly OFFSET: BABYLON.Vector3;
+    readonly DRAG_SENSITIVITY: number;
+    readonly ZOOM_MIN: number;
+    readonly ZOOM_MAX: number;
+    readonly FOLLOW_SMOOTHING: number;
+}
+
+interface PhysicsConfig {
+    readonly GRAVITY: BABYLON.Vector3;
+    readonly CHARACTER_GRAVITY: BABYLON.Vector3;
+}
+
+interface AnimationConfig {
+    readonly PLAYER_SCALE: number;
+    readonly PLAYER_Y_OFFSET: number;
+}
+
+interface DebugConfig {
+    readonly CAPSULE_VISIBLE: boolean;
+}
+
+type SkyType = "BOX" | "SPHERE";
+
+interface SkyConfig {
+    readonly TEXTURE_URL: string;
+    readonly ROTATION_Y: number;
+    readonly BLUR: number;
+    readonly TYPE: SkyType;
+}
+
+interface GameConfig {
+    readonly CHARACTER: CharacterConfig;
+    readonly CAMERA: CameraConfig;
+    readonly PHYSICS: PhysicsConfig;
+    readonly ANIMATION: AnimationConfig;
+    readonly DEBUG: DebugConfig;
+    readonly SKY: SkyConfig;
+}
+
 // Configuration Constants
-const CONFIG = {
+const CONFIG: GameConfig = {
     // Character Settings
     CHARACTER: {
         HEIGHT: 1.8,
@@ -50,7 +107,7 @@ const CONFIG = {
         TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/refs/heads/main/assets/cartoon-river-with-orange-sky.jpg",
         ROTATION_Y: 0,
         BLUR: 0.3,
-        TYPE: "SPHERE" // "BOX" or "SPHERE"
+        TYPE: "SPHERE" as SkyType
     }
 } as const;
 
