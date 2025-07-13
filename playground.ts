@@ -105,7 +105,8 @@ class SmoothFollowCameraController {
     private characterRotationStartY = 0;
     private characterRotationTargetY = 0;
     private characterRotationStartTime = 0;
-    private characterRotationDuration = 0.9; // 0.9 seconds
+    private characterRotationDuration = 0.5; // 0.5 seconds
+    private shouldStartRotationOnWalk = false;
 
     constructor(
         scene: BABYLON.Scene,
@@ -150,8 +151,8 @@ class SmoothFollowCameraController {
                 this.isDragging = false;
                 this.dragDeltaX = 0;
                 this.dragDeltaZ = 0;
-                // Start character rotation lerp when drag ends
-                this.startCharacterRotationLerp();
+                // Mark that we should start rotation lerp on first walk activation
+                this.shouldStartRotationOnWalk = true;
                 break;
                 
             case BABYLON.PointerEventTypes.POINTERMOVE:
@@ -246,7 +247,10 @@ class SmoothFollowCameraController {
 
     private updateCamera = (): void => {
         if (!this.isDragging) {
-            this.smoothFollowTarget();
+            // Only smooth follow if we're not waiting for walk activation
+            if (!this.shouldStartRotationOnWalk) {
+                this.smoothFollowTarget();
+            }
         } else {
             this.updateOffsetY();
         }
@@ -344,6 +348,13 @@ class SmoothFollowCameraController {
 
     private easeInOutCubic(t: number): number {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    public checkForWalkActivation(): void {
+        if (this.shouldStartRotationOnWalk) {
+            this.shouldStartRotationOnWalk = false;
+            this.startCharacterRotationLerp();
+        }
     }
 
     public dispose(): void {
@@ -519,6 +530,10 @@ class CharacterController {
             if (!playerAnimations.walk.isPlaying) {
                 playerAnimations.idle.stop();
                 playerAnimations.walk.start(true);
+                // Check for walk activation to trigger character rotation
+                if (this.cameraController) {
+                    this.cameraController.checkForWalkActivation();
+                }
             }
         } else {
             if (!playerAnimations.idle.isPlaying) {
