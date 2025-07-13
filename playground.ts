@@ -292,10 +292,18 @@ class SmoothFollowCameraController {
         // Calculate the desired Y rotation (yaw) to face AWAY from the camera
         const targetYaw = Math.atan2(-toCamera.x, -toCamera.z);
         
-        // Start the lerp
+        // Calculate the shortest rotation path
+        const currentYaw = this.target.rotation.y;
+        let rotationDifference = targetYaw - currentYaw;
+        
+        // Normalize to shortest path (-π to π)
+        while (rotationDifference > Math.PI) rotationDifference -= 2 * Math.PI;
+        while (rotationDifference < -Math.PI) rotationDifference += 2 * Math.PI;
+        
+        // Start the lerp with the shortest path
         this.isRotatingCharacter = true;
-        this.characterRotationStartY = this.target.rotation.y;
-        this.characterRotationTargetY = targetYaw;
+        this.characterRotationStartY = currentYaw;
+        this.characterRotationTargetY = currentYaw + rotationDifference;
         this.characterRotationStartTime = Date.now();
     }
 
