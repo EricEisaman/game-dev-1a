@@ -248,10 +248,16 @@ class SmoothFollowCameraController {
         const rotatedOffset = this.offset.rotateByQuaternionToRef(yRot, new BABYLON.Vector3());
         const desiredPos = this.target.position.add(rotatedOffset);
         
+        // Calculate dynamic smoothing based on offset.z
+        // Closer camera (smaller offset.z) = more responsive (higher smoothing value)
+        // Farther camera (larger offset.z) = more relaxed (lower smoothing value)
+        const normalizedOffset = (this.offset.z - CONFIG.CAMERA.ZOOM_MIN) / (CONFIG.CAMERA.ZOOM_MAX - CONFIG.CAMERA.ZOOM_MIN);
+        const dynamicSmoothing = BABYLON.Scalar.Lerp(0.05, 0.25, normalizedOffset);
+        
         BABYLON.Vector3.LerpToRef(
             this.camera.position, 
             desiredPos, 
-            CONFIG.CAMERA.FOLLOW_SMOOTHING, 
+            dynamicSmoothing, 
             this.camera.position
         );
         
