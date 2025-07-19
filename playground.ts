@@ -149,7 +149,7 @@ const CONFIG: GameConfig = {
     
     // Sky Settings
     SKY: {
-        TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/refs/heads/main/assets/cartoon-river-with-orange-sky.jpg",
+        TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/cartoon-river-with-orange-sky.jpg",
         ROTATION_Y: 0,
         BLUR: 0.3,
         TYPE: "SPHERE" as SkyType
@@ -224,7 +224,7 @@ const CONFIG: GameConfig = {
         SOUND_EFFECTS: [
             {
                 name: "Thruster",
-                url: "https://cdn.jsdelivr.net/gh/EricEisaman/game-dev-1a@main/assets/sounds/thruster.m4a",
+                url: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/sounds/effects/thruster.m4a",
                 volume: 0.5,
                 loop: true
             }
@@ -253,9 +253,9 @@ const CONFIG: GameConfig = {
 
 // Asset URLs
 const ASSETS = {
-    CHARACTER_MODEL: "https://cdn.glitch.global/eb9efb0a-b839-4ec6-9701-f10ab7097b32/among_us_anims.glb?v=1716732954106",
-    LEVEL_MODEL: "https://raw.githubusercontent.com/CedricGuillemet/dump/master/CharController/levelTest.glb",
-    LIGHTMAP_TEXTURE: "https://raw.githubusercontent.com/CedricGuillemet/dump/master/CharController/lightmap.jpg"
+    CHARACTER_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+    LEVEL_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
+    LIGHTMAP_TEXTURE: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/lightmap.jpg"
 } as const;
 
 // Input Mapping
