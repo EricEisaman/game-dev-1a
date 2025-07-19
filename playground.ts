@@ -72,6 +72,26 @@ interface EffectsConfig {
     readonly SOUND_EFFECTS: readonly SoundEffect[];
 }
 
+type HUDPosition = "top" | "bottom" | "left" | "right";
+
+interface HUDConfig {
+    readonly POSITION: HUDPosition;
+    readonly FONT_FAMILY: string;
+    readonly PRIMARY_COLOR: string;
+    readonly SECONDARY_COLOR: string;
+    readonly HIGHLIGHT_COLOR: string;
+    readonly BACKGROUND_COLOR: string;
+    readonly BACKGROUND_OPACITY: number;
+    readonly PADDING: number;
+    readonly BORDER_RADIUS: number;
+    readonly SHOW_COORDINATES: boolean;
+    readonly SHOW_TIME: boolean;
+    readonly SHOW_FPS: boolean;
+    readonly SHOW_STATE: boolean;
+    readonly SHOW_BOOST_STATUS: boolean;
+    readonly UPDATE_INTERVAL: number;
+}
+
 interface GameConfig {
     readonly CHARACTER: CharacterConfig;
     readonly CAMERA: CameraConfig;
@@ -80,6 +100,7 @@ interface GameConfig {
     readonly DEBUG: DebugConfig;
     readonly SKY: SkyConfig;
     readonly EFFECTS: EffectsConfig;
+    readonly HUD: HUDConfig;
 }
 
 // Configuration Constants
@@ -208,6 +229,25 @@ const CONFIG: GameConfig = {
                 loop: true
             }
         ] as const
+    },
+    
+    // HUD Settings
+    HUD: {
+        POSITION: "top" as HUDPosition,
+        FONT_FAMILY: "'Segoe UI', 'Roboto', 'Arial', sans-serif",
+        PRIMARY_COLOR: "#ffffff",
+        SECONDARY_COLOR: "#cccccc",
+        HIGHLIGHT_COLOR: "#00ff88",
+        BACKGROUND_COLOR: "#000000",
+        BACKGROUND_OPACITY: 0.7,
+        PADDING: 15,
+        BORDER_RADIUS: 8,
+        SHOW_COORDINATES: true,
+        SHOW_TIME: true,
+        SHOW_FPS: true,
+        SHOW_STATE: true,
+        SHOW_BOOST_STATUS: true,
+        UPDATE_INTERVAL: 100 // milliseconds
     }
 } as const;
 
@@ -228,7 +268,9 @@ const INPUT_KEYS = {
     STRAFE_RIGHT: ['e'],
     JUMP: [' '],
     BOOST: ['shift'],
-    DEBUG: ['0']
+    DEBUG: ['0'],
+    HUD_TOGGLE: ['h'],
+    HUD_POSITION: ['p']
 } as const;
 
 // Character States
@@ -642,6 +684,473 @@ class SkyManager {
 }
 
 // ============================================================================
+// HUD MANAGER
+// ============================================================================
+
+class HUDManager {
+    private static hudContainer: HTMLDivElement | null = null;
+    private static hudElements: Map<string, HTMLDivElement> = new Map();
+    private static scene: BABYLON.Scene | null = null;
+    private static characterController: CharacterController | null = null;
+    private static startTime: number = 0;
+    private static lastUpdateTime: number = 0;
+    private static updateInterval: number | null = null;
+    private static fpsCounter: number = 0;
+    private static fpsLastTime: number = 0;
+    private static currentFPS: number = 0;
+    
+    /**
+     * Initializes the HUD with a scene and character controller
+     * @param scene The Babylon.js scene
+     * @param characterController The character controller
+     */
+    public static initialize(scene: BABYLON.Scene, characterController: CharacterController): void {
+        this.scene = scene;
+        this.characterController = characterController;
+        this.startTime = Date.now();
+        this.createHUD();
+        this.startUpdateLoop();
+    }
+    
+    /**
+     * Creates the HUD container and elements
+     */
+    private static createHUD(): void {
+        if (!this.scene) return;
+        
+        const canvas = this.scene.getEngine().getRenderingCanvas();
+        if (!canvas) return;
+        
+        // Create HUD container
+        this.hudContainer = document.createElement('div');
+        this.hudContainer.id = 'game-hud';
+        this.hudContainer.style.cssText = this.getHUDContainerStyles();
+        
+        // Create HUD elements
+        this.createHUDElement('coordinates', 'Coordinates');
+        this.createHUDElement('time', 'Time');
+        this.createHUDElement('fps', 'FPS');
+        this.createHUDElement('state', 'State');
+        this.createHUDElement('boost', 'Boost');
+        
+        // Add CSS animations
+        this.addHUDAnimations();
+        
+        // Add HUD to canvas parent
+        const canvasParent = canvas.parentElement;
+        if (canvasParent) {
+            canvasParent.appendChild(this.hudContainer);
+        }
+        
+        // Set up FPS counter
+        this.scene.onBeforeRenderObservable.add(() => {
+            this.fpsCounter++;
+            const currentTime = Date.now();
+            if (currentTime - this.fpsLastTime >= 1000) {
+                this.currentFPS = this.fpsCounter;
+                this.fpsCounter = 0;
+                this.fpsLastTime = currentTime;
+            }
+        });
+    }
+    
+    /**
+     * Adds CSS animations for HUD effects
+     */
+    private static addHUDAnimations(): void {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.8; transform: scale(1.05); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+            
+            .hud-element {
+                transition: all 0.2s ease;
+            }
+            
+            .hud-element:hover {
+                transform: scale(1.02);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    /**
+     * Gets the CSS styles for the HUD container based on position
+     * @returns CSS styles string
+     */
+    private static getHUDContainerStyles(): string {
+        const config = CONFIG.HUD;
+        const position = config.POSITION;
+        
+        let positionStyles = '';
+        switch (position) {
+            case 'top':
+                positionStyles = 'top: 0; left: 0; right: 0; flex-direction: row; justify-content: space-between;';
+                break;
+            case 'bottom':
+                positionStyles = 'bottom: 0; left: 0; right: 0; flex-direction: row; justify-content: space-between;';
+                break;
+            case 'left':
+                positionStyles = 'top: 0; left: 0; bottom: 0; flex-direction: column; justify-content: flex-start;';
+                break;
+            case 'right':
+                positionStyles = 'top: 0; right: 0; bottom: 0; flex-direction: column; justify-content: flex-start;';
+                break;
+        }
+        
+        return `
+            position: absolute;
+            ${positionStyles}
+            display: flex;
+            padding: ${config.PADDING}px;
+            font-family: ${config.FONT_FAMILY};
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            pointer-events: none;
+        `;
+    }
+    
+    /**
+     * Creates a HUD element
+     * @param id Element ID
+     * @param label Element label
+     */
+    private static createHUDElement(id: string, label: string): void {
+        if (!this.hudContainer) return;
+        
+        const element = document.createElement('div');
+        element.id = `hud-${id}`;
+        element.className = 'hud-element';
+        element.style.cssText = this.getHUDElementStyles();
+        
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'hud-label';
+        labelSpan.textContent = label;
+        labelSpan.style.color = CONFIG.HUD.SECONDARY_COLOR;
+        
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'hud-value';
+        valueSpan.id = `hud-${id}-value`;
+        valueSpan.style.color = CONFIG.HUD.PRIMARY_COLOR;
+        
+        element.appendChild(labelSpan);
+        element.appendChild(document.createElement('br'));
+        element.appendChild(valueSpan);
+        
+        this.hudContainer.appendChild(element);
+        this.hudElements.set(id, element);
+    }
+    
+    /**
+     * Gets the CSS styles for HUD elements
+     * @returns CSS styles string
+     */
+    private static getHUDElementStyles(): string {
+        const config = CONFIG.HUD;
+        return `
+            background-color: ${config.BACKGROUND_COLOR};
+            background-opacity: ${config.BACKGROUND_OPACITY};
+            background: rgba(0, 0, 0, ${config.BACKGROUND_OPACITY});
+            color: ${config.PRIMARY_COLOR};
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: ${config.BORDER_RADIUS}px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            min-width: 80px;
+            text-align: center;
+            transition: all 0.2s ease;
+        `;
+    }
+    
+    /**
+     * Starts the HUD update loop
+     */
+    private static startUpdateLoop(): void {
+        this.updateInterval = window.setInterval(() => {
+            this.updateHUD();
+        }, CONFIG.HUD.UPDATE_INTERVAL);
+    }
+    
+    /**
+     * Updates all HUD elements
+     */
+    private static updateHUD(): void {
+        if (!this.scene || !this.characterController) return;
+        
+        const currentTime = Date.now();
+        if (currentTime - this.lastUpdateTime < CONFIG.HUD.UPDATE_INTERVAL) return;
+        this.lastUpdateTime = currentTime;
+        
+        // Update coordinates
+        if (CONFIG.HUD.SHOW_COORDINATES) {
+            this.updateCoordinates();
+        }
+        
+        // Update time
+        if (CONFIG.HUD.SHOW_TIME) {
+            this.updateTime();
+        }
+        
+        // Update FPS
+        if (CONFIG.HUD.SHOW_FPS) {
+            this.updateFPS();
+        }
+        
+        // Update state
+        if (CONFIG.HUD.SHOW_STATE) {
+            this.updateState();
+        }
+        
+        // Update boost status
+        if (CONFIG.HUD.SHOW_BOOST_STATUS) {
+            this.updateBoostStatus();
+        }
+    }
+    
+    /**
+     * Updates the coordinates display
+     */
+    private static updateCoordinates(): void {
+        const element = this.hudElements.get('coordinates');
+        if (!element) return;
+        
+        const position = this.characterController!.getDisplayCapsule().position;
+        const valueElement = element.querySelector('#hud-coordinates-value') as HTMLSpanElement;
+        if (valueElement) {
+            valueElement.textContent = `X: ${position.x.toFixed(2)} Y: ${position.y.toFixed(2)} Z: ${position.z.toFixed(2)}`;
+        }
+    }
+    
+    /**
+     * Updates the time display
+     */
+    private static updateTime(): void {
+        const element = this.hudElements.get('time');
+        if (!element) return;
+        
+        const elapsed = Date.now() - this.startTime;
+        const seconds = Math.floor(elapsed / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        
+        const timeString = hours > 0 
+            ? `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
+            : `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+        
+        const valueElement = element.querySelector('#hud-time-value') as HTMLSpanElement;
+        if (valueElement) {
+            valueElement.textContent = timeString;
+        }
+    }
+    
+    /**
+     * Updates the FPS display
+     */
+    private static updateFPS(): void {
+        const element = this.hudElements.get('fps');
+        if (!element) return;
+        
+        const valueElement = element.querySelector('#hud-fps-value') as HTMLSpanElement;
+        if (valueElement) {
+            valueElement.textContent = `${this.currentFPS} FPS`;
+            
+            // Color code FPS
+            if (this.currentFPS >= 55) {
+                valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
+            } else if (this.currentFPS >= 30) {
+                valueElement.style.color = CONFIG.HUD.PRIMARY_COLOR;
+            } else {
+                valueElement.style.color = '#ff4444';
+            }
+        }
+    }
+    
+    /**
+     * Updates the state display
+     */
+    private static updateState(): void {
+        const element = this.hudElements.get('state');
+        if (!element) return;
+        
+        const valueElement = element.querySelector('#hud-state-value') as HTMLSpanElement;
+        if (valueElement) {
+            // Get character state (this would need to be exposed from CharacterController)
+            const isMoving = this.isCharacterMoving();
+            const isOnGround = this.isCharacterOnGround();
+            
+            let stateText = '';
+            if (isMoving && isOnGround) {
+                stateText = 'Walking';
+                valueElement.style.color = CONFIG.HUD.PRIMARY_COLOR;
+            } else if (isMoving && !isOnGround) {
+                stateText = 'Flying';
+                valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
+            } else if (!isOnGround) {
+                stateText = 'In Air';
+                valueElement.style.color = CONFIG.HUD.SECONDARY_COLOR;
+            } else {
+                stateText = 'Idle';
+                valueElement.style.color = CONFIG.HUD.SECONDARY_COLOR;
+            }
+            
+            valueElement.textContent = stateText;
+        }
+    }
+    
+    /**
+     * Updates the boost status display
+     */
+    private static updateBoostStatus(): void {
+        const element = this.hudElements.get('boost');
+        if (!element) return;
+        
+        const valueElement = element.querySelector('#hud-boost-value') as HTMLSpanElement;
+        if (valueElement) {
+            // This would need to be exposed from CharacterController
+            const isBoosting = this.isCharacterBoosting();
+            
+            if (isBoosting) {
+                valueElement.textContent = 'ACTIVE';
+                valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
+                element.style.animation = 'pulse 0.5s ease-in-out infinite alternate';
+            } else {
+                valueElement.textContent = 'Inactive';
+                valueElement.style.color = CONFIG.HUD.SECONDARY_COLOR;
+                element.style.animation = 'none';
+            }
+        }
+    }
+    
+    /**
+     * Checks if character is moving
+     */
+    private static isCharacterMoving(): boolean {
+        return this.characterController?.isMoving() || false;
+    }
+    
+    /**
+     * Checks if character is on ground
+     */
+    private static isCharacterOnGround(): boolean {
+        return this.characterController?.isOnGround() || false;
+    }
+    
+    /**
+     * Checks if character is boosting
+     */
+    private static isCharacterBoosting(): boolean {
+        return this.characterController?.isBoosting() || false;
+    }
+    
+    /**
+     * Shows or hides HUD elements
+     * @param elementId Element ID to toggle
+     * @param visible Whether to show the element
+     */
+    public static setElementVisibility(elementId: string, visible: boolean): void {
+        const element = this.hudElements.get(elementId);
+        if (element) {
+            element.style.display = visible ? 'block' : 'none';
+        }
+    }
+    
+    /**
+     * Updates HUD configuration
+     * @param newConfig New HUD configuration
+     */
+    public static updateConfig(newConfig: Partial<HUDConfig>): void {
+        // Update container styles
+        if (this.hudContainer && newConfig.POSITION) {
+            this.hudContainer.style.cssText = this.getHUDContainerStyles();
+        }
+        
+        // Update element styles
+        this.hudElements.forEach((element, id) => {
+            element.style.cssText = this.getHUDElementStyles();
+        });
+        
+        // Update visibility
+        if (newConfig.SHOW_COORDINATES !== undefined) {
+            this.setElementVisibility('coordinates', newConfig.SHOW_COORDINATES);
+        }
+        if (newConfig.SHOW_TIME !== undefined) {
+            this.setElementVisibility('time', newConfig.SHOW_TIME);
+        }
+        if (newConfig.SHOW_FPS !== undefined) {
+            this.setElementVisibility('fps', newConfig.SHOW_FPS);
+        }
+        if (newConfig.SHOW_STATE !== undefined) {
+            this.setElementVisibility('state', newConfig.SHOW_STATE);
+        }
+        if (newConfig.SHOW_BOOST_STATUS !== undefined) {
+            this.setElementVisibility('boost', newConfig.SHOW_BOOST_STATUS);
+        }
+    }
+    
+    /**
+     * Changes HUD position dynamically
+     * @param position New position ('top', 'bottom', 'left', 'right')
+     */
+    public static setPosition(position: HUDPosition): void {
+        this.updateConfig({ POSITION: position });
+    }
+    
+    /**
+     * Changes HUD colors dynamically
+     * @param primaryColor Primary color
+     * @param secondaryColor Secondary color
+     * @param highlightColor Highlight color
+     */
+    public static setColors(primaryColor: string, secondaryColor: string, highlightColor: string): void {
+        // This would require updating the CONFIG object or creating a new config
+        // For now, we'll update the elements directly
+        this.hudElements.forEach((element, id) => {
+            const label = element.querySelector('.hud-label') as HTMLSpanElement;
+            const value = element.querySelector('.hud-value') as HTMLSpanElement;
+            
+            if (label) label.style.color = secondaryColor;
+            if (value) value.style.color = primaryColor;
+        });
+    }
+    
+    /**
+     * Toggles HUD visibility
+     * @param visible Whether to show the HUD
+     */
+    public static setVisibility(visible: boolean): void {
+        if (this.hudContainer) {
+            this.hudContainer.style.display = visible ? 'flex' : 'none';
+        }
+    }
+    
+    /**
+     * Disposes the HUD
+     */
+    public static dispose(): void {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+        
+        if (this.hudContainer) {
+            this.hudContainer.remove();
+            this.hudContainer = null;
+        }
+        
+        this.hudElements.clear();
+        this.scene = null;
+        this.characterController = null;
+    }
+}
+
+// ============================================================================
 // SMOOTH FOLLOW CAMERA CONTROLLER
 // ============================================================================
 
@@ -950,7 +1459,7 @@ class CharacterController {
     private targetRotationY = 0;
     private keysDown = new Set<string>();
     private cameraController: SmoothFollowCameraController | null = null;
-    private isBoosting = false;
+    private boostActive = false;
     private playerParticleSystem: BABYLON.IParticleSystem | null = null;
     private thrusterSound: BABYLON.Sound | null = null;
 
@@ -1019,10 +1528,14 @@ class CharacterController {
         } else if (INPUT_KEYS.JUMP.includes(key as any)) {
             this.wantJump = true;
         } else if (INPUT_KEYS.BOOST.includes(key as any)) {
-            this.isBoosting = true;
+            this.boostActive = true;
             this.updateParticleSystem();
         } else if (INPUT_KEYS.DEBUG.includes(key as any)) {
             this.toggleDebugDisplay();
+        } else if (INPUT_KEYS.HUD_TOGGLE.includes(key as any)) {
+            this.toggleHUD();
+        } else if (INPUT_KEYS.HUD_POSITION.includes(key as any)) {
+            this.cycleHUDPosition();
         }
     }
 
@@ -1041,7 +1554,7 @@ class CharacterController {
             this.wantJump = false;
         }
         if (INPUT_KEYS.BOOST.includes(key as any)) {
-            this.isBoosting = false;
+            this.boostActive = false;
             this.updateParticleSystem();
         }
     }
@@ -1050,9 +1563,19 @@ class CharacterController {
         this.displayCapsule.isVisible = !this.displayCapsule.isVisible;
     }
 
+    private toggleHUD(): void {
+        // This would need to be connected to HUDManager
+        console.log("HUD toggle pressed - implement HUDManager.setVisibility()");
+    }
+
+    private cycleHUDPosition(): void {
+        // This would need to be connected to HUDManager
+        console.log("HUD position cycle pressed - implement HUDManager.setPosition()");
+    }
+
     private updateParticleSystem(): void {
         if (this.playerParticleSystem) {
-            if (this.isBoosting) {
+            if (this.boostActive) {
                 this.playerParticleSystem.start();
             } else {
                 this.playerParticleSystem.stop();
@@ -1061,7 +1584,7 @@ class CharacterController {
         
         // Update thruster sound
         if (this.thrusterSound) {
-            if (this.isBoosting) {
+            if (this.boostActive) {
                 if (!this.thrusterSound.isPlaying) {
                     this.thrusterSound.play();
                 }
@@ -1204,7 +1727,7 @@ class CharacterController {
         currentVelocity: BABYLON.Vector3,
         characterOrientation: BABYLON.Quaternion
     ): BABYLON.Vector3 {
-        const speed = this.isBoosting ? CONFIG.CHARACTER.SPEED.IN_AIR * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.IN_AIR;
+        const speed = this.boostActive ? CONFIG.CHARACTER.SPEED.IN_AIR * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.IN_AIR;
         const desiredVelocity = this.inputDirection.scale(speed).applyRotationQuaternion(characterOrientation);
         const outputVelocity = this.characterController.calculateMovement(
             deltaTime, forwardWorld, upWorld, currentVelocity, 
@@ -1226,7 +1749,7 @@ class CharacterController {
         supportInfo: BABYLON.CharacterSurfaceInfo,
         characterOrientation: BABYLON.Quaternion
     ): BABYLON.Vector3 {
-        const speed = this.isBoosting ? CONFIG.CHARACTER.SPEED.ON_GROUND * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.ON_GROUND;
+        const speed = this.boostActive ? CONFIG.CHARACTER.SPEED.ON_GROUND * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.ON_GROUND;
         const desiredVelocity = this.inputDirection.scale(speed).applyRotationQuaternion(characterOrientation);
         const outputVelocity = this.characterController.calculateMovement(
             deltaTime, forwardWorld, supportInfo.averageSurfaceNormal, currentVelocity,
@@ -1251,7 +1774,7 @@ class CharacterController {
     }
 
     private calculateJumpVelocity(currentVelocity: BABYLON.Vector3, upWorld: BABYLON.Vector3): BABYLON.Vector3 {
-        const jumpHeight = this.isBoosting ? 10.0 : CONFIG.CHARACTER.JUMP_HEIGHT;
+        const jumpHeight = this.boostActive ? 10.0 : CONFIG.CHARACTER.JUMP_HEIGHT;
         const u = Math.sqrt(2 * CONFIG.PHYSICS.CHARACTER_GRAVITY.length() * jumpHeight);
         const curRelVel = currentVelocity.dot(upWorld);
         return currentVelocity.add(upWorld.scale(u - curRelVel));
@@ -1301,6 +1824,38 @@ class CharacterController {
         this.thrusterSound = sound;
         // Start with sound stopped
         sound.stop();
+    }
+
+    /**
+     * Gets whether the character is currently moving
+     * @returns True if character is moving, false otherwise
+     */
+    public isMoving(): boolean {
+        return this.isAnyMovementKeyPressed();
+    }
+
+    /**
+     * Gets whether the character is currently boosting
+     * @returns True if character is boosting, false otherwise
+     */
+    public isBoosting(): boolean {
+        return this.boostActive;
+    }
+
+    /**
+     * Gets the current character state
+     * @returns The current character state
+     */
+    public getState(): CharacterState {
+        return this.state;
+    }
+
+    /**
+     * Gets whether the character is on the ground
+     * @returns True if character is on ground, false otherwise
+     */
+    public isOnGround(): boolean {
+        return this.state === CHARACTER_STATES.ON_GROUND;
     }
 }
 
@@ -1454,6 +2009,9 @@ class SceneManager {
             
             // Connect the character controller to the camera controller
             this.characterController.setCameraController(this.smoothFollowController);
+            
+            // Initialize HUD
+            HUDManager.initialize(this.scene, this.characterController);
         }
     }
 
@@ -1492,6 +2050,19 @@ class SceneManager {
     public getScene(): BABYLON.Scene {
         return this.scene;
     }
+
+    /**
+     * Disposes all resources
+     */
+    public dispose(): void {
+        HUDManager.dispose();
+        if (this.smoothFollowController) {
+            this.smoothFollowController.dispose();
+        }
+        if (this.characterController) {
+            // Character controller cleanup would go here if needed
+        }
+    }
 }
 
 // ============================================================================
@@ -1504,3 +2075,29 @@ class Playground {
         return sceneManager.getScene();
     }
 }
+
+// ============================================================================
+// HUD USAGE EXAMPLES
+// ============================================================================
+
+/*
+// Example: Change HUD position
+HUDManager.setPosition('bottom');
+
+// Example: Change HUD colors
+HUDManager.setColors('#00ff00', '#888888', '#ffff00');
+
+// Example: Toggle HUD visibility
+HUDManager.setVisibility(false);
+
+// Example: Update HUD configuration
+HUDManager.updateConfig({
+    SHOW_COORDINATES: false,
+    SHOW_FPS: true,
+    POSITION: 'right'
+});
+
+// Example: Show/hide specific HUD elements
+HUDManager.setElementVisibility('coordinates', false);
+HUDManager.setElementVisibility('boost', true);
+*/
