@@ -1232,6 +1232,7 @@ class CollectiblesManager {
     private static collectionObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
     private static collectedItems: Set<string> = new Set();
     private static instanceBasis: BABYLON.Mesh | null = null;
+    private static cratePhysicsShape: BABYLON.PhysicsShape | null = null; // Reusable physics shape
     
     // Custom physics ready event system
     private static physicsReadyObservable = new BABYLON.Observable<void>();
@@ -1246,59 +1247,8 @@ class CollectiblesManager {
             throw new Error("Scene not available for physics initialization check");
         }
         
-        // Check if physics is already initialized
-        if (this.isPhysicsReady()) {
-            console.log("Physics already initialized");
-            return;
-        }
-        
-        // Set up physics ready detection
-        this.setupPhysicsReadyDetection();
-        
-        // Wait for physics ready event
-        return new Promise((resolve) => {
-            this.physicsReadyObservable.addOnce(() => {
-                console.log("Physics ready event received");
-                resolve();
-            });
-        });
-    }
-    
-    /**
-     * Sets up detection for when physics becomes ready
-     */
-    private static setupPhysicsReadyDetection(): void {
-        if (!this.scene || this.physicsReadyObserver) return;
-        
-        // Monitor scene for physics engine changes
-        this.physicsReadyObserver = this.scene.onBeforeRenderObservable.add(() => {
-            if (this.isPhysicsReady()) {
-                console.log("Physics ready detected");
-                this.physicsReadyObservable.notifyObservers();
-                
-                // Clean up observer
-                if (this.physicsReadyObserver) {
-                    this.scene!.onBeforeRenderObservable.remove(this.physicsReadyObserver);
-                    this.physicsReadyObserver = null;
-                }
-            }
-        });
-    }
-    
-    /**
-     * Checks if physics is properly initialized
-     * @returns True if physics is ready, false otherwise
-     */
-    private static isPhysicsReady(): boolean {
-        if (!this.scene) return false;
-        
-        const physicsEngine = this.scene.getPhysicsEngine();
-        if (!physicsEngine) return false;
-        
-        // Check if physics engine has essential methods and properties
-        return !!(physicsEngine.setGravity && 
-                 physicsEngine.getTimeStep && 
-                 physicsEngine.getSubTimeStep);
+        // Simple delay to allow physics to initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     /**
@@ -1344,14 +1294,9 @@ class CollectiblesManager {
             new BABYLON.Vector3(-4, 0.5, -11) // Behind and left
         ];
         
-        console.log("Creating crates at positions:", cratePositions);
-        
         for (let i = 0; i < cratePositions.length; i++) {
-            console.log(`Creating crate ${i} at position ${cratePositions[i].toString()}`);
             await this.createCollectibleInstance(`crate_instance_${i + 1}`, cratePositions[i]);
         }
-        
-        console.log("Total collectibles created:", this.collectibles.size);
         
         // Set up physics collision detection
         this.setupCollisionDetection();
@@ -1402,6 +1347,29 @@ class CollectiblesManager {
                 console.log("Crate instance basis created and disabled");
                 console.log("Mesh geometry vertices:", this.instanceBasis.geometry?.getTotalVertices());
                 console.log("Mesh bounding box:", this.instanceBasis.getBoundingInfo()?.boundingBox);
+                
+                // Create reusable physics shape for better performance
+                const boundingInfo = this.instanceBasis.getBoundingInfo();
+                if (boundingInfo) {
+                    const size = boundingInfo.boundingBox.maximumWorld.subtract(boundingInfo.boundingBox.minimumWorld);
+                    this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
+                        BABYLON.Vector3.Zero(), // Center - use static zero
+                        BABYLON.Quaternion.Identity(), // Rotation - use static identity
+                        size.scale(0.5), // Half-size for box shape
+                        this.scene
+                    );
+                    console.log(`Created reusable physics shape with size: ${size.toString()}`);
+                } else {
+                    // Fallback to default size
+                    this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
+                        BABYLON.Vector3.Zero(), // Center - use static zero
+                        BABYLON.Quaternion.Identity(), // Rotation - use static identity
+                        BABYLON.Vector3.One(), // Size - use static one
+                        this.scene
+                    );
+                    console.log(`Created fallback physics shape`);
+                }
+                
             } else {
                 console.warn("No meshes with geometry found in crate model, creating fallback");
                 this.createFallbackInstanceBasis();
@@ -1438,7 +1406,15 @@ class CollectiblesManager {
         this.instanceBasis.isVisible = false;
         this.instanceBasis.setEnabled(false);
         
+        // Create reusable physics shape for fallback crates
+        this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
+            BABYLON.Vector3.Zero(), // Center - use static zero
+            BABYLON.Quaternion.Identity(), // Rotation - use static identity
+            BABYLON.Vector3.One(), // Size - use static one
+            this.scene
+        );
         console.log("Fallback crate instance basis created and disabled");
+        console.log("Created fallback physics shape");
     }
     
     /**
@@ -1451,8 +1427,6 @@ class CollectiblesManager {
             console.error("No scene or instance basis available for creating collectible instance");
             return;
         }
-        
-        console.log(`Creating collectible instance ${id} at ${position.toString()}`);
         
         try {
             // Create an instance from the loaded crate model
@@ -1472,31 +1446,17 @@ class CollectiblesManager {
             const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Get the crate configuration
             instance.scaling.setAll(itemConfig.scale);
             
-            console.log(`Crate instance positioned at: ${instance.position.toString()}`);
-            console.log(`Crate instance visibility: ${instance.isVisible}`);
-            
-            // Create physics body for the instance
+            // Create physics body using PhysicsAggregate for better performance
             const physicsAggregate = new BABYLON.PhysicsAggregate(instance, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
-            
-            // Ensure the physics body is positioned correctly
-            if (physicsAggregate.body) {
-                physicsAggregate.body.setMassProperties({ mass: 0.1 });
-                console.log(`Physics body created for ${id} at ${position.toString()}`);
-            } else {
-                console.warn(`Failed to create physics body for ${id}`);
-            }
             
             // Store references
             this.collectibles.set(id, instance);
-            this.collectibleBodies.set(id, physicsAggregate.body);
+            if (physicsAggregate.body) {
+                this.collectibleBodies.set(id, physicsAggregate.body);
+            }
             
             // Add rotation animation
             this.addRotationAnimation(instance);
-            
-            console.log(`Created collectible instance: ${id} at ${position.toString()}`);
-            console.log(`Instance visibility: ${instance.isVisible}, enabled: ${instance.isEnabled()}`);
-            console.log(`Instance scale: ${instance.scaling.toString()}`);
-            console.log(`Instance material: ${instance.material ? 'present' : 'missing'}`);
         } catch (error) {
             console.error(`Failed to create collectible instance ${id}:`, error);
         }
@@ -1718,12 +1678,13 @@ class CollectiblesManager {
         
         particleSystem.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", this.scene);
         particleSystem.emitter = position;
+        // Use direct object creation for better performance
         particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5);
         particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5);
         
-        particleSystem.color1 = new BABYLON.Color4(0.5, 1, 0, 1); // Lime green
-        particleSystem.color2 = new BABYLON.Color4(0.2, 0.8, 0, 1); // Darker lime green
-        particleSystem.colorDead = new BABYLON.Color4(0, 0.5, 0, 0); // Fade to dark green
+        particleSystem.color1 = new BABYLON.Color4(0.5, 0.8, 1, 1); // Baby blue
+        particleSystem.color2 = new BABYLON.Color4(0.2, 0.6, 0.9, 1); // Darker baby blue
+        particleSystem.colorDead = new BABYLON.Color4(0, 0.3, 0.6, 0); // Fade to dark blue
         
         particleSystem.minSize = 0.1;
         particleSystem.maxSize = 0.3;
@@ -2021,7 +1982,7 @@ class SmoothFollowCameraController {
         }
         
         const yRot = BABYLON.Quaternion.FromEulerAngles(0, this.target.rotation.y, 0);
-        const rotatedOffset = this.offset.rotateByQuaternionToRef(yRot, new BABYLON.Vector3());
+        const rotatedOffset = this.offset.rotateByQuaternionToRef(yRot, BABYLON.Vector3.Zero());
         const desiredPos = this.target.position.add(rotatedOffset);
         
         // Calculate dynamic smoothing based on offset.z
@@ -2360,7 +2321,7 @@ class CharacterController {
         const deltaTime = this.scene.deltaTime / 1000.0;
         if (deltaTime === 0) return;
 
-        const down = new BABYLON.Vector3(0, -1, 0);
+        const down = BABYLON.Vector3.Down();
         const support = this.characterController.checkSupport(deltaTime, down);
 
         const characterOrientation = BABYLON.Quaternion.FromEulerAngles(0, this.displayCapsule.rotation.y, 0);
@@ -2383,7 +2344,7 @@ class CharacterController {
         const upWorld = CONFIG.PHYSICS.CHARACTER_GRAVITY.normalizeToNew();
         upWorld.scaleInPlace(-1.0);
         
-        const forwardLocalSpace = new BABYLON.Vector3(0, 0, 1);
+        const forwardLocalSpace = BABYLON.Vector3.Forward();
         const forwardWorld = forwardLocalSpace.applyRotationQuaternion(characterOrientation);
         const currentVelocity = this.characterController.getVelocity();
 
@@ -2413,7 +2374,7 @@ class CharacterController {
         const desiredVelocity = this.inputDirection.scale(speed).applyRotationQuaternion(characterOrientation);
         const outputVelocity = this.characterController.calculateMovement(
             deltaTime, forwardWorld, upWorld, currentVelocity, 
-            BABYLON.Vector3.ZeroReadOnly, desiredVelocity, upWorld
+            BABYLON.Vector3.Zero(), desiredVelocity, upWorld
         );
         
         outputVelocity.addInPlace(upWorld.scale(-outputVelocity.dot(upWorld)));
