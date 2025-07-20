@@ -1287,11 +1287,11 @@ class CollectiblesManager {
         
         // Create 5 crate instances at different positions - closer to player
         const cratePositions = [
-            new BABYLON.Vector3(4, 0.5, -8),  // Right side of player
-            new BABYLON.Vector3(-4, 0.5, -8), // Left side of player
+            new BABYLON.Vector3(1, 0.5, -8),  // Right side of player
+            new BABYLON.Vector3(5, 0.5, -8), // Left side of player
             new BABYLON.Vector3(0, 0.5, -5),  // In front of player
-            new BABYLON.Vector3(4, 0.5, -11), // Behind and right
-            new BABYLON.Vector3(-4, 0.5, -11) // Behind and left
+            new BABYLON.Vector3(1, 0.5, -11), // Behind and right
+            new BABYLON.Vector3(5, 3.5, -11) // Behind and left
         ];
         
         for (let i = 0; i < cratePositions.length; i++) {
