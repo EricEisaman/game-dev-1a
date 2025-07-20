@@ -3187,10 +3187,8 @@ class CharacterController {
                 this.boostActive = false;
             }
             
-            // Update particle system for boost
-            if (this.boostActive) {
-                this.updateParticleSystem();
-            }
+            // Always update particle system to ensure proper on/off state
+            this.updateParticleSystem();
         }
     }
 
