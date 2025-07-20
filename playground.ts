@@ -104,10 +104,18 @@ interface HUDConfig {
     readonly SHOW_COORDINATES: boolean;
     readonly SHOW_TIME: boolean;
     readonly SHOW_FPS: boolean;
-            readonly SHOW_STATE: boolean;
+    readonly SHOW_STATE: boolean;
+    readonly SHOW_BOOST_STATUS: boolean;
+    readonly SHOW_CREDITS: boolean;
+    readonly UPDATE_INTERVAL: number;
+    readonly MOBILE: {
+        readonly SHOW_COORDINATES: boolean;
+        readonly SHOW_TIME: boolean;
+        readonly SHOW_FPS: boolean;
+        readonly SHOW_STATE: boolean;
         readonly SHOW_BOOST_STATUS: boolean;
         readonly SHOW_CREDITS: boolean;
-        readonly UPDATE_INTERVAL: number;
+    };
 }
 
 interface GameConfig {
@@ -267,7 +275,15 @@ const CONFIG: GameConfig = {
         SHOW_STATE: true,
         SHOW_BOOST_STATUS: true,
         SHOW_CREDITS: true,
-        UPDATE_INTERVAL: 100 // milliseconds
+        UPDATE_INTERVAL: 100, // milliseconds
+        MOBILE: {
+            SHOW_COORDINATES: false,
+            SHOW_TIME: false,
+            SHOW_FPS: false,
+            SHOW_STATE: true,
+            SHOW_BOOST_STATUS: true,
+            SHOW_CREDITS: true
+        }
     },
     
     // Items Settings
@@ -311,6 +327,41 @@ const INPUT_KEYS = {
     HUD_POSITION: ['p']
 } as const;
 
+// Mobile Touch Controls Configuration
+const MOBILE_CONTROLS = {
+    JOYSTICK_RADIUS: 60,
+    JOYSTICK_DEADZONE: 10,
+    BUTTON_SIZE: 80,
+    BUTTON_SPACING: 20,
+    OPACITY: 0.7,
+    COLORS: {
+        JOYSTICK_BG: '#333333',
+        JOYSTICK_STICK: '#ffffff',
+        BUTTON_BG: '#444444',
+        BUTTON_ACTIVE: '#00ff88',
+        BUTTON_TEXT: '#ffffff'
+    },
+    POSITIONS: {
+        JOYSTICK: {
+            BOTTOM: 120,
+            LEFT: 120
+        },
+        JUMP_BUTTON: {
+            TOP: 120,
+            RIGHT: 120
+        },
+        BOOST_BUTTON: {
+            TOP: 120,
+            RIGHT: 220 // 120 + BUTTON_SIZE + BUTTON_SPACING
+        }
+    },
+    VISIBILITY: {
+        SHOW_JOYSTICK: true,
+        SHOW_JUMP_BUTTON: true,
+        SHOW_BOOST_BUTTON: true
+    }
+} as const;
+
 // Character States
 const CHARACTER_STATES = {
     IN_AIR: "IN_AIR",
@@ -322,6 +373,815 @@ type CharacterState = typeof CHARACTER_STATES[keyof typeof CHARACTER_STATES];
 
 // Animation Groups
 const playerAnimations: Record<string, BABYLON.AnimationGroup | undefined> = {};
+
+// ============================================================================
+// MOBILE INPUT MANAGER
+// ============================================================================
+
+class MobileInputManager {
+    private static isInitialized = false;
+    private static joystickContainer: HTMLDivElement | null = null;
+    private static joystickStick: HTMLDivElement | null = null;
+    private static joystickCenter: { x: number, y: number } = { x: 0, y: 0 };
+    private static joystickActive = false;
+    private static joystickTouchId: number | null = null;
+    
+    private static jumpButton: HTMLDivElement | null = null;
+    private static boostButton: HTMLDivElement | null = null;
+    private static jumpActive = false;
+    private static boostActive = false;
+    private static jumpTouchId: number | null = null;
+    private static boostTouchId: number | null = null;
+    
+    private static inputDirection = new BABYLON.Vector3(0, 0, 0);
+    private static wantJump = false;
+    private static wantBoost = false;
+    
+    /**
+     * Initializes mobile touch controls
+     * @param canvas The Babylon.js canvas element
+     */
+    public static initialize(canvas: HTMLCanvasElement): void {
+        if (this.isInitialized) {
+            console.log("Mobile input manager already initialized - skipping");
+            return;
+        }
+        
+        // Clean up any existing controls first
+        this.cleanupExistingControls();
+        
+        // Ensure canvas takes full screen on mobile
+        this.setupMobileCanvas(canvas);
+        
+        this.createJoystick(canvas);
+        this.createActionButtons(canvas);
+        this.setupTouchEventListeners(canvas);
+        
+        // Apply visibility settings from config
+        this.applyVisibilitySettings();
+        
+
+        
+        this.isInitialized = true;
+        console.log("Mobile input manager initialized successfully");
+    }
+    
+    /**
+     * Cleans up any existing mobile controls to prevent duplicates
+     */
+    private static cleanupExistingControls(): void {
+        // Remove any existing joystick containers
+        const existingJoysticks = document.querySelectorAll('#mobile-joystick');
+        existingJoysticks.forEach(element => {
+            console.log("Removing duplicate joystick");
+            element.remove();
+        });
+        
+        // Remove any existing jump buttons
+        const existingJumpButtons = document.querySelectorAll('#mobile-jump-button');
+        existingJumpButtons.forEach(element => {
+            console.log("Removing duplicate jump button");
+            element.remove();
+        });
+        
+        // Remove any existing boost buttons
+        const existingBoostButtons = document.querySelectorAll('#mobile-boost-button');
+        existingBoostButtons.forEach(element => {
+            console.log("Removing duplicate boost button");
+            element.remove();
+        });
+        
+        // Reset state
+        this.joystickContainer = null;
+        this.joystickStick = null;
+        this.jumpButton = null;
+        this.boostButton = null;
+        this.joystickActive = false;
+        this.jumpActive = false;
+        this.boostActive = false;
+        this.joystickTouchId = null;
+        this.jumpTouchId = null;
+        this.boostTouchId = null;
+        this.inputDirection.set(0, 0, 0);
+        this.wantJump = false;
+        this.wantBoost = false;
+    }
+    
+    /**
+     * Sets up canvas for full-screen mobile display
+     * @param canvas The canvas element
+     */
+    private static setupMobileCanvas(canvas: HTMLCanvasElement): void {
+        // Get the canvas container
+        const container = canvas.parentElement;
+        if (!container) return;
+        
+        // Set canvas to full screen on mobile
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.zIndex = '1';
+        
+        // Ensure container doesn't interfere
+        container.style.width = '100vw';
+        container.style.height = '100vh';
+        container.style.position = 'fixed';
+        container.style.top = '0';
+        container.style.left = '0';
+        container.style.margin = '0';
+        container.style.padding = '0';
+        container.style.overflow = 'hidden';
+        
+        // Prevent body scrolling on mobile
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100vw';
+        document.body.style.height = '100vh';
+        
+        // Force canvas resize using window resize event
+        window.dispatchEvent(new Event('resize'));
+        
+        // Handle orientation changes
+        this.setupOrientationHandler(canvas);
+        
+        console.log("Mobile canvas setup complete - full screen mode");
+    }
+    
+    /**
+     * Sets up orientation change handling for mobile
+     * @param canvas The canvas element
+     */
+    private static setupOrientationHandler(canvas: HTMLCanvasElement): void {
+        const handleOrientationChange = () => {
+            // Small delay to ensure orientation change is complete
+            setTimeout(() => {
+                // Force canvas resize using window resize event
+                window.dispatchEvent(new Event('resize'));
+                console.log("Orientation change handled - canvas resized");
+            }, 100);
+        };
+        
+        // Listen for orientation changes
+        window.addEventListener('orientationchange', handleOrientationChange);
+        window.addEventListener('resize', handleOrientationChange);
+    }
+    
+    /**
+     * Creates the virtual joystick for movement
+     * @param canvas The canvas element
+     */
+    private static createJoystick(canvas: HTMLCanvasElement): void {
+        const container = canvas.parentElement;
+        if (!container) return;
+        
+        // Create joystick container
+        this.joystickContainer = document.createElement('div');
+        this.joystickContainer.id = 'mobile-joystick';
+        this.joystickContainer.style.cssText = `
+            position: fixed;
+            bottom: ${MOBILE_CONTROLS.POSITIONS.JOYSTICK.BOTTOM}px;
+            left: ${MOBILE_CONTROLS.POSITIONS.JOYSTICK.LEFT}px;
+            width: ${MOBILE_CONTROLS.JOYSTICK_RADIUS * 2}px;
+            height: ${MOBILE_CONTROLS.JOYSTICK_RADIUS * 2}px;
+            border-radius: 50%;
+            background-color: ${MOBILE_CONTROLS.COLORS.JOYSTICK_BG};
+            opacity: ${MOBILE_CONTROLS.OPACITY};
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 1000;
+            pointer-events: auto;
+            user-select: none;
+            touch-action: none;
+        `;
+        
+        // Create joystick stick
+        this.joystickStick = document.createElement('div');
+        this.joystickStick.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: ${MOBILE_CONTROLS.COLORS.JOYSTICK_STICK};
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: transform 0.1s ease;
+        `;
+        
+        this.joystickContainer.appendChild(this.joystickStick);
+        container.appendChild(this.joystickContainer);
+        
+        // Store center position
+        const rect = this.joystickContainer.getBoundingClientRect();
+        this.joystickCenter = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+    }
+    
+    /**
+     * Creates action buttons (jump, boost)
+     * @param canvas The canvas element
+     */
+    private static createActionButtons(canvas: HTMLCanvasElement): void {
+        const container = canvas.parentElement;
+        if (!container) return;
+        
+        // Create jump button
+        this.jumpButton = document.createElement('div');
+        this.jumpButton.id = 'mobile-jump-button';
+        this.jumpButton.textContent = 'JUMP';
+        this.jumpButton.style.cssText = `
+            position: fixed;
+            top: ${MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.TOP}px;
+            right: ${MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.RIGHT}px;
+            width: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
+            height: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
+            border-radius: 50%;
+            background-color: ${MOBILE_CONTROLS.COLORS.BUTTON_BG};
+            color: ${MOBILE_CONTROLS.COLORS.BUTTON_TEXT};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            opacity: ${MOBILE_CONTROLS.OPACITY};
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 1000;
+            pointer-events: auto;
+            user-select: none;
+            touch-action: none;
+            transition: all 0.2s ease;
+        `;
+        
+        // Create boost button
+        this.boostButton = document.createElement('div');
+        this.boostButton.id = 'mobile-boost-button';
+        this.boostButton.textContent = 'BOOST';
+        this.boostButton.style.cssText = `
+            position: fixed;
+            top: ${MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.TOP}px;
+            right: ${MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.RIGHT}px;
+            width: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
+            height: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
+            border-radius: 50%;
+            background-color: ${MOBILE_CONTROLS.COLORS.BUTTON_BG};
+            color: ${MOBILE_CONTROLS.COLORS.BUTTON_TEXT};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            opacity: ${MOBILE_CONTROLS.OPACITY};
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 1000;
+            pointer-events: auto;
+            user-select: none;
+            touch-action: none;
+            transition: all 0.2s ease;
+        `;
+        
+        container.appendChild(this.jumpButton);
+        container.appendChild(this.boostButton);
+    }
+    
+    /**
+     * Sets up touch event listeners
+     * @param canvas The canvas element
+     */
+    private static setupTouchEventListeners(canvas: HTMLCanvasElement): void {
+        // Joystick touch events
+        if (this.joystickContainer) {
+                    this.joystickContainer.addEventListener('touchstart', this.handleJoystickTouchStart.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('touchmove', this.handleJoystickTouchMove.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('touchend', this.handleJoystickTouchEnd.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('touchcancel', this.handleJoystickTouchEnd.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('pointerdown', this.handleJoystickTouchStart.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('pointermove', this.handleJoystickTouchMove.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('pointerup', this.handleJoystickTouchEnd.bind(this), { passive: false });
+        this.joystickContainer.addEventListener('mouseup', this.handleJoystickTouchEnd.bind(this), { passive: false });
+        }
+        
+        // Button touch events
+                if (this.jumpButton) {
+            this.jumpButton.addEventListener('touchstart', this.handleJumpTouchStart.bind(this), { passive: false });
+            this.jumpButton.addEventListener('touchend', this.handleJumpTouchEnd.bind(this), { passive: false });
+            this.jumpButton.addEventListener('touchcancel', this.handleJumpTouchEnd.bind(this), { passive: false });
+            this.jumpButton.addEventListener('pointerdown', this.handleJumpTouchStart.bind(this), { passive: false });
+            this.jumpButton.addEventListener('pointerup', this.handleJumpTouchEnd.bind(this), { passive: false });
+            this.jumpButton.addEventListener('mouseup', this.handleJumpTouchEnd.bind(this), { passive: false });
+        }
+        
+        if (this.boostButton) {
+            this.boostButton.addEventListener('touchstart', this.handleBoostTouchStart.bind(this), { passive: false });
+            this.boostButton.addEventListener('touchend', this.handleBoostTouchEnd.bind(this), { passive: false });
+            this.boostButton.addEventListener('touchcancel', this.handleBoostTouchEnd.bind(this), { passive: false });
+            this.boostButton.addEventListener('pointerdown', this.handleBoostTouchStart.bind(this), { passive: false });
+            this.boostButton.addEventListener('pointerup', this.handleBoostTouchEnd.bind(this), { passive: false });
+            this.boostButton.addEventListener('mouseup', this.handleBoostTouchEnd.bind(this), { passive: false });
+        }
+        
+        // Global touch end handler to catch any missed touch events
+        document.addEventListener('touchend', this.handleGlobalTouchEnd.bind(this), { passive: false });
+        document.addEventListener('touchcancel', this.handleGlobalTouchEnd.bind(this), { passive: false });
+        document.addEventListener('pointerup', this.handleGlobalTouchEnd.bind(this), { passive: false });
+        document.addEventListener('mouseup', this.handleGlobalTouchEnd.bind(this), { passive: false });
+        
+        // Add specific boost area touch end handler
+        if (this.boostButton) {
+            const boostArea = this.boostButton.parentElement;
+            if (boostArea) {
+                boostArea.addEventListener('touchend', this.handleBoostTouchEnd.bind(this), { passive: false });
+                boostArea.addEventListener('touchcancel', this.handleBoostTouchEnd.bind(this), { passive: false });
+                boostArea.addEventListener('pointerup', this.handleBoostTouchEnd.bind(this), { passive: false });
+                boostArea.addEventListener('mouseup', this.handleBoostTouchEnd.bind(this), { passive: false });
+            }
+        }
+        
+
+    }
+    
+    /**
+     * Handles joystick touch/pointer start
+     * @param e Touch or Pointer event
+     */
+    private static handleJoystickTouchStart(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        if ('touches' in e && e.touches.length > 0) {
+            this.joystickActive = true;
+            this.joystickTouchId = e.touches[0].identifier;
+            this.updateJoystickPosition(e.touches[0]);
+        } else if ('pointerId' in e) {
+            this.joystickActive = true;
+            this.joystickTouchId = e.pointerId;
+            this.updateJoystickPositionFromPointer(e);
+        }
+    }
+    
+    /**
+     * Handles joystick touch/pointer move
+     * @param e Touch or Pointer event
+     */
+    private static handleJoystickTouchMove(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        if (!this.joystickActive) return;
+        
+        if ('touches' in e) {
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === this.joystickTouchId) {
+                    this.updateJoystickPosition(e.touches[i]);
+                    break;
+                }
+            }
+        } else if ('pointerId' in e && e.pointerId === this.joystickTouchId) {
+            this.updateJoystickPositionFromPointer(e);
+        }
+    }
+    
+    /**
+     * Handles joystick touch/pointer end
+     * @param e Touch or Pointer event
+     */
+    private static handleJoystickTouchEnd(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        this.joystickActive = false;
+        this.joystickTouchId = null;
+        this.resetJoystick();
+        
+        // Force reset movement input to ensure it stops
+        this.inputDirection.set(0, 0, 0);
+    }
+    
+    /**
+     * Updates joystick position and calculates input direction
+     * @param touch Touch object
+     */
+    private static updateJoystickPosition(touch: Touch): void {
+        if (!this.joystickStick || !this.joystickContainer) return;
+        
+        const rect = this.joystickContainer.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+        
+        const deltaX = touchX - centerX;
+        const deltaY = touchY - centerY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Apply deadzone
+        if (distance < MOBILE_CONTROLS.JOYSTICK_DEADZONE) {
+            this.resetJoystick();
+            return;
+        }
+        
+        // Clamp to joystick radius
+        const maxDistance = MOBILE_CONTROLS.JOYSTICK_RADIUS - 15; // Leave space for stick
+        const clampedDistance = Math.min(distance, maxDistance);
+        
+        // Calculate normalized direction
+        const normalizedX = deltaX / distance;
+        const normalizedY = deltaY / distance;
+        
+        // Update stick position - use percentage-based positioning
+        const stickX = (normalizedX * clampedDistance);
+        const stickY = (normalizedY * clampedDistance);
+        
+        this.joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+        
+        // Update input direction (invert Y for forward/backward)
+        this.inputDirection.x = normalizedX;
+        this.inputDirection.z = -normalizedY;
+    }
+    
+    /**
+     * Updates joystick position based on pointer event
+     * @param e Pointer event
+     */
+    private static updateJoystickPositionFromPointer(e: PointerEvent): void {
+        if (!this.joystickStick || !this.joystickContainer) return;
+        
+        const rect = this.joystickContainer.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const touchX = e.clientX - rect.left;
+        const touchY = e.clientY - rect.top;
+        
+        const deltaX = touchX - centerX;
+        const deltaY = touchY - centerY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Apply deadzone
+        if (distance < MOBILE_CONTROLS.JOYSTICK_DEADZONE) {
+            this.resetJoystick();
+            return;
+        }
+        
+        // Clamp to joystick radius
+        const maxDistance = MOBILE_CONTROLS.JOYSTICK_RADIUS - 15; // Leave space for stick
+        const clampedDistance = Math.min(distance, maxDistance);
+        
+        // Calculate normalized direction
+        const normalizedX = deltaX / distance;
+        const normalizedY = deltaY / distance;
+        
+        // Update stick position - use percentage-based positioning
+        const stickX = (normalizedX * clampedDistance);
+        const stickY = (normalizedY * clampedDistance);
+        
+        this.joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+        
+        // Update input direction (invert Y for forward/backward)
+        this.inputDirection.x = normalizedX;
+        this.inputDirection.z = -normalizedY;
+    }
+    
+    /**
+     * Resets joystick to center position
+     */
+    private static resetJoystick(): void {
+        if (this.joystickStick) {
+            this.joystickStick.style.transform = 'translate(-50%, -50%)';
+        }
+        this.inputDirection.set(0, 0, 0);
+    }
+    
+    /**
+     * Handles jump button touch/pointer start
+     * @param e Touch or Pointer event
+     */
+    private static handleJumpTouchStart(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        this.jumpActive = true;
+        this.wantJump = true;
+        
+        if ('touches' in e && e.touches.length > 0) {
+            this.jumpTouchId = e.touches[0].identifier;
+        } else if ('pointerId' in e) {
+            this.jumpTouchId = e.pointerId;
+        }
+        
+        if (this.jumpButton) {
+            this.jumpButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_ACTIVE;
+        }
+    }
+    
+    /**
+     * Handles jump button touch/pointer end
+     * @param e Touch or Pointer event
+     */
+    private static handleJumpTouchEnd(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        this.jumpActive = false;
+        this.wantJump = false;
+        this.jumpTouchId = null;
+        
+        if (this.jumpButton) {
+            this.jumpButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
+        }
+        
+        // Force reset jump input to ensure it stops
+        this.wantJump = false;
+    }
+    
+    /**
+     * Handles boost button touch/pointer start
+     * @param e Touch or Pointer event
+     */
+    private static handleBoostTouchStart(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        this.boostActive = true;
+        this.wantBoost = true;
+        
+        if ('touches' in e && e.touches.length > 0) {
+            this.boostTouchId = e.touches[0].identifier;
+        } else if ('pointerId' in e) {
+            this.boostTouchId = e.pointerId;
+        }
+        
+        if (this.boostButton) {
+            this.boostButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_ACTIVE;
+        }
+        
+
+    }
+    
+    /**
+     * Handles boost button touch/pointer end
+     * @param e Touch or Pointer event
+     */
+    private static handleBoostTouchEnd(e: TouchEvent | PointerEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Reset all boost states immediately
+        this.boostActive = false;
+        this.wantBoost = false;
+        this.boostTouchId = null;
+        
+        // Reset visual state
+        if (this.boostButton) {
+            this.boostButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
+        }
+        
+        // Force reset boost input to ensure it stops
+        this.wantBoost = false;
+        this.boostActive = false;
+        
+
+    }
+    
+
+    
+    /**
+     * Global touch/pointer end handler to catch any missed touch events
+     * @param e Touch or Pointer event
+     */
+    private static handleGlobalTouchEnd(e: TouchEvent | PointerEvent): void {
+        // Reset all inputs when any touch ends to prevent stuck controls
+        this.wantJump = false;
+        this.wantBoost = false;
+        this.boostActive = false;
+        this.inputDirection.set(0, 0, 0);
+    }
+    
+    /**
+     * Gets the current input direction from mobile controls
+     * @returns Input direction vector
+     */
+    public static getInputDirection(): BABYLON.Vector3 {
+        return this.inputDirection.clone();
+    }
+    
+    /**
+     * Gets whether jump is requested from mobile controls
+     * @returns True if jump is requested
+     */
+    public static getWantJump(): boolean {
+        return this.wantJump;
+    }
+    
+    /**
+     * Gets whether boost is requested from mobile controls
+     * @returns True if boost is requested
+     */
+    public static getWantBoost(): boolean {
+        return this.wantBoost;
+    }
+    
+    /**
+     * Checks if mobile controls are active
+     * @returns True if mobile controls are being used
+     */
+    public static isMobileActive(): boolean {
+        return this.joystickActive || this.jumpActive || this.boostActive;
+    }
+    
+    /**
+     * Shows or hides mobile controls
+     * @param visible Whether to show the controls
+     */
+    public static setVisibility(visible: boolean): void {
+        if (this.joystickContainer) {
+            this.joystickContainer.style.display = visible ? 'block' : 'none';
+        }
+        if (this.jumpButton) {
+            this.jumpButton.style.display = visible ? 'flex' : 'none';
+        }
+        if (this.boostButton) {
+            this.boostButton.style.display = visible ? 'flex' : 'none';
+        }
+    }
+    
+    /**
+     * Updates the position of mobile controls
+     * @param controlType The type of control ('joystick', 'jump', 'boost')
+     * @param position The new position object with top/bottom/left/right properties
+     */
+    public static updateControlPosition(controlType: 'joystick' | 'jump' | 'boost', position: { top?: number, bottom?: number, left?: number, right?: number }): void {
+        let element: HTMLDivElement | null = null;
+        
+        switch (controlType) {
+            case 'joystick':
+                element = this.joystickContainer;
+                break;
+            case 'jump':
+                element = this.jumpButton;
+                break;
+            case 'boost':
+                element = this.boostButton;
+                break;
+        }
+        
+        if (element) {
+            if (position.top !== undefined) {
+                element.style.top = `${position.top}px`;
+            }
+            if (position.bottom !== undefined) {
+                element.style.bottom = `${position.bottom}px`;
+            }
+            if (position.left !== undefined) {
+                element.style.left = `${position.left}px`;
+            }
+            if (position.right !== undefined) {
+                element.style.right = `${position.right}px`;
+            }
+            
+            console.log(`Updated ${controlType} position:`, position);
+        }
+    }
+    
+    /**
+     * Updates the visibility of individual controls
+     * @param controlType The type of control ('joystick', 'jump', 'boost')
+     * @param visible Whether to show the control
+     */
+    public static setControlVisibility(controlType: 'joystick' | 'jump' | 'boost', visible: boolean): void {
+        let element: HTMLDivElement | null = null;
+        
+        switch (controlType) {
+            case 'joystick':
+                element = this.joystickContainer;
+                break;
+            case 'jump':
+                element = this.jumpButton;
+                break;
+            case 'boost':
+                element = this.boostButton;
+                break;
+        }
+        
+        if (element) {
+            element.style.display = visible ? (controlType === 'joystick' ? 'block' : 'flex') : 'none';
+            console.log(`${controlType} visibility set to:`, visible);
+        }
+    }
+    
+    /**
+     * Gets the current position of a mobile control
+     * @param controlType The type of control ('joystick', 'jump', 'boost')
+     * @returns The current position object
+     */
+    public static getControlPosition(controlType: 'joystick' | 'jump' | 'boost'): { top?: number, bottom?: number, left?: number, right?: number } {
+        let element: HTMLDivElement | null = null;
+        
+        switch (controlType) {
+            case 'joystick':
+                element = this.joystickContainer;
+                break;
+            case 'jump':
+                element = this.jumpButton;
+                break;
+            case 'boost':
+                element = this.boostButton;
+                break;
+        }
+        
+        if (element) {
+            const rect = element.getBoundingClientRect();
+            return {
+                top: rect.top,
+                bottom: window.innerHeight - rect.bottom,
+                left: rect.left,
+                right: window.innerWidth - rect.right
+            };
+        }
+        
+        return {};
+    }
+    
+    /**
+     * Resets all mobile controls to their default positions
+     */
+    public static resetToDefaultPositions(): void {
+        this.updateControlPosition('joystick', {
+            bottom: MOBILE_CONTROLS.POSITIONS.JOYSTICK.BOTTOM,
+            left: MOBILE_CONTROLS.POSITIONS.JOYSTICK.LEFT
+        });
+        
+        this.updateControlPosition('jump', {
+            top: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.TOP,
+            right: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.RIGHT
+        });
+        
+        this.updateControlPosition('boost', {
+            top: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.TOP,
+            right: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.RIGHT
+        });
+        
+        console.log("Mobile controls reset to default positions");
+    }
+    
+    /**
+     * Applies visibility settings from the config
+     */
+    private static applyVisibilitySettings(): void {
+        this.setControlVisibility('joystick', MOBILE_CONTROLS.VISIBILITY.SHOW_JOYSTICK);
+        this.setControlVisibility('jump', MOBILE_CONTROLS.VISIBILITY.SHOW_JUMP_BUTTON);
+        this.setControlVisibility('boost', MOBILE_CONTROLS.VISIBILITY.SHOW_BOOST_BUTTON);
+    }
+    
+    /**
+     * Forces a reset of all mobile control states
+     * Call this if controls get stuck
+     */
+    public static forceResetAllStates(): void {
+        // Reset all active states
+        this.joystickActive = false;
+        this.jumpActive = false;
+        this.boostActive = false;
+        
+        // Reset all touch IDs
+        this.joystickTouchId = null;
+        this.jumpTouchId = null;
+        this.boostTouchId = null;
+        
+        // Reset input direction
+        this.inputDirection.set(0, 0, 0);
+        
+        // Reset button states
+        this.wantJump = false;
+        this.wantBoost = false;
+        
+        // Reset joystick visual
+        this.resetJoystick();
+        
+        // Reset button colors
+        if (this.jumpButton) {
+            this.jumpButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
+        }
+        if (this.boostButton) {
+            this.boostButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
+        }
+    }
+    
+
+    
+    /**
+     * Disposes mobile input manager
+     */
+    public static dispose(): void {
+        console.log("Disposing mobile input manager");
+        
+        // Remove event listeners
+        document.removeEventListener('touchend', this.handleGlobalTouchEnd.bind(this));
+        document.removeEventListener('touchcancel', this.handleGlobalTouchEnd.bind(this));
+        
+        // Clean up all existing controls
+        this.cleanupExistingControls();
+        
+        // Reset initialization flag
+        this.isInitialized = false;
+        
+        console.log("Mobile input manager disposed");
+    }
+}
 
 // ============================================================================
 // EFFECTS MANAGER
@@ -743,10 +1603,40 @@ class HUDManager {
      * @param characterController The character controller
      */
     public static initialize(scene: BABYLON.Scene, characterController: CharacterController): void {
+        // Clean up any existing HUD before creating a new one
+        if (this.hudContainer) {
+            this.dispose();
+        }
+        
         this.scene = scene;
         this.characterController = characterController;
         this.startTime = Date.now();
         this.createHUD();
+        
+        // Detect if this is a mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                        ('ontouchstart' in window) || 
+                        (navigator.maxTouchPoints > 0);
+        
+        // Set initial visibility for all HUD elements based on device type
+        if (isMobile) {
+            // Mobile: Only show state, boost, and credits
+            this.setElementVisibility('coordinates', false);
+            this.setElementVisibility('time', false);
+            this.setElementVisibility('fps', false);
+            this.setElementVisibility('state', true);
+            this.setElementVisibility('boost', true);
+            this.setElementVisibility('credits', true);
+        } else {
+            // Desktop: Show all elements
+            this.setElementVisibility('coordinates', CONFIG.HUD.SHOW_COORDINATES);
+            this.setElementVisibility('time', CONFIG.HUD.SHOW_TIME);
+            this.setElementVisibility('fps', CONFIG.HUD.SHOW_FPS);
+            this.setElementVisibility('state', CONFIG.HUD.SHOW_STATE);
+            this.setElementVisibility('boost', CONFIG.HUD.SHOW_BOOST_STATUS);
+            this.setElementVisibility('credits', CONFIG.HUD.SHOW_CREDITS);
+        }
+        
         this.startUpdateLoop();
     }
     
@@ -865,7 +1755,7 @@ class HUDManager {
         const element = document.createElement('div');
         element.id = `hud-${id}`;
         element.className = 'hud-element';
-        element.style.cssText = this.getHUDElementStyles();
+        element.style.cssText = this.getHUDElementStyles() + 'display: none;'; // Start hidden
         
         const labelSpan = document.createElement('span');
         labelSpan.className = 'hud-label';
@@ -876,9 +1766,21 @@ class HUDManager {
         valueSpan.className = 'hud-value';
         valueSpan.id = `hud-${id}-value`;
         valueSpan.style.color = CONFIG.HUD.PRIMARY_COLOR;
+        // Prevent awkward wrapping for coordinates
+        if (id === 'coordinates') {
+            valueSpan.style.whiteSpace = 'nowrap';
+            valueSpan.style.minWidth = '180px';
+            valueSpan.style.display = 'inline-block';
+        }
         
         element.appendChild(labelSpan);
-        element.appendChild(document.createElement('br'));
+        // Only add <br> for non-coordinates elements
+        if (id !== 'coordinates') {
+            element.appendChild(document.createElement('br'));
+        } else {
+            // Add a little space between label and value for coordinates
+            labelSpan.style.marginRight = '8px';
+        }
         element.appendChild(valueSpan);
         
         this.hudContainer.appendChild(element);
@@ -964,10 +1866,10 @@ class HUDManager {
     private static updateCoordinates(): void {
         const element = this.hudElements.get('coordinates');
         if (!element) return;
-        
         const position = this.characterController!.getDisplayCapsule().position;
         const valueElement = element.querySelector('#hud-coordinates-value') as HTMLSpanElement;
         if (valueElement) {
+            // Always format on a single line
             valueElement.textContent = `X: ${position.x.toFixed(2)} Y: ${position.y.toFixed(2)} Z: ${position.z.toFixed(2)}`;
         }
     }
@@ -1135,12 +2037,15 @@ class HUDManager {
         if (this.hudContainer && newConfig.POSITION) {
             this.hudContainer.style.cssText = this.getHUDContainerStyles();
         }
-        
-        // Update element styles
+        // Update element styles (but preserve display property)
         this.hudElements.forEach((element, id) => {
+            const currentDisplay = element.style.display;
             element.style.cssText = this.getHUDElementStyles();
+            // Preserve the current display state
+            if (currentDisplay) {
+                element.style.display = currentDisplay;
+            }
         });
-        
         // Update visibility
         if (newConfig.SHOW_COORDINATES !== undefined) {
             this.setElementVisibility('coordinates', newConfig.SHOW_COORDINATES);
@@ -2105,9 +3010,15 @@ class CharacterController {
     private boostActive = false;
     private playerParticleSystem: BABYLON.IParticleSystem | null = null;
     private thrusterSound: BABYLON.Sound | null = null;
+    
+    // Mobile device detection - computed once at initialization
+    private readonly isMobileDevice: boolean;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
+        
+        // Detect mobile device once at initialization
+        this.isMobileDevice = this.detectMobileDevice();
         
         // Create character physics controller
         this.characterController = new BABYLON.PhysicsCharacterController(
@@ -2140,6 +3051,17 @@ class CharacterController {
         this.scene.onKeyboardObservable.add(this.handleKeyboard);
         this.scene.onBeforeRenderObservable.add(this.updateCharacter);
         this.scene.onAfterPhysicsObservable.add(this.updatePhysics);
+        
+        // Initialize mobile controls if on mobile device
+        if (this.isMobileDevice) {
+            MobileInputManager.initialize(this.scene.getEngine().getRenderingCanvas()!);
+        }
+    }
+    
+    private detectMobileDevice(): boolean {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               ('ontouchstart' in window) ||
+               (navigator.maxTouchPoints > 0);
     }
 
     private handleKeyboard = (kbInfo: any): void => {
@@ -2180,6 +3102,9 @@ class CharacterController {
         } else if (INPUT_KEYS.HUD_POSITION.includes(key as any)) {
             this.cycleHUDPosition();
         }
+        
+        // Check for mobile input
+        this.updateMobileInput();
     }
 
     private handleKeyUp(key: string): void {
@@ -2199,6 +3124,45 @@ class CharacterController {
         if (INPUT_KEYS.BOOST.includes(key as any)) {
             this.boostActive = false;
             this.updateParticleSystem();
+        }
+        
+        // Check for mobile input
+        this.updateMobileInput();
+    }
+    
+    private updateMobileInput(): void {
+        // Always update mobile input if this is a mobile device
+        if (this.isMobileDevice) {
+            // Get mobile input direction
+            const mobileDirection = MobileInputManager.getInputDirection();
+            this.inputDirection.copyFrom(mobileDirection);
+            
+            // Get mobile jump and boost states
+            this.wantJump = MobileInputManager.getWantJump();
+            this.boostActive = MobileInputManager.getWantBoost();
+            
+            // Force boost off if button is not visually active
+            if (this.boostActive) {
+                const boostButton = document.getElementById('mobile-boost-button');
+                if (boostButton) {
+                    const backgroundColor = boostButton.style.backgroundColor;
+                    if (backgroundColor !== '#00ff88' && backgroundColor !== 'rgb(0, 255, 136)') {
+                        this.boostActive = false;
+                        // Also reset the MobileInputManager state
+                        MobileInputManager.forceResetAllStates();
+                    }
+                }
+            }
+            
+            // Also check if MobileInputManager says boost should be off
+            if (!MobileInputManager.getWantBoost()) {
+                this.boostActive = false;
+            }
+            
+            // Update particle system for boost
+            if (this.boostActive) {
+                this.updateParticleSystem();
+            }
         }
     }
 
@@ -2240,6 +3204,9 @@ class CharacterController {
     }
 
     private updateCharacter = (): void => {
+        // Update mobile input every frame
+        this.updateMobileInput();
+        
         this.updateRotation();
         this.updatePosition();
         this.updateAnimations();
@@ -2307,12 +3274,22 @@ class CharacterController {
     }
 
     private isAnyMovementKeyPressed(): boolean {
-        return INPUT_KEYS.FORWARD.some(key => this.keysDown.has(key)) ||
-               INPUT_KEYS.BACKWARD.some(key => this.keysDown.has(key)) ||
-               INPUT_KEYS.LEFT.some(key => this.keysDown.has(key)) ||
-               INPUT_KEYS.RIGHT.some(key => this.keysDown.has(key)) ||
-               INPUT_KEYS.STRAFE_LEFT.some(key => this.keysDown.has(key)) ||
-               INPUT_KEYS.STRAFE_RIGHT.some(key => this.keysDown.has(key));
+        // Check keyboard input
+        const keyboardMoving = INPUT_KEYS.FORWARD.some(key => this.keysDown.has(key)) ||
+                              INPUT_KEYS.BACKWARD.some(key => this.keysDown.has(key)) ||
+                              INPUT_KEYS.LEFT.some(key => this.keysDown.has(key)) ||
+                              INPUT_KEYS.RIGHT.some(key => this.keysDown.has(key)) ||
+                              INPUT_KEYS.STRAFE_LEFT.some(key => this.keysDown.has(key)) ||
+                              INPUT_KEYS.STRAFE_RIGHT.some(key => this.keysDown.has(key));
+        
+        // Only check mobile input if this is a mobile device
+        if (this.isMobileDevice) {
+            const mobileMoving = MobileInputManager.isMobileActive() && 
+                               (MobileInputManager.getInputDirection().length() > 0.1);
+            return keyboardMoving || mobileMoving;
+        }
+        
+        return keyboardMoving;
     }
 
     private updatePhysics = (): void => {
@@ -2517,6 +3494,15 @@ class CharacterController {
      */
     public getVelocity(): BABYLON.Vector3 {
         return this.characterController.getVelocity();
+    }
+    
+    public dispose(): void {
+        console.log("Disposing character controller");
+        
+        // Dispose mobile input manager
+        MobileInputManager.dispose();
+        
+        console.log("Character controller disposed");
     }
 }
 
@@ -2743,7 +3729,7 @@ class SceneManager {
             this.smoothFollowController.dispose();
         }
         if (this.characterController) {
-            // Character controller cleanup would go here if needed
+            this.characterController.dispose();
         }
     }
 }
