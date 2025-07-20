@@ -575,12 +575,16 @@ class MobileInputManager {
         this.joystickContainer.appendChild(this.joystickStick);
         container.appendChild(this.joystickContainer);
         
-        // Store center position
-        const rect = this.joystickContainer.getBoundingClientRect();
-        this.joystickCenter = {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2
-        };
+        // Store center position after element is in DOM
+        setTimeout(() => {
+            const rect = this.joystickContainer?.getBoundingClientRect();
+            if (rect) {
+                this.joystickCenter = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
+        }, 0);
     }
     
     /**
@@ -763,6 +767,9 @@ class MobileInputManager {
     private static updateJoystickPosition(touch: Touch): void {
         if (!this.joystickStick || !this.joystickContainer) return;
         
+        // Update joystick center position dynamically
+        this.updateJoystickCenterPosition();
+        
         const rect = this.joystickContainer.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
@@ -806,6 +813,9 @@ class MobileInputManager {
     private static updateJoystickPositionFromPointer(e: PointerEvent): void {
         if (!this.joystickStick || !this.joystickContainer) return;
         
+        // Update joystick center position dynamically
+        this.updateJoystickCenterPosition();
+        
         const rect = this.joystickContainer.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
@@ -840,6 +850,19 @@ class MobileInputManager {
         // Update input direction (invert Y for forward/backward)
         this.inputDirection.x = normalizedX;
         this.inputDirection.z = -normalizedY;
+    }
+    
+    /**
+     * Updates joystick center position based on current element position
+     */
+    private static updateJoystickCenterPosition(): void {
+        if (!this.joystickContainer) return;
+        
+        const rect = this.joystickContainer.getBoundingClientRect();
+        this.joystickCenter = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
     }
     
     /**
