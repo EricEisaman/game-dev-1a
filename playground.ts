@@ -344,15 +344,15 @@ const MOBILE_CONTROLS = {
     POSITIONS: {
         JOYSTICK: {
             BOTTOM: 120,
-            LEFT: 120
+            LEFT: 0
         },
         JUMP_BUTTON: {
-            TOP: 120,
-            RIGHT: 120
+            BOTTOM: 220, // Above boost button
+            RIGHT: 0
         },
         BOOST_BUTTON: {
-            TOP: 120,
-            RIGHT: 220 // 120 + BUTTON_SIZE + BUTTON_SPACING
+            BOTTOM: 120, // Bottom right
+            RIGHT: 0
         }
     },
     VISIBILITY: {
@@ -601,7 +601,7 @@ class MobileInputManager {
         this.jumpButton.textContent = 'JUMP';
         this.jumpButton.style.cssText = `
             position: fixed;
-            top: ${MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.TOP}px;
+            bottom: ${MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.BOTTOM}px;
             right: ${MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.RIGHT}px;
             width: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
             height: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
@@ -628,7 +628,7 @@ class MobileInputManager {
         this.boostButton.textContent = 'BOOST';
         this.boostButton.style.cssText = `
             position: fixed;
-            top: ${MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.TOP}px;
+            bottom: ${MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.BOTTOM}px;
             right: ${MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.RIGHT}px;
             width: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
             height: ${MOBILE_CONTROLS.BUTTON_SIZE}px;
@@ -1129,12 +1129,12 @@ class MobileInputManager {
         });
         
         this.updateControlPosition('jump', {
-            top: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.TOP,
+            bottom: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.BOTTOM,
             right: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.RIGHT
         });
         
         this.updateControlPosition('boost', {
-            top: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.TOP,
+            bottom: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.BOTTOM,
             right: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.RIGHT
         });
         
