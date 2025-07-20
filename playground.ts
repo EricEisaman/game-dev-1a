@@ -1852,33 +1852,38 @@ class HUDManager {
         if (currentTime - this.lastUpdateTime < CONFIG.HUD.UPDATE_INTERVAL) return;
         this.lastUpdateTime = currentTime;
         
+        // Detect if this is a mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                        ('ontouchstart' in window) || 
+                        (navigator.maxTouchPoints > 0);
+        
         // Update coordinates
-        if (CONFIG.HUD.SHOW_COORDINATES) {
+        if (isMobile ? CONFIG.HUD.MOBILE.SHOW_COORDINATES : CONFIG.HUD.SHOW_COORDINATES) {
             this.updateCoordinates();
         }
         
         // Update time
-        if (CONFIG.HUD.SHOW_TIME) {
+        if (isMobile ? CONFIG.HUD.MOBILE.SHOW_TIME : CONFIG.HUD.SHOW_TIME) {
             this.updateTime();
         }
         
         // Update FPS
-        if (CONFIG.HUD.SHOW_FPS) {
+        if (isMobile ? CONFIG.HUD.MOBILE.SHOW_FPS : CONFIG.HUD.SHOW_FPS) {
             this.updateFPS();
         }
         
         // Update state
-        if (CONFIG.HUD.SHOW_STATE) {
+        if (isMobile ? CONFIG.HUD.MOBILE.SHOW_STATE : CONFIG.HUD.SHOW_STATE) {
             this.updateState();
         }
         
         // Update boost status
-        if (CONFIG.HUD.SHOW_BOOST_STATUS) {
+        if (isMobile ? CONFIG.HUD.MOBILE.SHOW_BOOST_STATUS : CONFIG.HUD.SHOW_BOOST_STATUS) {
             this.updateBoostStatus();
         }
         
         // Update credits
-        if (CONFIG.HUD.SHOW_CREDITS) {
+        if (isMobile ? CONFIG.HUD.MOBILE.SHOW_CREDITS : CONFIG.HUD.SHOW_CREDITS) {
             this.updateCredits();
         }
     }
