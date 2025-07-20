@@ -72,6 +72,23 @@ interface EffectsConfig {
     readonly SOUND_EFFECTS: readonly SoundEffect[];
 }
 
+interface ItemConfig {
+    readonly name: string;
+    readonly url: string;
+    readonly mass: number;
+    readonly collectible: boolean;
+    readonly creditValue: number;
+    readonly minImpulseForCollection: number;
+    readonly scale: number;
+}
+
+interface ItemsConfig {
+    readonly ITEMS: readonly ItemConfig[];
+    readonly COLLECTION_RADIUS: number;
+    readonly COLLECTION_SOUND: string;
+    readonly SHOW_COLLECTION_EFFECTS: boolean;
+}
+
 type HUDPosition = "top" | "bottom" | "left" | "right";
 
 interface HUDConfig {
@@ -87,9 +104,10 @@ interface HUDConfig {
     readonly SHOW_COORDINATES: boolean;
     readonly SHOW_TIME: boolean;
     readonly SHOW_FPS: boolean;
-    readonly SHOW_STATE: boolean;
-    readonly SHOW_BOOST_STATUS: boolean;
-    readonly UPDATE_INTERVAL: number;
+            readonly SHOW_STATE: boolean;
+        readonly SHOW_BOOST_STATUS: boolean;
+        readonly SHOW_CREDITS: boolean;
+        readonly UPDATE_INTERVAL: number;
 }
 
 interface GameConfig {
@@ -101,6 +119,7 @@ interface GameConfig {
     readonly SKY: SkyConfig;
     readonly EFFECTS: EffectsConfig;
     readonly HUD: HUDConfig;
+    readonly ITEMS: ItemsConfig;
 }
 
 // Configuration Constants
@@ -247,7 +266,26 @@ const CONFIG: GameConfig = {
         SHOW_FPS: true,
         SHOW_STATE: true,
         SHOW_BOOST_STATUS: true,
+        SHOW_CREDITS: true,
         UPDATE_INTERVAL: 100 // milliseconds
+    },
+    
+    // Items Settings
+    ITEMS: {
+        ITEMS: [
+            {
+                name: "Crate",
+                url: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/items/stylized_crate_asset.glb",
+                mass: 0.5,
+                collectible: true,
+                creditValue: 100,
+                minImpulseForCollection: 0.5,
+                scale: 0.5
+            }
+        ],
+        COLLECTION_RADIUS: 1.5,
+        COLLECTION_SOUND: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/sounds/effects/collect.m4a",
+        SHOW_COLLECTION_EFFECTS: true
     }
 } as const;
 
@@ -732,6 +770,7 @@ class HUDManager {
         this.createHUDElement('fps', 'FPS');
         this.createHUDElement('state', 'State');
         this.createHUDElement('boost', 'Boost');
+        this.createHUDElement('credits', 'Credits');
         
         // Add CSS animations
         this.addHUDAnimations();
@@ -912,6 +951,11 @@ class HUDManager {
         if (CONFIG.HUD.SHOW_BOOST_STATUS) {
             this.updateBoostStatus();
         }
+        
+        // Update credits
+        if (CONFIG.HUD.SHOW_CREDITS) {
+            this.updateCredits();
+        }
     }
     
     /**
@@ -1050,6 +1094,27 @@ class HUDManager {
     }
     
     /**
+     * Updates the credits display
+     */
+    private static updateCredits(): void {
+        const element = this.hudElements.get('credits');
+        if (!element) return;
+        
+        const totalCredits = CollectiblesManager.getTotalCredits();
+        const valueElement = element.querySelector('#hud-credits-value') as HTMLSpanElement;
+        if (valueElement) {
+            valueElement.textContent = `${totalCredits}`;
+            
+            // Highlight when credits increase
+            if (totalCredits > 0) {
+                valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
+            } else {
+                valueElement.style.color = CONFIG.HUD.PRIMARY_COLOR;
+            }
+        }
+    }
+    
+    /**
      * Shows or hides HUD elements
      * @param elementId Element ID to toggle
      * @param visible Whether to show the element
@@ -1091,6 +1156,9 @@ class HUDManager {
         }
         if (newConfig.SHOW_BOOST_STATUS !== undefined) {
             this.setElementVisibility('boost', newConfig.SHOW_BOOST_STATUS);
+        }
+        if (newConfig.SHOW_CREDITS !== undefined) {
+            this.setElementVisibility('credits', newConfig.SHOW_CREDITS);
         }
     }
     
@@ -1147,6 +1215,620 @@ class HUDManager {
         this.hudElements.clear();
         this.scene = null;
         this.characterController = null;
+    }
+}
+
+// ============================================================================
+// COLLECTIBLES MANAGER
+// ============================================================================
+
+class CollectiblesManager {
+    private static scene: BABYLON.Scene | null = null;
+    private static characterController: CharacterController | null = null;
+    private static collectibles: Map<string, BABYLON.AbstractMesh> = new Map();
+    private static collectibleBodies: Map<string, BABYLON.PhysicsBody> = new Map();
+    private static collectionSound: BABYLON.Sound | null = null;
+    private static totalCredits: number = 0;
+    private static collectionObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
+    private static collectedItems: Set<string> = new Set();
+    private static instanceBasis: BABYLON.Mesh | null = null;
+    
+    // Custom physics ready event system
+    private static physicsReadyObservable = new BABYLON.Observable<void>();
+    private static physicsReadyObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
+    
+    /**
+     * Waits for physics to be properly initialized
+     * @returns Promise that resolves when physics is ready
+     */
+    private static async waitForPhysicsInitialization(): Promise<void> {
+        if (!this.scene) {
+            throw new Error("Scene not available for physics initialization check");
+        }
+        
+        // Check if physics is already initialized
+        if (this.isPhysicsReady()) {
+            console.log("Physics already initialized");
+            return;
+        }
+        
+        // Set up physics ready detection
+        this.setupPhysicsReadyDetection();
+        
+        // Wait for physics ready event
+        return new Promise((resolve) => {
+            this.physicsReadyObservable.addOnce(() => {
+                console.log("Physics ready event received");
+                resolve();
+            });
+        });
+    }
+    
+    /**
+     * Sets up detection for when physics becomes ready
+     */
+    private static setupPhysicsReadyDetection(): void {
+        if (!this.scene || this.physicsReadyObserver) return;
+        
+        // Monitor scene for physics engine changes
+        this.physicsReadyObserver = this.scene.onBeforeRenderObservable.add(() => {
+            if (this.isPhysicsReady()) {
+                console.log("Physics ready detected");
+                this.physicsReadyObservable.notifyObservers();
+                
+                // Clean up observer
+                if (this.physicsReadyObserver) {
+                    this.scene!.onBeforeRenderObservable.remove(this.physicsReadyObserver);
+                    this.physicsReadyObserver = null;
+                }
+            }
+        });
+    }
+    
+    /**
+     * Checks if physics is properly initialized
+     * @returns True if physics is ready, false otherwise
+     */
+    private static isPhysicsReady(): boolean {
+        if (!this.scene) return false;
+        
+        const physicsEngine = this.scene.getPhysicsEngine();
+        if (!physicsEngine) return false;
+        
+        // Check if physics engine has essential methods and properties
+        return !!(physicsEngine.setGravity && 
+                 physicsEngine.getTimeStep && 
+                 physicsEngine.getSubTimeStep);
+    }
+    
+    /**
+     * Initializes the CollectiblesManager with a scene and character controller
+     * @param scene The Babylon.js scene
+     * @param characterController The character controller
+     */
+    public static initialize(scene: BABYLON.Scene, characterController: CharacterController): Promise<void> {
+        this.scene = scene;
+        this.characterController = characterController;
+        this.totalCredits = 0;
+        
+        return this.setupCollectibles();
+    }
+    
+    /**
+     * Sets up collectibles in the environment
+     */
+    private static async setupCollectibles(): Promise<void> {
+        if (!this.scene) return;
+        
+        // Wait for physics to be properly initialized
+        await this.waitForPhysicsInitialization();
+        
+        // Create collection sound
+        this.collectionSound = new BABYLON.Sound(
+            "collectionSound", 
+            CONFIG.ITEMS.COLLECTION_SOUND, 
+            this.scene, 
+            null, 
+            { volume: 0.7 }
+        );
+        
+        // Load the crate model once to use as instance basis
+        await this.loadCrateModel();
+        
+        // Create 5 crate instances at different positions - closer to player
+        const cratePositions = [
+            new BABYLON.Vector3(4, 0.5, -8),  // Right side of player
+            new BABYLON.Vector3(-4, 0.5, -8), // Left side of player
+            new BABYLON.Vector3(0, 0.5, -5),  // In front of player
+            new BABYLON.Vector3(4, 0.5, -11), // Behind and right
+            new BABYLON.Vector3(-4, 0.5, -11) // Behind and left
+        ];
+        
+        console.log("Creating crates at positions:", cratePositions);
+        
+        for (let i = 0; i < cratePositions.length; i++) {
+            console.log(`Creating crate ${i} at position ${cratePositions[i].toString()}`);
+            await this.createCollectibleInstance(`crate_instance_${i + 1}`, cratePositions[i]);
+        }
+        
+        console.log("Total collectibles created:", this.collectibles.size);
+        
+        // Set up physics collision detection
+        this.setupCollisionDetection();
+    }
+    
+    /**
+     * Loads the crate model once to use as instance basis
+     */
+    private static async loadCrateModel(): Promise<void> {
+        if (!this.scene) return;
+        
+        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use the crate configuration
+        
+        try {
+            console.log(`Loading crate model from: ${itemConfig.url}`);
+            const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
+            
+            // Rename the root node to "crate_basis" for better organization
+            if (result.meshes && result.meshes.length > 0) {
+                // Find the root mesh (the one without a parent)
+                const rootMesh = result.meshes.find(mesh => !mesh.parent);
+                if (rootMesh) {
+                    rootMesh.name = "crate_basis";
+                }
+            }
+            
+            console.log(`Crate model loaded successfully. Meshes found: ${result.meshes.length}`);
+            
+            // Check if any mesh has proper geometry
+            const meshWithGeometry = result.meshes.find(mesh => {
+                if (mesh instanceof BABYLON.Mesh) {
+                    return mesh.geometry && mesh.geometry.getTotalVertices() > 0;
+                }
+                return false;
+            });
+            
+            if (meshWithGeometry) {
+                // Use the first mesh with geometry as the instance basis
+                this.instanceBasis = meshWithGeometry as BABYLON.Mesh;
+                
+                // Scale the instance basis - make it larger and more visible
+                this.instanceBasis.scaling.setAll(itemConfig.scale); // Use original scale
+                
+                // Make the instance basis invisible and disable it in the scene
+                this.instanceBasis.isVisible = false;
+                this.instanceBasis.setEnabled(false);
+                
+                console.log("Crate instance basis created and disabled");
+                console.log("Mesh geometry vertices:", this.instanceBasis.geometry?.getTotalVertices());
+                console.log("Mesh bounding box:", this.instanceBasis.getBoundingInfo()?.boundingBox);
+            } else {
+                console.warn("No meshes with geometry found in crate model, creating fallback");
+                this.createFallbackInstanceBasis();
+            }
+        } catch (error) {
+            console.error("Failed to load crate model:", error);
+            console.log("Creating fallback crate basis");
+            this.createFallbackInstanceBasis();
+        }
+    }
+    
+    /**
+     * Creates a fallback instance basis using a simple box
+     */
+    private static createFallbackInstanceBasis(): void {
+        if (!this.scene) return;
+        
+        const itemConfig = CONFIG.ITEMS.ITEMS[0];
+        
+        // Create a fallback crate using a simple box - CAST TO MESH!
+        this.instanceBasis = BABYLON.MeshBuilder.CreateBox("fallback_crate_basis", { size: 2 }, this.scene) as BABYLON.Mesh; // Larger size
+        
+        // Create a bright baby blue material to make it very visible
+        const material = new BABYLON.StandardMaterial("fallback_crate_basis_material", this.scene);
+        material.diffuseColor = new BABYLON.Color3(0.5, 0.8, 1); // Baby blue
+        material.emissiveColor = new BABYLON.Color3(0.1, 0.2, 0.3); // Subtle blue glow
+        material.specularColor = new BABYLON.Color3(1, 1, 1); // Shiny
+        this.instanceBasis.material = material;
+        
+        // Scale the instance basis - make it larger and more visible
+        this.instanceBasis.scaling.setAll(itemConfig.scale); // Use original scale
+        
+        // Make the instance basis invisible and disable it in the scene
+        this.instanceBasis.isVisible = false;
+        this.instanceBasis.setEnabled(false);
+        
+        console.log("Fallback crate instance basis created and disabled");
+    }
+    
+    /**
+     * Creates a collectible instance from the instance basis
+     * @param id Unique identifier for the collectible
+     * @param position Position to place the collectible
+     */
+    private static async createCollectibleInstance(id: string, position: BABYLON.Vector3): Promise<void> {
+        if (!this.scene || !this.instanceBasis) {
+            console.error("No scene or instance basis available for creating collectible instance");
+            return;
+        }
+        
+        console.log(`Creating collectible instance ${id} at ${position.toString()}`);
+        
+        try {
+            // Create an instance from the loaded crate model
+            const instance = this.instanceBasis.createInstance(id);
+            
+            // Remove the instance from its parent to make it independent
+            if (instance.parent) {
+                instance.setParent(null);
+            }
+            
+            // Set position and make it visible
+            instance.position = position;
+            instance.isVisible = true;
+            instance.setEnabled(true);
+            
+            // Ensure the instance is properly scaled
+            const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Get the crate configuration
+            instance.scaling.setAll(itemConfig.scale);
+            
+            console.log(`Crate instance positioned at: ${instance.position.toString()}`);
+            console.log(`Crate instance visibility: ${instance.isVisible}`);
+            
+            // Create physics body for the instance
+            const physicsAggregate = new BABYLON.PhysicsAggregate(instance, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+            
+            // Ensure the physics body is positioned correctly
+            if (physicsAggregate.body) {
+                physicsAggregate.body.setMassProperties({ mass: 0.1 });
+                console.log(`Physics body created for ${id} at ${position.toString()}`);
+            } else {
+                console.warn(`Failed to create physics body for ${id}`);
+            }
+            
+            // Store references
+            this.collectibles.set(id, instance);
+            this.collectibleBodies.set(id, physicsAggregate.body);
+            
+            // Add rotation animation
+            this.addRotationAnimation(instance);
+            
+            console.log(`Created collectible instance: ${id} at ${position.toString()}`);
+            console.log(`Instance visibility: ${instance.isVisible}, enabled: ${instance.isEnabled()}`);
+            console.log(`Instance scale: ${instance.scaling.toString()}`);
+            console.log(`Instance material: ${instance.material ? 'present' : 'missing'}`);
+        } catch (error) {
+            console.error(`Failed to create collectible instance ${id}:`, error);
+        }
+    }
+    
+    /**
+     * Creates a collectible item (legacy method - kept for fallback)
+     * @param id Unique identifier for the collectible
+     * @param position Position to place the collectible
+     */
+    private static async createCollectible(id: string, position: BABYLON.Vector3): Promise<void> {
+        if (!this.scene) {
+            console.error("No scene available for creating collectible");
+            return;
+        }
+        
+        console.log(`Starting to create collectible ${id} at ${position.toString()}`);
+        
+        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use the crate configuration
+        
+        try {
+            console.log(`Attempting to load model from: ${itemConfig.url}`);
+            // Import the item model
+            const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
+            
+            console.log(`Model loaded successfully. Meshes found: ${result.meshes.length}`);
+            
+            if (result.meshes.length > 0) {
+                const mesh = result.meshes[0];
+                mesh.name = id;
+                
+                // Scale the mesh appropriately and make it more visible
+                mesh.scaling.setAll(itemConfig.scale);
+                
+                // Set position BEFORE creating physics body
+                mesh.position = position;
+                console.log(`Model crate positioned at: ${mesh.position.toString()}`);
+                
+                // Make sure the mesh is visible
+                mesh.isVisible = true;
+                console.log(`Model crate visibility: ${mesh.isVisible}`);
+                
+                // Create physics body exactly like environment meshes
+                const physicsAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+                
+                // Ensure the physics body is positioned correctly
+                if (physicsAggregate.body) {
+                    physicsAggregate.body.setMassProperties({ mass: 0.1 });
+                    console.log(`Physics body created for ${id} at ${position.toString()}`);
+                } else {
+                    console.warn(`Failed to create physics body for ${id}`);
+                }
+                
+                // Store references
+                this.collectibles.set(id, mesh);
+                
+                // Add rotation animation
+                this.addRotationAnimation(mesh);
+                
+                console.log(`Created collectible: ${id} at ${position.toString()}`);
+            } else {
+                console.warn(`No meshes found in ${itemConfig.url} for ${id}`);
+            }
+        } catch (error) {
+            console.error(`Failed to create collectible ${id}:`, error);
+            console.log("Creating fallback crate instead...");
+            
+            // Create a fallback crate using a simple box
+            const fallbackCrate = BABYLON.MeshBuilder.CreateBox(`fallback_${id}`, { size: 1 }, this.scene);
+            console.log(`Created fallback crate mesh: ${fallbackCrate.name}`);
+            
+            // Create a simple material to make it visible
+            const material = new BABYLON.StandardMaterial(`fallback_${id}_material`, this.scene);
+            material.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.2); // Brown color
+            material.emissiveColor = new BABYLON.Color3(0.1, 0.05, 0); // Slight glow
+            fallbackCrate.material = material;
+            
+            // Set position and visibility BEFORE creating physics body
+            fallbackCrate.position = position;
+            fallbackCrate.isVisible = true;
+            console.log(`Fallback crate positioned at: ${fallbackCrate.position.toString()}, visible: ${fallbackCrate.isVisible}`);
+            
+            // Create physics body exactly like environment meshes
+            const physicsAggregate = new BABYLON.PhysicsAggregate(fallbackCrate, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+            
+            // Ensure the physics body is positioned correctly
+            if (physicsAggregate.body) {
+                physicsAggregate.body.setMassProperties({ mass: 0.1 });
+                console.log(`Physics body created for fallback ${id} at ${position.toString()}`);
+            } else {
+                console.warn(`Failed to create physics body for fallback ${id}`);
+            }
+            
+            // Store references
+            this.collectibles.set(id, fallbackCrate);
+            
+            // Add rotation animation
+            this.addRotationAnimation(fallbackCrate);
+            
+            console.log(`Created fallback collectible: ${id} at ${position.toString()}`);
+        }
+    }
+    
+    /**
+     * Adds a rotation animation to make collectibles more visible
+     * @param mesh The mesh to animate
+     */
+    private static addRotationAnimation(mesh: BABYLON.AbstractMesh): void {
+        if (!this.scene) return;
+        
+        const animation = new BABYLON.Animation(
+            "rotationAnimation",
+            "rotation.y",
+            30,
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+        );
+        
+        const keyFrames = [
+            { frame: 0, value: 0 },
+            { frame: 30, value: 2 * Math.PI }
+        ];
+        
+        animation.setKeys(keyFrames);
+        mesh.animations = [animation];
+        
+        this.scene.beginAnimation(mesh, 0, 30, true);
+    }
+    
+    /**
+     * Sets up collision detection for collectibles
+     */
+    private static setupCollisionDetection(): void {
+        if (!this.scene || !this.characterController) return;
+        
+        // Set up collision detection using scene collision observer
+        this.collectionObserver = this.scene.onBeforeRenderObservable.add(() => {
+            this.checkCollisions();
+        });
+    }
+    
+    /**
+     * Checks for collisions between character and collectibles
+     */
+    private static checkCollisions(): void {
+        if (!this.characterController) return;
+        
+        const characterPosition = this.characterController.getDisplayCapsule().position;
+        const collectionRadius = CONFIG.ITEMS.COLLECTION_RADIUS;
+        
+        for (const [id, mesh] of this.collectibles.entries()) {
+            // Skip if already collected
+            if (this.collectedItems.has(id)) continue;
+            
+            const distance = BABYLON.Vector3.Distance(characterPosition, mesh.position);
+            
+            if (distance <= collectionRadius) {
+                this.attemptCollection(id, mesh);
+            }
+        }
+    }
+    
+    /**
+     * Attempts to collect an item based on velocity
+     * @param collectibleId The ID of the collectible
+     * @param collectibleMesh The mesh of the collectible
+     */
+    private static attemptCollection(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh): void {
+        if (!this.characterController) return;
+        
+        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use crate configuration
+        const characterVelocity = this.characterController.getVelocity();
+        const speed = characterVelocity.length();
+        
+        if (speed >= itemConfig.minImpulseForCollection) {
+            this.collectItem(collectibleId, collectibleMesh);
+        }
+    }
+    
+    /**
+     * Collects an item and adds credits
+     * @param collectibleId The ID of the collectible
+     * @param collectibleMesh The mesh of the collectible
+     */
+    private static collectItem(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh): void {
+        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use crate configuration
+        
+        // Mark as collected to prevent multiple collections
+        this.collectedItems.add(collectibleId);
+        
+        // Add credits
+        this.totalCredits += itemConfig.creditValue;
+        
+        // Play collection sound
+        if (this.collectionSound) {
+            this.collectionSound.play();
+        }
+        
+        // Show collection effects
+        if (CONFIG.ITEMS.SHOW_COLLECTION_EFFECTS) {
+            this.showCollectionEffects(collectibleMesh.position);
+        }
+        
+        // Remove the collectible
+        this.removeCollectible(collectibleId);
+        
+        console.log(`Collected ${itemConfig.name}! Credits: ${this.totalCredits}`);
+    }
+    
+    /**
+     * Shows collection effects at the specified position
+     * @param position Position to show effects
+     */
+    private static async showCollectionEffects(position: BABYLON.Vector3): Promise<void> {
+        if (!this.scene) return;
+        
+        // Create a particle effect for collection
+        const particleSystem = new BABYLON.ParticleSystem("collectionParticles", 50, this.scene);
+        
+        particleSystem.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", this.scene);
+        particleSystem.emitter = position;
+        particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5);
+        particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        
+        particleSystem.color1 = new BABYLON.Color4(0.5, 1, 0, 1); // Lime green
+        particleSystem.color2 = new BABYLON.Color4(0.2, 0.8, 0, 1); // Darker lime green
+        particleSystem.colorDead = new BABYLON.Color4(0, 0.5, 0, 0); // Fade to dark green
+        
+        particleSystem.minSize = 0.1;
+        particleSystem.maxSize = 0.3;
+        
+        particleSystem.minLifeTime = 0.3;
+        particleSystem.maxLifeTime = 0.8;
+        
+        particleSystem.emitRate = 100;
+        particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+        
+        particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
+        
+        particleSystem.direction1 = new BABYLON.Vector3(-2, -2, -2);
+        particleSystem.direction2 = new BABYLON.Vector3(2, 2, 2);
+        
+        particleSystem.minEmitPower = 1;
+        particleSystem.maxEmitPower = 3;
+        particleSystem.updateSpeed = 0.016;
+        
+        particleSystem.start();
+        
+        // Stop the particle system after a short time
+        setTimeout(() => {
+            particleSystem.stop();
+            particleSystem.dispose();
+        }, 1000);
+    }
+    
+    /**
+     * Removes a collectible from the scene
+     * @param collectibleId The ID of the collectible to remove
+     */
+    private static removeCollectible(collectibleId: string): void {
+        const mesh = this.collectibles.get(collectibleId);
+        
+        if (mesh) {
+            mesh.dispose();
+            this.collectibles.delete(collectibleId);
+        }
+    }
+    
+    /**
+     * Gets the total credits collected
+     * @returns Total credits
+     */
+    public static getTotalCredits(): number {
+        return this.totalCredits;
+    }
+    
+    /**
+     * Adds credits manually (for testing or other purposes)
+     * @param amount Amount of credits to add
+     */
+    public static addCredits(amount: number): void {
+        this.totalCredits += amount;
+    }
+    
+    /**
+     * Gets all active collectibles
+     * @returns Map of collectible IDs to meshes
+     */
+    public static getCollectibles(): Map<string, BABYLON.AbstractMesh> {
+        return new Map(this.collectibles);
+    }
+    
+    /**
+     * Disposes the CollectiblesManager
+     */
+    public static dispose(): void {
+        // Remove all collectibles
+        for (const [id, mesh] of this.collectibles.entries()) {
+            this.removeCollectible(id);
+        }
+        
+        // Remove collision observer
+        if (this.collectionObserver && this.scene) {
+            this.scene.onBeforeRenderObservable.remove(this.collectionObserver);
+            this.collectionObserver = null;
+        }
+        
+        // Remove physics ready observer
+        if (this.physicsReadyObserver && this.scene) {
+            this.scene.onBeforeRenderObservable.remove(this.physicsReadyObserver);
+            this.physicsReadyObserver = null;
+        }
+        
+        // Clear physics ready observable
+        this.physicsReadyObservable.clear();
+        
+        // Dispose collection sound
+        if (this.collectionSound) {
+            this.collectionSound.dispose();
+            this.collectionSound = null;
+        }
+        
+        // Dispose instance basis
+        if (this.instanceBasis) {
+            this.instanceBasis.dispose();
+            this.instanceBasis = null;
+        }
+        
+        this.scene = null;
+        this.characterController = null;
+        this.totalCredits = 0;
+        this.collectedItems.clear();
     }
 }
 
@@ -1857,6 +2539,24 @@ class CharacterController {
     public isOnGround(): boolean {
         return this.state === CHARACTER_STATES.ON_GROUND;
     }
+    
+    /**
+     * Gets the physics body of the character controller
+     * @returns The physics body or null if not available
+     */
+    public getPhysicsBody(): BABYLON.PhysicsBody | null {
+        // PhysicsCharacterController doesn't expose its physics body directly
+        // We'll use the display capsule for collision detection instead
+        return null;
+    }
+    
+    /**
+     * Gets the current velocity of the character
+     * @returns The current velocity vector
+     */
+    public getVelocity(): BABYLON.Vector3 {
+        return this.characterController.getVelocity();
+    }
 }
 
 // ============================================================================
@@ -1918,7 +2618,16 @@ class SceneManager {
 
     private loadLevel(): void {
         BABYLON.ImportMeshAsync(ASSETS.LEVEL_MODEL, this.scene)
-            .then(() => {
+            .then((result) => {
+                // Rename the root node to "environment" for better organization
+                if (result.meshes && result.meshes.length > 0) {
+                    // Find the root mesh (the one without a parent)
+                    const rootMesh = result.meshes.find(mesh => !mesh.parent);
+                    if (rootMesh) {
+                        rootMesh.name = "environment";
+                    }
+                }
+                
                 this.setupLevelPhysics();
                 this.setupCharacter();
                 this.loadCharacterModel();
@@ -2012,12 +2721,24 @@ class SceneManager {
             
             // Initialize HUD
             HUDManager.initialize(this.scene, this.characterController);
+            
+            // Initialize Collectibles after character is set up
+            CollectiblesManager.initialize(this.scene, this.characterController);
         }
     }
 
     private loadCharacterModel(): void {
         BABYLON.ImportMeshAsync(ASSETS.CHARACTER_MODEL, this.scene)
             .then(async result => {
+                // Rename the root node to "player" for better organization
+                if (result.meshes && result.meshes.length > 0) {
+                    // Find the root mesh (the one without a parent)
+                    const rootMesh = result.meshes.find(mesh => !mesh.parent);
+                    if (rootMesh) {
+                        rootMesh.name = "player";
+                    }
+                }
+                
                 if (this.characterController && result.meshes[0]) {
                     this.characterController.setPlayerMesh(result.meshes[0]);
                     
@@ -2056,6 +2777,7 @@ class SceneManager {
      */
     public dispose(): void {
         HUDManager.dispose();
+        CollectiblesManager.dispose();
         if (this.smoothFollowController) {
             this.smoothFollowController.dispose();
         }
