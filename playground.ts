@@ -3041,12 +3041,18 @@ class CharacterController {
     
     // Mobile device detection - computed once at initialization
     private readonly isMobileDevice: boolean;
+    private readonly isIPadWithKeyboard: boolean;
+    private readonly isIPad: boolean;
+    private keyboardEventCount: number = 0;
+    private keyboardDetectionTimeout: number | null = null;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
         
-        // Detect mobile device once at initialization
+        // Enhanced device detection
         this.isMobileDevice = this.detectMobileDevice();
+        this.isIPad = this.detectIPad();
+        this.isIPadWithKeyboard = this.detectIPadWithKeyboard();
         
         // Create character physics controller
         this.characterController = new BABYLON.PhysicsCharacterController(
@@ -3092,6 +3098,68 @@ class CharacterController {
                (navigator.maxTouchPoints > 0);
     }
 
+    private detectIPad(): boolean {
+        // More specific iPad detection
+        return /iPad/i.test(navigator.userAgent) || 
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 0);
+    }
+
+    private detectIPadWithKeyboard(): boolean {
+        if (!this.isIPad) return false;
+        
+        // Check for keyboard presence using various methods
+        const hasKeyboard = this.checkForKeyboardPresence();
+        const hasExternalKeyboard = this.checkForExternalKeyboard();
+        
+        return hasKeyboard || hasExternalKeyboard;
+    }
+
+    private checkForKeyboardPresence(): boolean {
+        // Method 1: Check if virtual keyboard is likely present
+        // This is not 100% reliable but gives us a good indication
+        const viewportHeight = window.innerHeight;
+        const screenHeight = window.screen.height;
+        const keyboardLikelyPresent = viewportHeight < screenHeight * 0.8;
+        
+        return keyboardLikelyPresent;
+    }
+
+    private checkForExternalKeyboard(): boolean {
+        // Method 2: Check for external keyboard events
+        // We'll track if we receive keyboard events that suggest an external keyboard
+        this.keyboardEventCount = 0;
+        const keyboardThreshold = 3; // Number of events to consider keyboard present
+        
+        const checkKeyboardEvents = (event: KeyboardEvent) => {
+            // Only count events that are likely from a physical keyboard
+            // (not virtual keyboard events which often have different characteristics)
+            if (event.key.length === 1 || 
+                ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Shift'].includes(event.key)) {
+                this.keyboardEventCount++;
+                
+                if (this.keyboardEventCount >= keyboardThreshold) {
+                    // Remove the listener once we've confirmed keyboard presence
+                    document.removeEventListener('keydown', checkKeyboardEvents);
+                    if (this.keyboardDetectionTimeout) {
+                        clearTimeout(this.keyboardDetectionTimeout);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        };
+        
+        // Add listener for a short period to detect keyboard
+        document.addEventListener('keydown', checkKeyboardEvents);
+        
+        // Remove listener after 5 seconds if no keyboard detected
+        this.keyboardDetectionTimeout = window.setTimeout(() => {
+            document.removeEventListener('keydown', checkKeyboardEvents);
+        }, 5000);
+        
+        return false; // Will be updated by the event listener
+    }
+
     private handleKeyboard = (kbInfo: any): void => {
         const key = kbInfo.event.key.toLowerCase();
         
@@ -3112,12 +3180,16 @@ class CharacterController {
         // Movement input
         if (INPUT_KEYS.FORWARD.includes(key as any)) {
             this.inputDirection.z = 1;
+            console.log('Forward key pressed, inputDirection.z =', this.inputDirection.z);
         } else if (INPUT_KEYS.BACKWARD.includes(key as any)) {
             this.inputDirection.z = -1;
+            console.log('Backward key pressed, inputDirection.z =', this.inputDirection.z);
         } else if (INPUT_KEYS.STRAFE_LEFT.includes(key as any)) {
             this.inputDirection.x = -1;
+            console.log('Strafe left key pressed, inputDirection.x =', this.inputDirection.x);
         } else if (INPUT_KEYS.STRAFE_RIGHT.includes(key as any)) {
             this.inputDirection.x = 1;
+            console.log('Strafe right key pressed, inputDirection.x =', this.inputDirection.x);
         } else if (INPUT_KEYS.JUMP.includes(key as any)) {
             this.wantJump = true;
         } else if (INPUT_KEYS.BOOST.includes(key as any)) {
@@ -3131,8 +3203,10 @@ class CharacterController {
             this.cycleHUDPosition();
         }
         
-        // Check for mobile input
-        this.updateMobileInput();
+        // Only update mobile input for iPads with keyboards, not for regular keyboard input
+        if (this.isIPadWithKeyboard) {
+            this.updateMobileInput();
+        }
     }
 
     private handleKeyUp(key: string): void {
@@ -3154,60 +3228,82 @@ class CharacterController {
             this.updateParticleSystem();
         }
         
-        // Check for mobile input
-        this.updateMobileInput();
+        // Only update mobile input for iPads with keyboards, not for regular keyboard input
+        if (this.isIPadWithKeyboard) {
+            this.updateMobileInput();
+        }
     }
     
     private updateMobileInput(): void {
-        // Always update mobile input if this is a mobile device
+        // Only update mobile input if this is a mobile device
         if (this.isMobileDevice) {
             // Get mobile input direction
             const mobileDirection = MobileInputManager.getInputDirection();
-            this.inputDirection.copyFrom(mobileDirection);
             
-            // Update player rotation based on X-axis (left/right)
-            if (Math.abs(mobileDirection.x) > 0.1) {
-                // Rotate based on X-axis input (left = counterclockwise, right = clockwise)
-                this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
-            }
-            
-            // Set forward/backward movement based on Y-axis
-            if (Math.abs(mobileDirection.z) > 0.1) {
-                // Use Y-axis for forward/backward movement (flipped)
-                this.inputDirection.z = mobileDirection.z; // Remove the negative to flip direction
-            } else {
-                this.inputDirection.z = 0;
-            }
-            
-            // Clear X movement since we're using it for rotation
-            this.inputDirection.x = 0;
-            
-            // Get mobile jump and boost states
-            this.wantJump = MobileInputManager.getWantJump();
-            this.boostActive = MobileInputManager.getWantBoost();
-            
-            // Force boost off if button is not visually active
-            if (this.boostActive) {
-                const boostButton = document.getElementById('mobile-boost-button');
-                if (boostButton) {
-                    const backgroundColor = boostButton.style.backgroundColor;
-                    if (backgroundColor !== '#00ff88' && backgroundColor !== 'rgb(0, 255, 136)') {
-                        this.boostActive = false;
-                        // Also reset the MobileInputManager state
-                        MobileInputManager.forceResetAllStates();
-                    }
+            // For iPads with keyboards, allow both keyboard and touch input to work together
+            if (this.isIPadWithKeyboard) {
+                // Always allow touch input for rotation (X-axis)
+                if (Math.abs(mobileDirection.x) > 0.1) {
+                    this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
                 }
-            }
-            
-            // Also check if MobileInputManager says boost should be off
-            if (!MobileInputManager.getWantBoost()) {
-                this.boostActive = false;
+                
+                // For movement (Z-axis), use keyboard if available, otherwise use touch
+                const hasKeyboardMovement = this.keysDown.has('w') || this.keysDown.has('s') || 
+                                         this.keysDown.has('arrowup') || this.keysDown.has('arrowdown');
+                
+                if (!hasKeyboardMovement && Math.abs(mobileDirection.z) > 0.1) {
+                    // Use touch input for forward/backward movement when no keyboard movement
+                    this.inputDirection.z = mobileDirection.z;
+                } else if (!hasKeyboardMovement) {
+                    // Reset Z movement when no input
+                    this.inputDirection.z = 0;
+                }
+                
+                // For actions (jump/boost), allow both keyboard and touch
+                const mobileWantJump = MobileInputManager.getWantJump();
+                const mobileWantBoost = MobileInputManager.getWantBoost();
+                
+                // Use keyboard input if available, otherwise use touch input
+                if (!this.keysDown.has(' ') && mobileWantJump) {
+                    this.wantJump = true;
+                } else if (!this.keysDown.has(' ') && !mobileWantJump) {
+                    this.wantJump = false;
+                }
+                if (!this.keysDown.has('shift') && mobileWantBoost) {
+                    this.boostActive = true;
+                } else if (!this.keysDown.has('shift') && !mobileWantBoost) {
+                    this.boostActive = false;
+                }
+            } else {
+                // Standard mobile behavior - replace keyboard input with touch input
+                this.inputDirection.copyFrom(mobileDirection);
+                
+                // Update player rotation based on X-axis (left/right)
+                if (Math.abs(mobileDirection.x) > 0.1) {
+                    this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
+                }
+                
+                // Set forward/backward movement based on Y-axis
+                if (Math.abs(mobileDirection.z) > 0.1) {
+                    this.inputDirection.z = mobileDirection.z;
+                } else {
+                    this.inputDirection.z = 0;
+                }
+                
+                // Clear X movement since we're using it for rotation
+                this.inputDirection.x = 0;
+                
+                // Use mobile input for actions
+                this.wantJump = MobileInputManager.getWantJump();
+                this.boostActive = MobileInputManager.getWantBoost();
             }
             
             // Always update particle system to ensure proper on/off state
             this.updateParticleSystem();
         }
     }
+
+
 
     private toggleDebugDisplay(): void {
         this.displayCapsule.isVisible = !this.displayCapsule.isVisible;
@@ -3325,11 +3421,18 @@ class CharacterController {
                               INPUT_KEYS.STRAFE_LEFT.some(key => this.keysDown.has(key)) ||
                               INPUT_KEYS.STRAFE_RIGHT.some(key => this.keysDown.has(key));
         
-        // Only check mobile input if this is a mobile device
+        // Check mobile input
         if (this.isMobileDevice) {
             const mobileMoving = MobileInputManager.isMobileActive() && 
                                (MobileInputManager.getInputDirection().length() > 0.1);
-            return keyboardMoving || mobileMoving;
+            
+            // For iPads with keyboards, either input can trigger movement
+            if (this.isIPadWithKeyboard) {
+                return keyboardMoving || mobileMoving;
+            } else {
+                // For pure mobile, only mobile input matters
+                return mobileMoving;
+            }
         }
         
         return keyboardMoving;
