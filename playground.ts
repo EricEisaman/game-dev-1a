@@ -3165,6 +3165,23 @@ class CharacterController {
             const mobileDirection = MobileInputManager.getInputDirection();
             this.inputDirection.copyFrom(mobileDirection);
             
+            // Update player rotation based on X-axis (left/right)
+            if (Math.abs(mobileDirection.x) > 0.1) {
+                // Rotate based on X-axis input (left = counterclockwise, right = clockwise)
+                this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
+            }
+            
+            // Set forward/backward movement based on Y-axis
+            if (Math.abs(mobileDirection.z) > 0.1) {
+                // Use Y-axis for forward/backward movement (flipped)
+                this.inputDirection.z = mobileDirection.z; // Remove the negative to flip direction
+            } else {
+                this.inputDirection.z = 0;
+            }
+            
+            // Clear X movement since we're using it for rotation
+            this.inputDirection.x = 0;
+            
             // Get mobile jump and boost states
             this.wantJump = MobileInputManager.getWantJump();
             this.boostActive = MobileInputManager.getWantBoost();
