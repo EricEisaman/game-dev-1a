@@ -179,21 +179,21 @@ const ASSETS = {
         },
         {
             name: "Tech Girl",
-            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/techGirl/tech_girl.glb",
             animations: {
                 idle: "idle",
-                walk: "walk"
+                walk: "walking"
             },
-            scale: 0.05
+            scale: 0.1
         },
         {
             name: "Zombie",
-            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/zombie/zombie.glb",
             animations: {
-                idle: "idle",
-                walk: "walk"
+                idle: "Idle",
+                walk: "Walk"
             },
-            scale: 0.05
+            scale: 0.1
         }
     ] as readonly Character[],
     LEVEL_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
