@@ -133,7 +133,7 @@ interface SettingsSection {
 interface SettingsConfig {
     readonly HEADING_TEXT: string;
     readonly PANEL_WIDTH_RATIO: number;
-    readonly MIN_PANEL_WIDTH: number;
+    readonly FULL_SCREEN_THRESHOLD: number;
     readonly Z_INDEX: number;
     readonly BUTTON_Z_INDEX: number;
     readonly SECTIONS: readonly SettingsSection[];
@@ -151,6 +151,54 @@ interface GameConfig {
     readonly ITEMS: ItemsConfig;
     readonly SETTINGS: SettingsConfig;
 }
+
+// Asset Types
+interface CharacterAnims {
+    readonly idle: string;
+    readonly walk: string;
+}
+
+interface Character {
+    readonly name: string;
+    readonly model: string;
+    readonly animations: CharacterAnims;
+    readonly scale: number;
+}
+
+// Asset URLs
+const ASSETS = {
+    CHARACTERS: [
+        {
+            name: "Red",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+            animations: {
+                idle: "idle",
+                walk: "walk"
+            },
+            scale: 1
+        },
+        {
+            name: "Tech Girl",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+            animations: {
+                idle: "idle",
+                walk: "walk"
+            },
+            scale: 0.05
+        },
+        {
+            name: "Zombie",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+            animations: {
+                idle: "idle",
+                walk: "walk"
+            },
+            scale: 0.05
+        }
+    ] as readonly Character[],
+    LEVEL_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
+    LIGHTMAP_TEXTURE: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/lightmap.jpg"
+} as const;
 
 // Configuration Constants
 const CONFIG: GameConfig = {
@@ -330,7 +378,7 @@ const CONFIG: GameConfig = {
     SETTINGS: {
         HEADING_TEXT: "Settings",
         PANEL_WIDTH_RATIO: 1/3,
-        MIN_PANEL_WIDTH: 500,
+        FULL_SCREEN_THRESHOLD: 500,
         Z_INDEX: 1800,
         BUTTON_Z_INDEX: 2000,
         SECTIONS: [
@@ -346,16 +394,22 @@ const CONFIG: GameConfig = {
                         MobileInputManager.setVisibility(value);
                     }
                 }
+            },
+            {
+                title: "Character",
+                uiElement: "dropdown",
+                visibility: "all",
+                defaultValue: "Red", // Default to first character (Red)
+                options: ASSETS.CHARACTERS.map((character, index) => character.name),
+                onChange: (value: boolean | string) => {
+                    console.log("Character changed:", value);
+                    if (typeof value === 'string') {
+                        SettingsUI.changeCharacter(value);
+                    }
+                }
             }
         ]
     }
-} as const;
-
-// Asset URLs
-const ASSETS = {
-    CHARACTER_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
-    LEVEL_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
-    LIGHTMAP_TEXTURE: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/lightmap.jpg"
 } as const;
 
 // Input Mapping
@@ -3874,7 +3928,18 @@ class SceneManager {
     }
 
     private loadCharacterModel(): void {
-        BABYLON.ImportMeshAsync(ASSETS.CHARACTER_MODEL, this.scene)
+        // Load the first character from the CHARACTERS array
+        const character = ASSETS.CHARACTERS[0];
+        if (!character) {
+            console.error("No character found in ASSETS.CHARACTERS");
+            return;
+        }
+
+        this.loadCharacter(character);
+    }
+
+    private loadCharacter(character: Character): void {
+        BABYLON.ImportMeshAsync(character.model, this.scene)
             .then(async result => {
                 // Rename the root node to "player" for better organization
                 if (result.meshes && result.meshes.length > 0) {
@@ -3886,11 +3951,16 @@ class SceneManager {
                 }
                 
                 if (this.characterController && result.meshes[0]) {
+                    // Apply character scale to all meshes
+                    result.meshes.forEach(mesh => {
+                        mesh.scaling.setAll(character.scale);
+                    });
+                    
                     this.characterController.setPlayerMesh(result.meshes[0]);
                     
-                    // Setup animations
-                    playerAnimations.walk = result.animationGroups.find(a => a.name === 'walk');
-                    playerAnimations.idle = result.animationGroups.find(a => a.name === 'idle');
+                    // Setup animations using character's animation mapping
+                    playerAnimations.walk = result.animationGroups.find(a => a.name === character.animations.walk);
+                    playerAnimations.idle = result.animationGroups.find(a => a.name === character.animations.idle);
                     
                     // Stop animations initially
                     playerAnimations.walk?.stop();
@@ -3910,12 +3980,42 @@ class SceneManager {
                 }
             })
             .catch(error => {
-                console.error("Failed to load character model:", error);
+                console.error(`Failed to load character model (${character.name}):`, error);
             });
     }
 
     public getScene(): BABYLON.Scene {
         return this.scene;
+    }
+
+    public changeCharacter(characterIndexOrName: number | string): void {
+        let character: Character | undefined;
+        
+        if (typeof characterIndexOrName === 'number') {
+            // Handle numeric index
+            if (characterIndexOrName < 0 || characterIndexOrName >= ASSETS.CHARACTERS.length) {
+                console.error(`Invalid character index: ${characterIndexOrName}`);
+                return;
+            }
+            character = ASSETS.CHARACTERS[characterIndexOrName];
+        } else {
+            // Handle character name
+            character = ASSETS.CHARACTERS.find(char => char.name === characterIndexOrName);
+        }
+        
+        if (!character) {
+            console.error(`Character not found: ${characterIndexOrName}`);
+            return;
+        }
+
+        // Remove existing player mesh if it exists
+        const existingPlayer = this.scene.getMeshByName("player");
+        if (existingPlayer) {
+            existingPlayer.dispose();
+        }
+
+        // Load the new character
+        this.loadCharacter(character);
     }
 
     /**
@@ -3941,8 +4041,8 @@ class Playground {
     public static CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene {
         const sceneManager = new SceneManager(engine, canvas);
         
-        // Initialize settings UI
-        SettingsUI.initialize(canvas);
+        // Initialize settings UI with scene manager
+        SettingsUI.initialize(canvas, sceneManager);
         
         return sceneManager.getScene();
     }
@@ -3955,6 +4055,7 @@ class SettingsUI {
     private static settingsButton: HTMLDivElement | null = null;
     private static settingsPanel: HTMLDivElement | null = null;
     private static isPanelOpen = false;
+    private static sceneManager: SceneManager | null = null;
     
     // Device detection methods
     private static isMobileDevice(): boolean {
@@ -4026,7 +4127,8 @@ class SettingsUI {
         }
     }
     
-    public static initialize(canvas: HTMLCanvasElement): void {
+    public static initialize(canvas: HTMLCanvasElement, sceneManager?: SceneManager): void {
+        this.sceneManager = sceneManager || null;
         this.createSettingsButton(canvas);
         this.createSettingsPanel(canvas);
         this.setupEventListeners();
@@ -4126,6 +4228,8 @@ class SettingsUI {
             padding: 20px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.05);
+            box-sizing: border-box;
+            max-width: 100%;
         `;
         
         // Style the header title
@@ -4143,6 +4247,9 @@ class SettingsUI {
         const content = this.settingsPanel.querySelector('.settings-content') as HTMLElement;
         content.style.cssText = `
             padding: 20px;
+            box-sizing: border-box;
+            max-width: 100%;
+            overflow-x: hidden;
         `;
         
         // Style sections
@@ -4259,8 +4366,9 @@ class SettingsUI {
             content.innerHTML = sectionsHTML;
         }
         
-        // Re-setup event listeners
+        // Re-setup event listeners and toggle state handlers
         this.setupSectionEventListeners();
+        this.setupToggleStateHandlers();
     }
     
     private static generateSectionsHTML(): string {
@@ -4295,14 +4403,25 @@ class SettingsUI {
                 `;
             } else if (section.uiElement === 'dropdown') {
                 const defaultValue = section.defaultValue as string ?? (section.options?.[0] ?? '');
+                
+                // Special handling for Character dropdown to show character names
+                let optionsHTML = '';
+                if (section.title === "Character") {
+                    optionsHTML = ASSETS.CHARACTERS.map((character) => 
+                        `<option value="${character.name}" ${character.name === defaultValue ? 'selected' : ''}>${character.name}</option>`
+                    ).join('');
+                } else {
+                    optionsHTML = section.options?.map(option => 
+                        `<option value="${option}" ${option === defaultValue ? 'selected' : ''}>${option}</option>`
+                    ).join('') || '';
+                }
+                
                 sectionsHTML += `
                     <div class="settings-section" id="${sectionId}">
                         <div class="section-header">
                             <h3>${section.title}</h3>
                             <select data-section-index="${index}">
-                                ${section.options?.map(option => 
-                                    `<option value="${option}" ${option === defaultValue ? 'selected' : ''}>${option}</option>`
-                                ).join('') || ''}
+                                ${optionsHTML}
                             </select>
                         </div>
                     </div>
@@ -4418,11 +4537,27 @@ class SettingsUI {
     
     private static updatePanelWidth(): void {
         const viewWidth = window.innerWidth;
-        const panelWidth = Math.max(viewWidth * CONFIG.SETTINGS.PANEL_WIDTH_RATIO, CONFIG.SETTINGS.MIN_PANEL_WIDTH);
-        this.settingsPanel!.style.width = `${panelWidth}px`;
+        
+        // If screen width is less than threshold, use full viewport width (100vw)
+        // Otherwise use the configured ratio
+        if (viewWidth < CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD) {
+            this.settingsPanel!.style.width = '100vw';
+            // Ensure no horizontal overflow on small screens
+            this.settingsPanel!.style.boxSizing = 'border-box';
+            this.settingsPanel!.style.padding = '0';
+            this.settingsPanel!.style.margin = '0';
+        } else {
+            const panelWidth = Math.max(viewWidth * CONFIG.SETTINGS.PANEL_WIDTH_RATIO, CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD);
+            this.settingsPanel!.style.width = `${panelWidth}px`;
+            // Reset to normal styling for larger screens
+            this.settingsPanel!.style.boxSizing = '';
+            this.settingsPanel!.style.padding = '';
+            this.settingsPanel!.style.margin = '';
+        }
         
         if (!this.isPanelOpen) {
-            this.settingsPanel!.style.left = `-${panelWidth}px`;
+            const currentWidth = this.settingsPanel!.style.width;
+            this.settingsPanel!.style.left = `-${currentWidth}`;
         }
     }
     
@@ -4434,6 +4569,12 @@ class SettingsUI {
         if (this.settingsPanel) {
             this.settingsPanel.remove();
             this.settingsPanel = null;
+        }
+    }
+
+    public static changeCharacter(characterIndexOrName: number | string): void {
+        if (this.sceneManager) {
+            this.sceneManager.changeCharacter(characterIndexOrName);
         }
     }
 }
