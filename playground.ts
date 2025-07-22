@@ -191,9 +191,9 @@ const ASSETS = {
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/zombie/zombie.glb",
             animations: {
                 idle: "Idle",
-                walk: "Walk"
+                walk: "Run_InPlace"
             },
-            scale: 0.1
+            scale: 1.25
         }
     ] as readonly Character[],
     LEVEL_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
