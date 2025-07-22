@@ -208,9 +208,9 @@ const CONFIG: GameConfig = {
         RADIUS: 0.6,
         START_POSITION: new BABYLON.Vector3(3, 0.3, -8),
         SPEED: {
-            IN_AIR: 8.0,
-            ON_GROUND: 10.0,
-            BOOST_MULTIPLIER: 2.0
+            IN_AIR: 25.0,
+            ON_GROUND: 25.0,
+            BOOST_MULTIPLIER: 8.0
         },
         JUMP_HEIGHT: 2.0,
         ROTATION_SPEED: BABYLON.Tools.ToRadians(3),
@@ -3607,6 +3607,10 @@ class CharacterController {
             BABYLON.Vector3.Zero(), desiredVelocity, upWorld
         );
         
+        // Add minimal air resistance to reduce sliding in air
+        const airResistance = 0.98; // Reduced air resistance (was 0.95)
+        outputVelocity.scaleInPlace(airResistance);
+        
         outputVelocity.addInPlace(upWorld.scale(-outputVelocity.dot(upWorld)));
         outputVelocity.addInPlace(upWorld.scale(currentVelocity.dot(upWorld)));
         outputVelocity.addInPlace(CONFIG.PHYSICS.CHARACTER_GRAVITY.scale(deltaTime));
@@ -3630,6 +3634,24 @@ class CharacterController {
         );
         
         outputVelocity.subtractInPlace(supportInfo.averageSurfaceVelocity);
+        
+        // Add minimal friction and damping to reduce sliding
+        const friction = 0.95; // Reduce velocity by only 5% each frame (was 15%)
+        const maxSpeed = speed * 2.0; // Allow higher max speed (was 1.2)
+        
+        // Apply friction
+        outputVelocity.scaleInPlace(friction);
+        
+        // Clamp velocity to prevent excessive sliding
+        const currentSpeed = outputVelocity.length();
+        if (currentSpeed > maxSpeed) {
+            outputVelocity.normalize().scaleInPlace(maxSpeed);
+        }
+        
+        // Add minimal damping when no input is detected
+        if (this.inputDirection.length() < 0.1) {
+            outputVelocity.scaleInPlace(0.9); // Reduced damping when not moving (was 0.7)
+        }
         
         const inv1k = 1e-3;
         if (outputVelocity.dot(upWorld) > inv1k) {
