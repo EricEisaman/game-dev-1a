@@ -181,10 +181,10 @@ const ASSETS = {
             name: "Tech Girl",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/techGirl/tech_girl.glb",
             animations: {
-                idle: "idle",
-                walk: "walking"
+                idle: "Idel",
+                walk: "Walk"
             },
-            scale: 0.1
+            scale: 1.7
         },
         {
             name: "Zombie",
