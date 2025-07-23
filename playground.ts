@@ -252,6 +252,14 @@ const ASSETS = {
                 { name: "Cube.006", mass: 0.1, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
                 { name: "Cube.007", mass: 0, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX }
             ]
+        },
+        {
+            name: "Firefox Reality",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/firefoxReality/firefox_reality.glb",
+            lightmap: "",
+            scale: 1,
+            lightmappedMeshes: [],
+            physicsObjects: []
         }
     ] as readonly Environment[]
 } as const;
@@ -3930,7 +3938,7 @@ class SceneManager {
         this.setupPhysics();
         this.setupSky();
         await this.setupEffects();
-        this.loadEnvironment();
+        this.loadEnvironment("Level Test");
     }
 
     private setupLighting(): void {
@@ -3963,11 +3971,11 @@ class SceneManager {
         }
     }
 
-    private loadEnvironment(): void {
-        // Load the first environment from the ENVIRONMENTS array
-        const environment = ASSETS.ENVIRONMENTS[0];
+    private loadEnvironment(environmentName: string): void {
+        // Find the environment by name
+        const environment = ASSETS.ENVIRONMENTS.find(env => env.name === environmentName);
         if (!environment) {
-            console.error("No environment found in ASSETS.ENVIRONMENTS");
+            console.error(`Environment "${environmentName}" not found in ASSETS.ENVIRONMENTS`);
             return;
         }
 
