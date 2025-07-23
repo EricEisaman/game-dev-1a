@@ -3285,6 +3285,7 @@ class CharacterController {
     private readonly isIPad: boolean;
     private keyboardEventCount: number = 0;
     private keyboardDetectionTimeout: number | null = null;
+    private physicsPaused: boolean = false;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
@@ -3684,6 +3685,9 @@ class CharacterController {
         const deltaTime = this.scene.deltaTime / 1000.0;
         if (deltaTime === 0) return;
 
+        // Skip physics updates if paused
+        if (this.physicsPaused) return;
+
         const down = BABYLON.Vector3.Down();
         const support = this.characterController.checkSupport(deltaTime, down);
 
@@ -3904,6 +3908,31 @@ class CharacterController {
         return this.characterController.getVelocity();
     }
     
+    /**
+     * Pauses physics updates for the character
+     */
+    public pausePhysics(): void {
+        this.physicsPaused = true;
+        // Set velocity to zero to stop movement
+        this.characterController.setVelocity(new BABYLON.Vector3(0, 0, 0));
+        console.log("Character physics paused");
+    }
+
+    /**
+     * Resumes physics updates for the character
+     */
+    public resumePhysics(): void {
+        this.physicsPaused = false;
+        console.log("Character physics resumed");
+    }
+
+    /**
+     * Checks if physics is currently paused
+     */
+    public isPhysicsPaused(): boolean {
+        return this.physicsPaused;
+    }
+
     public dispose(): void {
 
         
@@ -4185,6 +4214,160 @@ class SceneManager {
         // Load the new character
         this.loadCharacter(character);
     }
+
+    /**
+     * Clears all environment meshes and their physics objects
+     */
+    public clearEnvironment(): void {
+        // Find the root environment mesh (always named "environment" by our loading process)
+        const rootEnvironmentMesh = this.scene.getMeshByName("environment");
+        
+        if (rootEnvironmentMesh) {
+            // Get all child meshes recursively
+            const allEnvironmentMeshes: BABYLON.AbstractMesh[] = [];
+            const collectMeshes = (mesh: BABYLON.AbstractMesh) => {
+                allEnvironmentMeshes.push(mesh);
+                mesh.getChildMeshes().forEach(collectMeshes);
+            };
+            
+            collectMeshes(rootEnvironmentMesh);
+            
+            // Dispose all environment meshes and their physics objects
+            allEnvironmentMeshes.forEach(mesh => {
+                // Dispose physics body if it exists
+                if (mesh.physicsImpostor) {
+                    mesh.physicsImpostor.dispose();
+                }
+                mesh.dispose();
+            });
+            
+            console.log(`Cleared ${allEnvironmentMeshes.length} environment meshes (including root and all children)`);
+        } else {
+            // Fallback: if no "environment" mesh found, clear any meshes that might be environment-related
+            const potentialEnvironmentMeshes = this.scene.meshes.filter(mesh => 
+                !mesh.name.includes("player") && 
+                !mesh.name.includes("camera") && 
+                !mesh.name.includes("light") &&
+                !mesh.name.includes("sky") &&
+                !mesh.name.includes("capsule") &&
+                !mesh.name.includes("fallback_") &&
+                !mesh.name.includes("crate_") &&
+                !mesh.name.includes("item_") &&
+                mesh !== this.characterController?.getDisplayCapsule()
+            );
+            
+            potentialEnvironmentMeshes.forEach(mesh => {
+                // Dispose physics body if it exists
+                if (mesh.physicsImpostor) {
+                    mesh.physicsImpostor.dispose();
+                }
+                mesh.dispose();
+            });
+            
+            console.log(`Cleared ${potentialEnvironmentMeshes.length} potential environment meshes (fallback method)`);
+        }
+    }
+
+    /**
+     * Clears all items and their instances
+     */
+    public clearItems(): void {
+        // Use CollectiblesManager to clear all collectibles
+        CollectiblesManager.dispose();
+        
+        // Also clear any other item meshes that might not be managed by CollectiblesManager
+        const itemMeshes = this.scene.meshes.filter(mesh => 
+            mesh.name.startsWith("fallback_") ||
+            mesh.name.startsWith("crate_") ||
+            mesh.name.startsWith("item_") ||
+            mesh.name.includes("collectible") ||
+            mesh.name.includes("pickup") ||
+            mesh.name.includes("treasure") ||
+            mesh.name.includes("coin") ||
+            mesh.name.includes("gem") ||
+            mesh.name.includes("crystal")
+        );
+        
+        itemMeshes.forEach(mesh => {
+            // Dispose physics body if it exists
+            if (mesh.physicsImpostor) {
+                mesh.physicsImpostor.dispose();
+            }
+            mesh.dispose();
+        });
+        
+        console.log(`Cleared ${itemMeshes.length} additional item meshes`);
+    }
+
+    /**
+     * Clears all particle systems
+     */
+    public clearParticles(): void {
+        // Use EffectsManager to clear all particle systems
+        EffectsManager.removeAllParticleSystems();
+        
+        // Also clear any particle systems that might not be managed by EffectsManager
+        const particleSystems = this.scene.particleSystems;
+        const unmanagedParticleSystems = particleSystems.filter(ps => 
+            !ps.name.includes("player") && 
+            !ps.name.includes("character") &&
+            !ps.name.includes("thruster")
+        );
+        
+        unmanagedParticleSystems.forEach(ps => {
+            ps.stop();
+            ps.dispose();
+        });
+        
+        console.log(`Cleared ${unmanagedParticleSystems.length} unmanaged particle systems`);
+    }
+
+    /**
+     * Pauses physics for the player character to prevent falling
+     */
+    public pausePhysics(): void {
+        if (this.characterController) {
+            this.characterController.pausePhysics();
+            console.log("Physics paused for player character");
+        }
+    }
+
+    /**
+     * Resumes physics for the player character
+     */
+    public resumePhysics(): void {
+        if (this.characterController) {
+            this.characterController.resumePhysics();
+            console.log("Physics resumed for player character");
+        }
+    }
+
+    /**
+     * Checks if physics is currently paused for the player character
+     */
+    public isPhysicsPaused(): boolean {
+        if (this.characterController) {
+            return this.characterController.isPhysicsPaused();
+        }
+        return false;
+    }
+
+    /**
+     * Example usage for environment and item management:
+     * 
+     * // Pause physics to prevent character from falling
+     * sceneManager.pausePhysics();
+     * 
+     * // Clear environment, items, and particles
+     * sceneManager.clearEnvironment();
+     * sceneManager.clearItems();
+     * sceneManager.clearParticles();
+     * 
+     * // Load new environment or items here...
+     * 
+     * // Resume physics when ready
+     * sceneManager.resumePhysics();
+     */
 
     /**
      * Disposes all resources
