@@ -158,6 +158,35 @@ interface GameConfig {
     readonly SETTINGS: SettingsConfig;
 }
 
+// Environment Types
+const OBJECT_ROLE = {
+    DYNAMIC_BOX: "DYNAMIC_BOX",
+    PIVOT_BEAM: "PIVOT_BEAM"
+} as const;
+
+type ObjectRole = typeof OBJECT_ROLE[keyof typeof OBJECT_ROLE];
+
+interface LightmappedMesh {
+    readonly name: string;
+    readonly level: number;
+}
+
+interface PhysicsObject {
+    readonly name: string;
+    readonly mass: number;
+    readonly scale: number;
+    readonly role: ObjectRole;
+}
+
+interface Environment {
+    readonly name: string;
+    readonly model: string;
+    readonly lightmap: string;
+    readonly scale: number;
+    readonly lightmappedMeshes: readonly LightmappedMesh[];
+    readonly physicsObjects: readonly PhysicsObject[];
+}
+
 // Asset Types
 interface CharacterAnims {
     readonly idle: string;
@@ -202,8 +231,29 @@ const ASSETS = {
             scale: 1.25
         }
     ] as readonly Character[],
-    LEVEL_MODEL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
-    LIGHTMAP_TEXTURE: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/lightmap.jpg"
+    ENVIRONMENTS: [
+        {
+            name: "Level Test",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/levelTest.glb",
+            lightmap: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/levelTest/lightmap.jpg",
+            scale: 1,
+            lightmappedMeshes: [
+                { name: "level_primitive0", level: 1.6 },
+                { name: "level_primitive1", level: 1.6 },
+                { name: "level_primitive2", level: 1.6 }
+            ],
+            physicsObjects: [
+                { name: "Cube", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube.001", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube.002", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube.003", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube.004", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube.005", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube.006", mass: 0.1, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
+                { name: "Cube.007", mass: 0, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX }
+            ]
+        }
+    ] as readonly Environment[]
 } as const;
 
 // Configuration Constants
@@ -424,7 +474,6 @@ const CONFIG: GameConfig = {
                 visibility: "iPadWithKeyboard",
                 defaultValue: true, // Default to showing controls
                 onChange: (value: boolean | string) => {
-                    console.log("Screen Controls toggled:", value);
                     // Control mobile input visibility
                     if (typeof MobileInputManager !== 'undefined' && typeof value === 'boolean') {
                         MobileInputManager.setVisibility(value);
@@ -438,7 +487,6 @@ const CONFIG: GameConfig = {
                 defaultValue: "Red", // Default to first character (Red)
                 options: ASSETS.CHARACTERS.map((character, index) => character.name),
                 onChange: (value: boolean | string) => {
-                    console.log("Character changed:", value);
                     if (typeof value === 'string') {
                         SettingsUI.changeCharacter(value);
                     }
@@ -539,7 +587,6 @@ class MobileInputManager {
      */
     public static initialize(canvas: HTMLCanvasElement): void {
         if (this.isInitialized) {
-            console.log("Mobile input manager already initialized - skipping");
             return;
         }
         
@@ -559,7 +606,6 @@ class MobileInputManager {
 
         
         this.isInitialized = true;
-        console.log("Mobile input manager initialized successfully");
     }
     
     /**
@@ -569,21 +615,18 @@ class MobileInputManager {
         // Remove any existing joystick containers
         const existingJoysticks = document.querySelectorAll('#mobile-joystick');
         existingJoysticks.forEach(element => {
-            console.log("Removing duplicate joystick");
             element.remove();
         });
         
         // Remove any existing jump buttons
         const existingJumpButtons = document.querySelectorAll('#mobile-jump-button');
         existingJumpButtons.forEach(element => {
-            console.log("Removing duplicate jump button");
             element.remove();
         });
         
         // Remove any existing boost buttons
         const existingBoostButtons = document.querySelectorAll('#mobile-boost-button');
         existingBoostButtons.forEach(element => {
-            console.log("Removing duplicate boost button");
             element.remove();
         });
         
@@ -643,8 +686,6 @@ class MobileInputManager {
         
         // Handle orientation changes
         this.setupOrientationHandler(canvas);
-        
-        console.log("Mobile canvas setup complete - full screen mode");
     }
     
     /**
@@ -657,7 +698,6 @@ class MobileInputManager {
             setTimeout(() => {
                 // Force canvas resize using window resize event
                 window.dispatchEvent(new Event('resize'));
-                console.log("Orientation change handled - canvas resized");
             }, 100);
         };
         
@@ -1199,7 +1239,7 @@ class MobileInputManager {
                 element.style.right = `${position.right}px`;
             }
             
-            console.log(`Updated ${controlType} position:`, position);
+    
         }
     }
     
@@ -1225,7 +1265,7 @@ class MobileInputManager {
         
         if (element) {
             element.style.display = visible ? (controlType === 'joystick' ? 'block' : 'flex') : 'none';
-            console.log(`${controlType} visibility set to:`, visible);
+    
         }
     }
     
@@ -1281,7 +1321,7 @@ class MobileInputManager {
             right: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.RIGHT
         });
         
-        console.log("Mobile controls reset to default positions");
+
     }
     
     /**
@@ -1333,7 +1373,7 @@ class MobileInputManager {
      * Disposes mobile input manager
      */
     public static dispose(): void {
-        console.log("Disposing mobile input manager");
+
         
         // Remove event listeners
         document.removeEventListener('touchend', this.handleGlobalTouchEnd.bind(this));
@@ -1345,7 +1385,7 @@ class MobileInputManager {
         // Reset initialization flag
         this.isInitialized = false;
         
-        console.log("Mobile input manager disposed");
+
     }
 }
 
@@ -1397,7 +1437,7 @@ class EffectsManager {
             
             if (particleSystem) {
                 this.activeParticleSystems.set(uniqueName, particleSystem);
-                console.log(`Created particle system: ${uniqueName}`);
+        
             }
             
             return particleSystem;
@@ -1427,7 +1467,7 @@ class EffectsManager {
             particleSystem.stop();
             particleSystem.dispose();
             this.activeParticleSystems.delete(systemName);
-            console.log(`Removed particle system: ${systemName}`);
+    
         }
     }
     
@@ -1440,7 +1480,7 @@ class EffectsManager {
             particleSystem.dispose();
         });
         this.activeParticleSystems.clear();
-        console.log("Removed all particle systems");
+
     }
     
     /**
@@ -1532,11 +1572,11 @@ class EffectsManager {
             
             // Add basic sound event handling
             sound.onended = () => {
-                console.log(`Sound "${soundName}" ended`);
+        
             };
             
             this.activeSounds.set(soundName, sound);
-            console.log(`Created sound: ${soundName}`);
+    
             return sound;
         } catch (error) {
             console.error(`Failed to create sound "${soundName}":`, error);
@@ -1584,7 +1624,7 @@ class EffectsManager {
             sound.dispose();
         });
         this.activeSounds.clear();
-        console.log("Removed all sounds");
+
     }
 }
 
@@ -2384,7 +2424,7 @@ class CollectiblesManager {
         if (!this.scene) return;
         
         try {
-            console.log(`Loading ${itemConfig.name} model from: ${itemConfig.url}`);
+
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
             
             // Rename the root node for better organization
@@ -2396,7 +2436,7 @@ class CollectiblesManager {
                 }
             }
             
-            console.log(`${itemConfig.name} model loaded successfully. Meshes found: ${result.meshes.length}`);
+
             
             // Check if any mesh has proper geometry
             const meshWithGeometry = result.meshes.find(mesh => {
@@ -2414,9 +2454,7 @@ class CollectiblesManager {
                 this.instanceBasis.isVisible = false;
                 this.instanceBasis.setEnabled(false);
                 
-                console.log(`${itemConfig.name} instance basis created and disabled`);
-                console.log("Mesh geometry vertices:", this.instanceBasis.geometry?.getTotalVertices());
-                console.log("Mesh bounding box:", this.instanceBasis.getBoundingInfo()?.boundingBox);
+
                 
                 // Create reusable physics shape for better performance
                 const boundingInfo = this.instanceBasis.getBoundingInfo();
@@ -2428,7 +2466,7 @@ class CollectiblesManager {
                         size.scale(0.5), // Half-size for box shape
                         this.scene
                     );
-                    console.log(`Created reusable physics shape with size: ${size.toString()}`);
+
                 } else {
                     // Fallback to default size
                     this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
@@ -2437,7 +2475,7 @@ class CollectiblesManager {
                         BABYLON.Vector3.One(), // Size - use static one
                         this.scene
                     );
-                    console.log(`Created fallback physics shape`);
+
                 }
                 
             } else {
@@ -2446,7 +2484,7 @@ class CollectiblesManager {
             }
         } catch (error) {
             console.error("Failed to load crate model:", error);
-            console.log("Creating fallback crate basis");
+
             this.createFallbackInstanceBasis();
         }
     }
@@ -2482,8 +2520,7 @@ class CollectiblesManager {
             BABYLON.Vector3.One(), // Size - use static one
             this.scene
         );
-        console.log("Fallback crate instance basis created and disabled");
-        console.log("Created fallback physics shape");
+
     }
     
     /**
@@ -2553,7 +2590,7 @@ class CollectiblesManager {
             return;
         }
         
-        console.log(`Starting to create collectible ${id} at ${instance.position.toString()}`);
+
         
         // Find the item config that contains this instance
         const itemConfig = CONFIG.ITEMS.ITEMS.find(item => 
@@ -2570,11 +2607,11 @@ class CollectiblesManager {
         }
         
         try {
-            console.log(`Attempting to load model from: ${itemConfig.url}`);
+
             // Import the item model
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
             
-            console.log(`Model loaded successfully. Meshes found: ${result.meshes.length}`);
+
             
             if (result.meshes.length > 0) {
                 const mesh = result.meshes[0];
@@ -2586,11 +2623,11 @@ class CollectiblesManager {
                 
                 // Set position BEFORE creating physics body
                 mesh.position = instance.position;
-                console.log(`Model positioned at: ${mesh.position.toString()}`);
+
                 
                 // Make sure the mesh is visible
                 mesh.isVisible = true;
-                console.log(`Model visibility: ${mesh.isVisible}`);
+
                 
                 // Get the scaled bounding box dimensions after applying instance scaling
                 const boundingBox = mesh.getBoundingInfo();
@@ -2609,7 +2646,7 @@ class CollectiblesManager {
                 // Ensure the physics body is positioned correctly
                 if (physicsAggregate.body) {
                     physicsAggregate.body.setMassProperties({ mass: instance.mass });
-                    console.log(`Physics body created for ${id} at ${instance.position.toString()}`);
+
                 } else {
                     console.warn(`Failed to create physics body for ${id}`);
                 }
@@ -2620,17 +2657,17 @@ class CollectiblesManager {
                 // Add rotation animation
                 this.addRotationAnimation(mesh);
                 
-                console.log(`Created collectible: ${id} at ${instance.position.toString()}`);
+
             } else {
                 console.warn(`No meshes found in ${itemConfig.url} for ${id}`);
             }
         } catch (error) {
             console.error(`Failed to create collectible ${id}:`, error);
-            console.log("Creating fallback crate instead...");
+
             
             // Create a fallback item using a simple box
             const fallbackItem = BABYLON.MeshBuilder.CreateBox(`fallback_${id}`, { size: 1 }, this.scene);
-            console.log(`Created fallback item mesh: ${fallbackItem.name}`);
+
             
             // Create a simple material to make it visible
             const material = new BABYLON.StandardMaterial(`fallback_${id}_material`, this.scene);
@@ -2641,7 +2678,7 @@ class CollectiblesManager {
             // Set position and visibility BEFORE creating physics body
             fallbackItem.position = instance.position;
             fallbackItem.isVisible = true;
-            console.log(`Fallback item positioned at: ${fallbackItem.position.toString()}, visible: ${fallbackItem.isVisible}`);
+
             
             // Apply scaling to the fallback item
             fallbackItem.scaling.setAll(instance.scale);
@@ -2663,7 +2700,7 @@ class CollectiblesManager {
             // Ensure the physics body is positioned correctly
             if (physicsAggregate.body) {
                 physicsAggregate.body.setMassProperties({ mass: instance.mass });
-                console.log(`Physics body created for fallback ${id} at ${instance.position.toString()}`);
+
             } else {
                 console.warn(`Failed to create physics body for fallback ${id}`);
             }
@@ -2674,7 +2711,7 @@ class CollectiblesManager {
             // Add rotation animation
             this.addRotationAnimation(fallbackItem);
             
-            console.log(`Created fallback collectible: ${id} at ${instance.position.toString()}`);
+
         }
     }
     
@@ -2791,7 +2828,7 @@ class CollectiblesManager {
         // Remove the collectible
         this.removeCollectible(collectibleId);
         
-        console.log(`Collected ${itemConfig.name}! Credits: ${this.totalCredits}`);
+
     }
     
     /**
@@ -3375,16 +3412,16 @@ class CharacterController {
         // Movement input
         if (INPUT_KEYS.FORWARD.includes(key as any)) {
             this.inputDirection.z = 1;
-            console.log('Forward key pressed, inputDirection.z =', this.inputDirection.z);
+
         } else if (INPUT_KEYS.BACKWARD.includes(key as any)) {
             this.inputDirection.z = -1;
-            console.log('Backward key pressed, inputDirection.z =', this.inputDirection.z);
+
         } else if (INPUT_KEYS.STRAFE_LEFT.includes(key as any)) {
             this.inputDirection.x = -1;
-            console.log('Strafe left key pressed, inputDirection.x =', this.inputDirection.x);
+
         } else if (INPUT_KEYS.STRAFE_RIGHT.includes(key as any)) {
             this.inputDirection.x = 1;
-            console.log('Strafe right key pressed, inputDirection.x =', this.inputDirection.x);
+
         } else if (INPUT_KEYS.JUMP.includes(key as any)) {
             this.wantJump = true;
         } else if (INPUT_KEYS.BOOST.includes(key as any)) {
@@ -3506,12 +3543,12 @@ class CharacterController {
 
     private toggleHUD(): void {
         // This would need to be connected to HUDManager
-        console.log("HUD toggle pressed - implement HUDManager.setVisibility()");
+
     }
 
     private cycleHUDPosition(): void {
         // This would need to be connected to HUDManager
-        console.log("HUD position cycle pressed - implement HUDManager.setPosition()");
+
     }
 
     private updateParticleSystem(): void {
@@ -3860,12 +3897,12 @@ class CharacterController {
     }
     
     public dispose(): void {
-        console.log("Disposing character controller");
+
         
         // Dispose mobile input manager
         MobileInputManager.dispose();
         
-        console.log("Character controller disposed");
+
     }
 }
 
@@ -3893,7 +3930,7 @@ class SceneManager {
         this.setupPhysics();
         this.setupSky();
         await this.setupEffects();
-        this.loadLevel();
+        this.loadEnvironment();
     }
 
     private setupLighting(): void {
@@ -3926,8 +3963,15 @@ class SceneManager {
         }
     }
 
-    private loadLevel(): void {
-        BABYLON.ImportMeshAsync(ASSETS.LEVEL_MODEL, this.scene)
+    private loadEnvironment(): void {
+        // Load the first environment from the ENVIRONMENTS array
+        const environment = ASSETS.ENVIRONMENTS[0];
+        if (!environment) {
+            console.error("No environment found in ASSETS.ENVIRONMENTS");
+            return;
+        }
+
+        BABYLON.ImportMeshAsync(environment.model, this.scene)
             .then((result) => {
                 // Rename the root node to "environment" for better organization
                 if (result.meshes && result.meshes.length > 0) {
@@ -3938,27 +3982,26 @@ class SceneManager {
                     }
                 }
                 
-                this.setupLevelPhysics();
+                this.setupEnvironmentPhysics(environment);
                 this.setupCharacter();
                 this.loadCharacterModel();
             })
             .catch(error => {
-                console.error("Failed to load level:", error);
+                console.error("Failed to load environment:", error);
             });
     }
 
-    private setupLevelPhysics(): void {
-        this.setupLightmappedMeshes();
-        this.setupPhysicsObjects();
-        this.setupJoints();
+    private setupEnvironmentPhysics(environment: Environment): void {
+        this.setupLightmappedMeshes(environment);
+        this.setupPhysicsObjects(environment);
+        this.setupJoints(environment);
     }
 
-    private setupLightmappedMeshes(): void {
-        const lightmap = new BABYLON.Texture(ASSETS.LIGHTMAP_TEXTURE);
-        const lightmappedMeshes = ["level_primitive0", "level_primitive1", "level_primitive2"];
+    private setupLightmappedMeshes(environment: Environment): void {
+        const lightmap = new BABYLON.Texture(environment.lightmap);
         
-        lightmappedMeshes.forEach(meshName => {
-            const mesh = this.scene.getMeshByName(meshName);
+        environment.lightmappedMeshes.forEach(lightmappedMesh => {
+            const mesh = this.scene.getMeshByName(lightmappedMesh.name);
             if (!mesh) return;
             
             new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH);
@@ -3968,7 +4011,7 @@ class SceneManager {
                 mesh.material.lightmapTexture = lightmap;
                 mesh.material.useLightmapAsShadowmap = true;
                 (mesh.material.lightmapTexture as BABYLON.Texture).uAng = Math.PI;
-                (mesh.material.lightmapTexture as BABYLON.Texture).level = 1.6;
+                (mesh.material.lightmapTexture as BABYLON.Texture).level = lightmappedMesh.level;
                 (mesh.material.lightmapTexture as BABYLON.Texture).coordinatesIndex = 1;
             }
             
@@ -3977,33 +4020,40 @@ class SceneManager {
         });
     }
 
-    private setupPhysicsObjects(): void {
-        const cubes = ["Cube", "Cube.001", "Cube.002", "Cube.003", "Cube.004", "Cube.005"];
-        cubes.forEach(meshName => {
-            const mesh = this.scene.getMeshByName(meshName);
+    private setupPhysicsObjects(environment: Environment): void {
+        environment.physicsObjects.forEach(physicsObject => {
+            const mesh = this.scene.getMeshByName(physicsObject.name);
             if (mesh) {
-                new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+                // Apply scaling if specified
+                if (physicsObject.scale !== 1) {
+                    mesh.scaling.setAll(physicsObject.scale);
+                }
+                
+                new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: physicsObject.mass });
             }
         });
-        
-        const planeMesh = this.scene.getMeshByName("Cube.006");
-        if (planeMesh) {
-            planeMesh.scaling.set(0.03, 3, 1);
-            new BABYLON.PhysicsAggregate(planeMesh, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
-        }
     }
 
-    private setupJoints(): void {
-        const fixedMass = new BABYLON.PhysicsAggregate(
-            this.scene.getMeshByName("Cube.007"), 
-            BABYLON.PhysicsShapeType.BOX, 
-            { mass: 0 }
-        );
+    private setupJoints(environment: Environment): void {
+        // Find objects with PIVOT_BEAM role
+        const pivotBeams = environment.physicsObjects.filter(obj => obj.role === OBJECT_ROLE.PIVOT_BEAM);
         
-        const planeMesh = this.scene.getMeshByName("Cube.006");
-        if (planeMesh) {
-            const plane = new BABYLON.PhysicsAggregate(planeMesh, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+        pivotBeams.forEach(pivotBeam => {
+            const beamMesh = this.scene.getMeshByName(pivotBeam.name);
+            if (!beamMesh) return;
             
+            // Find a fixed mass object to attach the hinge to
+            const fixedMassObject = environment.physicsObjects.find(obj => obj.role === OBJECT_ROLE.DYNAMIC_BOX && obj.mass === 0);
+            if (!fixedMassObject) return;
+            
+            const fixedMesh = this.scene.getMeshByName(fixedMassObject.name);
+            if (!fixedMesh) return;
+            
+            // Create physics aggregates if they don't exist
+            const fixedMass = new BABYLON.PhysicsAggregate(fixedMesh, BABYLON.PhysicsShapeType.BOX, { mass: 0 });
+            const beam = new BABYLON.PhysicsAggregate(beamMesh, BABYLON.PhysicsShapeType.BOX, { mass: pivotBeam.mass });
+            
+            // Create hinge constraint
             const joint = new BABYLON.HingeConstraint(
                 new BABYLON.Vector3(0.75, 0, 0),
                 new BABYLON.Vector3(-0.25, 0, 0),
@@ -4012,8 +4062,8 @@ class SceneManager {
                 this.scene
             );
             
-            fixedMass.body.addConstraint(plane.body, joint);
-        }
+            fixedMass.body.addConstraint(beam.body, joint);
+        });
     }
 
     private setupCharacter(): void {
@@ -4212,18 +4262,7 @@ class SettingsUI {
     }
     
     private static shouldShowSection(visibility: VisibilityType): boolean {
-        // Debug logging
-        console.log('SettingsUI Debug:', {
-            visibility,
-            isMobileDevice: this.isMobileDevice(),
-            isIPad: this.isIPad(),
-            isIPadWithKeyboard: this.isIPadWithKeyboard(),
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            maxTouchPoints: navigator.maxTouchPoints,
-            innerWidth: window.innerWidth,
-            innerHeight: window.innerHeight
-        });
+
         
         switch (visibility) {
             case "all":
@@ -4689,28 +4728,4 @@ class SettingsUI {
     }
 }
 
-// ============================================================================
-// HUD USAGE EXAMPLES
-// ============================================================================
 
-/*
-// Example: Change HUD position
-HUDManager.setPosition('bottom');
-
-// Example: Change HUD colors
-HUDManager.setColors('#00ff00', '#888888', '#ffff00');
-
-// Example: Toggle HUD visibility
-HUDManager.setVisibility(false);
-
-// Example: Update HUD configuration
-HUDManager.updateConfig({
-    SHOW_COORDINATES: false,
-    SHOW_FPS: true,
-    POSITION: 'right'
-});
-
-// Example: Show/hide specific HUD elements
-HUDManager.setElementVisibility('coordinates', false);
-HUDManager.setElementVisibility('boost', true);
-*/
