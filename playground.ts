@@ -151,7 +151,6 @@ interface GameConfig {
     readonly PHYSICS: PhysicsConfig;
     readonly ANIMATION: AnimationConfig;
     readonly DEBUG: DebugConfig;
-    readonly SKY: SkyConfig;
     readonly EFFECTS: EffectsConfig;
     readonly HUD: HUDConfig;
     readonly ITEMS: ItemsConfig;
@@ -185,6 +184,7 @@ interface Environment {
     readonly scale: number;
     readonly lightmappedMeshes: readonly LightmappedMesh[];
     readonly physicsObjects: readonly PhysicsObject[];
+    readonly sky?: SkyConfig; // Optional sky configuration for this environment
 }
 
 // Asset Types
@@ -251,7 +251,13 @@ const ASSETS = {
                 { name: "Cube.005", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.006", mass: 0.1, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
                 { name: "Cube.007", mass: 0, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX }
-            ]
+            ],
+            sky: {
+                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/cartoon-river-with-orange-sky.jpg",
+                ROTATION_Y: 0,
+                BLUR: 0.3,
+                TYPE: "SPHERE" as SkyType
+            }
         },
         {
             name: "Firefox Reality",
@@ -259,7 +265,13 @@ const ASSETS = {
             lightmap: "",
             scale: 1,
             lightmappedMeshes: [],
-            physicsObjects: []
+            physicsObjects: [],
+            sky: {
+                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/orange-desert-night.png",
+                ROTATION_Y: 0,
+                BLUR: 0.2,
+                TYPE: "SPHERE" as SkyType
+            }
         }
     ] as readonly Environment[]
 } as const;
@@ -306,14 +318,6 @@ const CONFIG: GameConfig = {
     // Debug Settings
     DEBUG: {
         CAPSULE_VISIBLE: false
-    },
-    
-    // Sky Settings
-    SKY: {
-        TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/cartoon-river-with-orange-sky.jpg",
-        ROTATION_Y: 0,
-        BLUR: 0.3,
-        TYPE: "SPHERE" as SkyType
     },
     
     // Effects Settings
@@ -1655,27 +1659,24 @@ class SkyManager {
      */
     public static createSky(
         scene: BABYLON.Scene, 
-        textureUrl: string = CONFIG.SKY.TEXTURE_URL,
-        rotationY: number = CONFIG.SKY.ROTATION_Y,
-        blur: number = CONFIG.SKY.BLUR,
-        type: string = CONFIG.SKY.TYPE
+        skyConfig: SkyConfig
     ): BABYLON.Mesh {
         // Remove existing sky if present
         this.removeSky(scene);
         
         // Create sky texture
-        this.skyTexture = new BABYLON.Texture(textureUrl, scene);
+        this.skyTexture = new BABYLON.Texture(skyConfig.TEXTURE_URL, scene);
         
         // Apply blur if specified
-        if (blur > 0) {
-            this.skyTexture.level = blur;
+        if (skyConfig.BLUR > 0) {
+            this.skyTexture.level = skyConfig.BLUR;
         }
         
         // Create sky based on type
-        if (type.toUpperCase() === "SPHERE") {
-            this.createSkySphere(scene, rotationY);
+        if (skyConfig.TYPE.toUpperCase() === "SPHERE") {
+            this.createSkySphere(scene, skyConfig.ROTATION_Y);
         } else {
-            this.createSkyBox(scene, rotationY);
+            this.createSkyBox(scene, skyConfig.ROTATION_Y);
         }
         
         return this.sky!;
@@ -3981,11 +3982,7 @@ class SceneManager {
     }
 
     private setupSky(): void {
-        try {
-            SkyManager.createSky(this.scene);
-        } catch (error) {
-            console.warn("Failed to create sky:", error);
-        }
+        // Sky will be set up when environment is loaded
     }
 
     private async setupEffects(): Promise<void> {
@@ -4016,6 +4013,15 @@ class SceneManager {
                     const rootMesh = result.meshes.find(mesh => !mesh.parent);
                     if (rootMesh) {
                         rootMesh.name = "environment";
+                    }
+                }
+                
+                // Set up environment-specific sky if configured
+                if (environment.sky) {
+                    try {
+                        SkyManager.createSky(this.scene, environment.sky);
+                    } catch (error) {
+                        console.warn("Failed to create environment sky:", error);
                     }
                 }
                 
