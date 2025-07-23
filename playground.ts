@@ -133,7 +133,7 @@ interface SettingsSection {
     readonly visibility: VisibilityType;
     readonly defaultValue?: boolean | string;
     readonly options?: string[]; // For dropdown elements
-    readonly onChange?: (value: boolean | string) => void;
+    readonly onChange?: (value: boolean | string) => void | Promise<void>;
 }
 
 interface SettingsConfig {
@@ -185,6 +185,7 @@ interface Environment {
     readonly lightmappedMeshes: readonly LightmappedMesh[];
     readonly physicsObjects: readonly PhysicsObject[];
     readonly sky?: SkyConfig; // Optional sky configuration for this environment
+    readonly spawnPoint: BABYLON.Vector3; // Spawn point for this environment
 }
 
 // Asset Types
@@ -257,7 +258,8 @@ const ASSETS = {
                 ROTATION_Y: 0,
                 BLUR: 0.3,
                 TYPE: "SPHERE" as SkyType
-            }
+            },
+            spawnPoint: new BABYLON.Vector3(3, 0.3, -8)
         },
         {
             name: "Firefox Reality",
@@ -271,7 +273,8 @@ const ASSETS = {
                 ROTATION_Y: 0,
                 BLUR: 0.2,
                 TYPE: "SPHERE" as SkyType
-            }
+            },
+            spawnPoint: new BABYLON.Vector3(0, 5, 0) // Higher spawn point for Firefox Reality
         }
     ] as readonly Environment[]
 } as const;
@@ -498,9 +501,21 @@ const CONFIG: GameConfig = {
                 visibility: "all",
                 defaultValue: "Red", // Default to first character (Red)
                 options: ASSETS.CHARACTERS.map((character, index) => character.name),
-                onChange: (value: boolean | string) => {
+                onChange: async (value: boolean | string) => {
+                    if (typeof value === 'string' && !SettingsUI.isInitializing) {
+                        await SettingsUI.changeCharacter(value);
+                    }
+                }
+            },
+            {
+                title: "Environment",
+                uiElement: "dropdown",
+                visibility: "all",
+                defaultValue: "Level Test", // Default to first environment
+                options: ASSETS.ENVIRONMENTS.map((environment, index) => environment.name),
+                onChange: async (value: boolean | string) => {
                     if (typeof value === 'string') {
-                        SettingsUI.changeCharacter(value);
+                        await SettingsUI.changeEnvironment(value);
                     }
                 }
             }
@@ -3908,6 +3923,14 @@ class CharacterController {
     public getVelocity(): BABYLON.Vector3 {
         return this.characterController.getVelocity();
     }
+
+    public setPosition(position: BABYLON.Vector3): void {
+        this.characterController.setPosition(position);
+    }
+
+    public setVelocity(velocity: BABYLON.Vector3): void {
+        this.characterController.setVelocity(velocity);
+    }
     
     /**
      * Pauses physics updates for the character
@@ -3934,6 +3957,19 @@ class CharacterController {
         return this.physicsPaused;
     }
 
+    /**
+     * Resets the character to the starting position
+     */
+    public resetToStartPosition(): void {
+        this.characterController.setPosition(CONFIG.CHARACTER.START_POSITION);
+        this.characterController.setVelocity(new BABYLON.Vector3(0, 0, 0));
+        this.inputDirection.setAll(0);
+        this.wantJump = false;
+        this.boostActive = false;
+        this.state = CHARACTER_STATES.IN_AIR;
+        console.log("Character reset to start position");
+    }
+
     public dispose(): void {
 
         
@@ -3953,6 +3989,7 @@ class SceneManager {
     private readonly camera: BABYLON.TargetCamera;
     private characterController: CharacterController | null = null;
     private smoothFollowController: SmoothFollowCameraController | null = null;
+    private currentEnvironment: string = "Level Test"; // Track current environment
 
     constructor(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
         this.scene = new BABYLON.Scene(engine);
@@ -3968,7 +4005,9 @@ class SceneManager {
         this.setupPhysics();
         this.setupSky();
         await this.setupEffects();
-        this.loadEnvironment("Level Test");
+        await this.loadEnvironment("Level Test");
+        this.setupCharacter();
+        this.loadCharacterModel();
     }
 
     private setupLighting(): void {
@@ -3997,7 +4036,7 @@ class SceneManager {
         }
     }
 
-    private loadEnvironment(environmentName: string): void {
+    public async loadEnvironment(environmentName: string): Promise<void> {
         // Find the environment by name
         const environment = ASSETS.ENVIRONMENTS.find(env => env.name === environmentName);
         if (!environment) {
@@ -4005,33 +4044,34 @@ class SceneManager {
             return;
         }
 
-        BABYLON.ImportMeshAsync(environment.model, this.scene)
-            .then((result) => {
-                // Rename the root node to "environment" for better organization
-                if (result.meshes && result.meshes.length > 0) {
-                    // Find the root mesh (the one without a parent)
-                    const rootMesh = result.meshes.find(mesh => !mesh.parent);
-                    if (rootMesh) {
-                        rootMesh.name = "environment";
-                    }
+        try {
+            const result = await BABYLON.ImportMeshAsync(environment.model, this.scene);
+            
+            // Rename the root node to "environment" for better organization
+            if (result.meshes && result.meshes.length > 0) {
+                // Find the root mesh (the one without a parent)
+                const rootMesh = result.meshes.find(mesh => !mesh.parent);
+                if (rootMesh) {
+                    rootMesh.name = "environment";
                 }
-                
-                // Set up environment-specific sky if configured
-                if (environment.sky) {
-                    try {
-                        SkyManager.createSky(this.scene, environment.sky);
-                    } catch (error) {
-                        console.warn("Failed to create environment sky:", error);
-                    }
+            }
+            
+            // Set up environment-specific sky if configured
+            if (environment.sky) {
+                try {
+                    SkyManager.createSky(this.scene, environment.sky);
+                } catch (error) {
+                    console.warn("Failed to create environment sky:", error);
                 }
-                
-                this.setupEnvironmentPhysics(environment);
-                this.setupCharacter();
-                this.loadCharacterModel();
-            })
-            .catch(error => {
-                console.error("Failed to load environment:", error);
-            });
+            }
+            
+            this.setupEnvironmentPhysics(environment);
+            
+            // Update current environment tracking
+            this.currentEnvironment = environmentName;
+        } catch (error) {
+            console.error("Failed to load environment:", error);
+        }
     }
 
     private setupEnvironmentPhysics(environment: Environment): void {
@@ -4110,9 +4150,11 @@ class SceneManager {
     }
 
     private setupCharacter(): void {
+        console.log("Setting up character...");
         this.characterController = new CharacterController(this.scene);
         
         if (this.characterController) {
+            console.log("Character controller created successfully");
             this.smoothFollowController = new SmoothFollowCameraController(
                 this.scene,
                 this.camera,
@@ -4127,6 +4169,8 @@ class SceneManager {
             
             // Initialize Collectibles after character is set up
             CollectiblesManager.initialize(this.scene, this.characterController);
+            
+            console.log("Character setup complete");
         }
     }
 
@@ -4142,14 +4186,17 @@ class SceneManager {
     }
 
     private loadCharacter(character: Character): void {
+        console.log(`Loading character model: ${character.name}`);
         BABYLON.ImportMeshAsync(character.model, this.scene)
             .then(async result => {
+                console.log(`Character model loaded with ${result.meshes.length} meshes`);
                 // Rename the root node to "player" for better organization
                 if (result.meshes && result.meshes.length > 0) {
                     // Find the root mesh (the one without a parent)
                     const rootMesh = result.meshes.find(mesh => !mesh.parent);
                     if (rootMesh) {
                         rootMesh.name = "player";
+                        console.log(`Root mesh renamed to "player"`);
                     }
                 }
                 
@@ -4189,6 +4236,33 @@ class SceneManager {
 
     public getScene(): BABYLON.Scene {
         return this.scene;
+    }
+
+    public getCurrentEnvironment(): string {
+        return this.currentEnvironment;
+    }
+
+    /**
+     * Repositions the character to a safe location in the new environment
+     */
+    public repositionCharacter(): void {
+        if (!this.characterController) return;
+        
+        // Get the current environment's spawn point
+        const environment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
+        const spawnPoint = environment?.spawnPoint || CONFIG.CHARACTER.START_POSITION;
+        
+        // Reset character to environment-specific spawn position
+        this.characterController.setPosition(spawnPoint);
+        this.characterController.setVelocity(new BABYLON.Vector3(0, 0, 0));
+        
+        // Also reset the display capsule position
+        const displayCapsule = this.characterController.getDisplayCapsule();
+        if (displayCapsule) {
+            displayCapsule.position.copyFrom(spawnPoint);
+        }
+        
+        console.log(`Character repositioned to spawn point: ${spawnPoint.x}, ${spawnPoint.y}, ${spawnPoint.z}`);
     }
 
     public changeCharacter(characterIndexOrName: number | string): void {
@@ -4259,6 +4333,7 @@ class SceneManager {
                 !mesh.name.includes("fallback_") &&
                 !mesh.name.includes("crate_") &&
                 !mesh.name.includes("item_") &&
+                !mesh.name.includes("CharacterDisplay") && // Don't clear character display capsule
                 mesh !== this.characterController?.getDisplayCapsule()
             );
             
@@ -4283,7 +4358,7 @@ class SceneManager {
         
         // Also clear any other item meshes that might not be managed by CollectiblesManager
         const itemMeshes = this.scene.meshes.filter(mesh => 
-            mesh.name.startsWith("fallback_") ||
+            (mesh.name.startsWith("fallback_") ||
             mesh.name.startsWith("crate_") ||
             mesh.name.startsWith("item_") ||
             mesh.name.includes("collectible") ||
@@ -4291,7 +4366,9 @@ class SceneManager {
             mesh.name.includes("treasure") ||
             mesh.name.includes("coin") ||
             mesh.name.includes("gem") ||
-            mesh.name.includes("crystal")
+            mesh.name.includes("crystal")) &&
+            !mesh.name.includes("player") && // Don't clear player character
+            !mesh.name.includes("CharacterDisplay") // Don't clear character display capsule
         );
         
         itemMeshes.forEach(mesh => {
@@ -4413,6 +4490,7 @@ class SettingsUI {
     private static settingsPanel: HTMLDivElement | null = null;
     private static isPanelOpen = false;
     private static sceneManager: SceneManager | null = null;
+    public static isInitializing = false; // Flag to prevent onChange during initialization
     
     // Device detection methods
     private static isMobileDevice(): boolean {
@@ -4474,10 +4552,12 @@ class SettingsUI {
     }
     
     public static initialize(canvas: HTMLCanvasElement, sceneManager?: SceneManager): void {
+        this.isInitializing = true; // Prevent onChange during initialization
         this.sceneManager = sceneManager || null;
         this.createSettingsButton(canvas);
         this.createSettingsPanel(canvas);
         this.setupEventListeners();
+        this.isInitializing = false; // Allow onChange after initialization
     }
     
     private static createSettingsButton(canvas: HTMLCanvasElement): void {
@@ -4750,11 +4830,15 @@ class SettingsUI {
             } else if (section.uiElement === 'dropdown') {
                 const defaultValue = section.defaultValue as string ?? (section.options?.[0] ?? '');
                 
-                // Special handling for Character dropdown to show character names
+                // Special handling for Character and Environment dropdowns to show names
                 let optionsHTML = '';
                 if (section.title === "Character") {
                     optionsHTML = ASSETS.CHARACTERS.map((character) => 
                         `<option value="${character.name}" ${character.name === defaultValue ? 'selected' : ''}>${character.name}</option>`
+                    ).join('');
+                } else if (section.title === "Environment") {
+                    optionsHTML = ASSETS.ENVIRONMENTS.map((environment) => 
+                        `<option value="${environment.name}" ${environment.name === defaultValue ? 'selected' : ''}>${environment.name}</option>`
                     ).join('');
                 } else {
                     optionsHTML = section.options?.map(option => 
@@ -4782,13 +4866,13 @@ class SettingsUI {
         // Setup toggle switches
         const toggles = this.settingsPanel!.querySelectorAll('input[type="checkbox"]');
         toggles.forEach(toggle => {
-            toggle.addEventListener('change', (e) => {
+            toggle.addEventListener('change', async (e) => {
                 const target = e.target as HTMLInputElement;
                 const sectionIndex = parseInt(target.dataset.sectionIndex!);
                 const section = CONFIG.SETTINGS.SECTIONS[sectionIndex];
                 
                 if (section && section.onChange) {
-                    section.onChange(target.checked);
+                    await section.onChange(target.checked);
                 }
             });
         });
@@ -4796,13 +4880,13 @@ class SettingsUI {
         // Setup dropdown selects
         const selects = this.settingsPanel!.querySelectorAll('select');
         selects.forEach(select => {
-            select.addEventListener('change', (e) => {
+            select.addEventListener('change', async (e) => {
                 const target = e.target as HTMLSelectElement;
                 const sectionIndex = parseInt(target.dataset.sectionIndex!);
                 const section = CONFIG.SETTINGS.SECTIONS[sectionIndex];
                 
-                if (section && section.onChange) {
-                    section.onChange(target.value);
+                if (section && section.onChange && !this.isInitializing) {
+                    await section.onChange(target.value);
                 }
             });
         });
@@ -4918,9 +5002,40 @@ class SettingsUI {
         }
     }
 
-    public static changeCharacter(characterIndexOrName: number | string): void {
-        if (this.sceneManager) {
+    public static async changeCharacter(characterIndexOrName: number | string): Promise<void> {
+        if (this.sceneManager && !this.isInitializing) {
             this.sceneManager.changeCharacter(characterIndexOrName);
+        }
+    }
+
+    public static async changeEnvironment(environmentName: string): Promise<void> {
+        if (this.sceneManager) {
+            // Check if the environment is actually different from current
+            const currentEnvironment = this.sceneManager.getCurrentEnvironment();
+            if (currentEnvironment === environmentName) {
+                return; // No change needed
+            }
+            
+            console.log(`Switching environment from "${currentEnvironment}" to "${environmentName}"`);
+            
+            // Pause physics to prevent character from falling during environment change
+            this.sceneManager.pausePhysics();
+            
+            // Clear existing environment, items, and particles
+            this.sceneManager.clearEnvironment();
+            this.sceneManager.clearItems();
+            this.sceneManager.clearParticles();
+            
+            // Load the new environment
+            await this.sceneManager.loadEnvironment(environmentName);
+            
+            // Reposition character to safe location in new environment
+            this.sceneManager.repositionCharacter();
+            
+            // Resume physics after environment is loaded
+            this.sceneManager.resumePhysics();
+            
+            console.log(`Environment switch complete. Current character count: ${this.sceneManager.getScene().meshes.filter(m => m.name.includes('player')).length}`);
         }
     }
 }
