@@ -265,7 +265,7 @@ const ASSETS = {
             name: "Firefox Reality",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/firefoxReality/firefox_reality.glb",
             lightmap: "",
-            scale: 1,
+            scale: 1.5,
             lightmappedMeshes: [],
             physicsObjects: [],
             sky: {
@@ -295,7 +295,7 @@ const CONFIG: GameConfig = {
         ROTATION_SPEED: BABYLON.Tools.ToRadians(3),
         ROTATION_SMOOTHING: 0.2
     },
-    
+
     // Camera Settings
     CAMERA: {
         START_POSITION: new BABYLON.Vector3(0, 5, -10),
@@ -305,24 +305,24 @@ const CONFIG: GameConfig = {
         ZOOM_MAX: -2,
         FOLLOW_SMOOTHING: 0.1
     },
-    
+
     // Physics Settings
     PHYSICS: {
         GRAVITY: new BABYLON.Vector3(0, -9.8, 0),
         CHARACTER_GRAVITY: new BABYLON.Vector3(0, -18, 0)
     },
-    
+
     // Animation Settings
     ANIMATION: {
         PLAYER_SCALE: 0.7,
         PLAYER_Y_OFFSET: -0.9
     },
-    
+
     // Debug Settings
     DEBUG: {
         CAPSULE_VISIBLE: false
     },
-    
+
     // Effects Settings
     EFFECTS: {
         PARTICLE_SNIPPETS: [
@@ -398,7 +398,7 @@ const CONFIG: GameConfig = {
             }
         ] as const
     },
-    
+
     // HUD Settings
     HUD: {
         POSITION: "top" as HUDPosition,
@@ -426,7 +426,7 @@ const CONFIG: GameConfig = {
             SHOW_CREDITS: true
         }
     },
-    
+
     // Items Settings
     ITEMS: {
         ITEMS: [
@@ -478,7 +478,7 @@ const CONFIG: GameConfig = {
     // Settings Panel Configuration
     SETTINGS: {
         HEADING_TEXT: "Settings",
-        PANEL_WIDTH_RATIO: 1/3,
+        PANEL_WIDTH_RATIO: 1 / 3,
         FULL_SCREEN_THRESHOLD: 500,
         Z_INDEX: 1800,
         BUTTON_Z_INDEX: 2000,
@@ -596,18 +596,18 @@ class MobileInputManager {
     private static joystickCenter: { x: number, y: number } = { x: 0, y: 0 };
     private static joystickActive = false;
     private static joystickTouchId: number | null = null;
-    
+
     private static jumpButton: HTMLDivElement | null = null;
     private static boostButton: HTMLDivElement | null = null;
     private static jumpActive = false;
     private static boostActive = false;
     private static jumpTouchId: number | null = null;
     private static boostTouchId: number | null = null;
-    
+
     private static inputDirection = new BABYLON.Vector3(0, 0, 0);
     private static wantJump = false;
     private static wantBoost = false;
-    
+
     /**
      * Initializes mobile touch controls
      * @param canvas The Babylon.js canvas element
@@ -616,25 +616,25 @@ class MobileInputManager {
         if (this.isInitialized) {
             return;
         }
-        
+
         // Clean up any existing controls first
         this.cleanupExistingControls();
-        
+
         // Ensure canvas takes full screen on mobile
         this.setupMobileCanvas(canvas);
-        
+
         this.createJoystick(canvas);
         this.createActionButtons(canvas);
         this.setupTouchEventListeners(canvas);
-        
+
         // Apply visibility settings from config
         this.applyVisibilitySettings();
-        
 
-        
+
+
         this.isInitialized = true;
     }
-    
+
     /**
      * Cleans up any existing mobile controls to prevent duplicates
      */
@@ -644,19 +644,19 @@ class MobileInputManager {
         existingJoysticks.forEach(element => {
             element.remove();
         });
-        
+
         // Remove any existing jump buttons
         const existingJumpButtons = document.querySelectorAll('#mobile-jump-button');
         existingJumpButtons.forEach(element => {
             element.remove();
         });
-        
+
         // Remove any existing boost buttons
         const existingBoostButtons = document.querySelectorAll('#mobile-boost-button');
         existingBoostButtons.forEach(element => {
             element.remove();
         });
-        
+
         // Reset state
         this.joystickContainer = null;
         this.joystickStick = null;
@@ -672,7 +672,7 @@ class MobileInputManager {
         this.wantJump = false;
         this.wantBoost = false;
     }
-    
+
     /**
      * Sets up canvas for full-screen mobile display
      * @param canvas The canvas element
@@ -681,7 +681,7 @@ class MobileInputManager {
         // Get the canvas container
         const container = canvas.parentElement;
         if (!container) return;
-        
+
         // Set canvas to full screen on mobile
         canvas.style.width = '100vw';
         canvas.style.height = '100vh';
@@ -689,7 +689,7 @@ class MobileInputManager {
         canvas.style.top = '0';
         canvas.style.left = '0';
         canvas.style.zIndex = '1';
-        
+
         // Ensure container doesn't interfere
         container.style.width = '100vw';
         container.style.height = '100vh';
@@ -699,7 +699,7 @@ class MobileInputManager {
         container.style.margin = '0';
         container.style.padding = '0';
         container.style.overflow = 'hidden';
-        
+
         // Prevent body scrolling on mobile
         document.body.style.margin = '0';
         document.body.style.padding = '0';
@@ -707,14 +707,14 @@ class MobileInputManager {
         document.body.style.position = 'fixed';
         document.body.style.width = '100vw';
         document.body.style.height = '100vh';
-        
+
         // Force canvas resize using window resize event
         window.dispatchEvent(new Event('resize'));
-        
+
         // Handle orientation changes
         this.setupOrientationHandler(canvas);
     }
-    
+
     /**
      * Sets up orientation change handling for mobile
      * @param canvas The canvas element
@@ -727,12 +727,12 @@ class MobileInputManager {
                 window.dispatchEvent(new Event('resize'));
             }, 100);
         };
-        
+
         // Listen for orientation changes
         window.addEventListener('orientationchange', handleOrientationChange);
         window.addEventListener('resize', handleOrientationChange);
     }
-    
+
     /**
      * Creates the virtual joystick for movement
      * @param canvas The canvas element
@@ -740,7 +740,7 @@ class MobileInputManager {
     private static createJoystick(canvas: HTMLCanvasElement): void {
         const container = canvas.parentElement;
         if (!container) return;
-        
+
         // Create joystick container
         this.joystickContainer = document.createElement('div');
         this.joystickContainer.id = 'mobile-joystick';
@@ -759,7 +759,7 @@ class MobileInputManager {
             user-select: none;
             touch-action: none;
         `;
-        
+
         // Create joystick stick
         this.joystickStick = document.createElement('div');
         this.joystickStick.style.cssText = `
@@ -774,10 +774,10 @@ class MobileInputManager {
             pointer-events: none;
             transition: transform 0.1s ease;
         `;
-        
+
         this.joystickContainer.appendChild(this.joystickStick);
         container.appendChild(this.joystickContainer);
-        
+
         // Store center position after element is in DOM
         setTimeout(() => {
             const rect = this.joystickContainer?.getBoundingClientRect();
@@ -789,7 +789,7 @@ class MobileInputManager {
             }
         }, 0);
     }
-    
+
     /**
      * Creates action buttons (jump, boost)
      * @param canvas The canvas element
@@ -797,7 +797,7 @@ class MobileInputManager {
     private static createActionButtons(canvas: HTMLCanvasElement): void {
         const container = canvas.parentElement;
         if (!container) return;
-        
+
         // Create jump button
         this.jumpButton = document.createElement('div');
         this.jumpButton.id = 'mobile-jump-button';
@@ -824,7 +824,7 @@ class MobileInputManager {
             touch-action: none;
             transition: all 0.2s ease;
         `;
-        
+
         // Create boost button
         this.boostButton = document.createElement('div');
         this.boostButton.id = 'mobile-boost-button';
@@ -851,11 +851,11 @@ class MobileInputManager {
             touch-action: none;
             transition: all 0.2s ease;
         `;
-        
+
         container.appendChild(this.jumpButton);
         container.appendChild(this.boostButton);
     }
-    
+
     /**
      * Sets up touch event listeners
      * @param canvas The canvas element
@@ -863,18 +863,18 @@ class MobileInputManager {
     private static setupTouchEventListeners(canvas: HTMLCanvasElement): void {
         // Joystick touch events
         if (this.joystickContainer) {
-                    this.joystickContainer.addEventListener('touchstart', this.handleJoystickTouchStart.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('touchmove', this.handleJoystickTouchMove.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('touchend', this.handleJoystickTouchEnd.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('touchcancel', this.handleJoystickTouchEnd.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('pointerdown', this.handleJoystickTouchStart.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('pointermove', this.handleJoystickTouchMove.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('pointerup', this.handleJoystickTouchEnd.bind(this), { passive: false });
-        this.joystickContainer.addEventListener('mouseup', this.handleJoystickTouchEnd.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('touchstart', this.handleJoystickTouchStart.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('touchmove', this.handleJoystickTouchMove.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('touchend', this.handleJoystickTouchEnd.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('touchcancel', this.handleJoystickTouchEnd.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('pointerdown', this.handleJoystickTouchStart.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('pointermove', this.handleJoystickTouchMove.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('pointerup', this.handleJoystickTouchEnd.bind(this), { passive: false });
+            this.joystickContainer.addEventListener('mouseup', this.handleJoystickTouchEnd.bind(this), { passive: false });
         }
-        
+
         // Button touch events
-                if (this.jumpButton) {
+        if (this.jumpButton) {
             this.jumpButton.addEventListener('touchstart', this.handleJumpTouchStart.bind(this), { passive: false });
             this.jumpButton.addEventListener('touchend', this.handleJumpTouchEnd.bind(this), { passive: false });
             this.jumpButton.addEventListener('touchcancel', this.handleJumpTouchEnd.bind(this), { passive: false });
@@ -882,7 +882,7 @@ class MobileInputManager {
             this.jumpButton.addEventListener('pointerup', this.handleJumpTouchEnd.bind(this), { passive: false });
             this.jumpButton.addEventListener('mouseup', this.handleJumpTouchEnd.bind(this), { passive: false });
         }
-        
+
         if (this.boostButton) {
             this.boostButton.addEventListener('touchstart', this.handleBoostTouchStart.bind(this), { passive: false });
             this.boostButton.addEventListener('touchend', this.handleBoostTouchEnd.bind(this), { passive: false });
@@ -891,13 +891,13 @@ class MobileInputManager {
             this.boostButton.addEventListener('pointerup', this.handleBoostTouchEnd.bind(this), { passive: false });
             this.boostButton.addEventListener('mouseup', this.handleBoostTouchEnd.bind(this), { passive: false });
         }
-        
+
         // Global touch end handler to catch any missed touch events
         document.addEventListener('touchend', this.handleGlobalTouchEnd.bind(this), { passive: false });
         document.addEventListener('touchcancel', this.handleGlobalTouchEnd.bind(this), { passive: false });
         document.addEventListener('pointerup', this.handleGlobalTouchEnd.bind(this), { passive: false });
         document.addEventListener('mouseup', this.handleGlobalTouchEnd.bind(this), { passive: false });
-        
+
         // Add specific boost area touch end handler
         if (this.boostButton) {
             const boostArea = this.boostButton.parentElement;
@@ -908,10 +908,10 @@ class MobileInputManager {
                 boostArea.addEventListener('mouseup', this.handleBoostTouchEnd.bind(this), { passive: false });
             }
         }
-        
+
 
     }
-    
+
     /**
      * Handles joystick touch/pointer start
      * @param e Touch or Pointer event
@@ -928,7 +928,7 @@ class MobileInputManager {
             this.updateJoystickPositionFromPointer(e);
         }
     }
-    
+
     /**
      * Handles joystick touch/pointer move
      * @param e Touch or Pointer event
@@ -936,7 +936,7 @@ class MobileInputManager {
     private static handleJoystickTouchMove(e: TouchEvent | PointerEvent): void {
         e.preventDefault();
         if (!this.joystickActive) return;
-        
+
         if ('touches' in e) {
             for (let i = 0; i < e.touches.length; i++) {
                 if (e.touches[i].identifier === this.joystickTouchId) {
@@ -948,7 +948,7 @@ class MobileInputManager {
             this.updateJoystickPositionFromPointer(e);
         }
     }
-    
+
     /**
      * Handles joystick touch/pointer end
      * @param e Touch or Pointer event
@@ -958,116 +958,116 @@ class MobileInputManager {
         this.joystickActive = false;
         this.joystickTouchId = null;
         this.resetJoystick();
-        
+
         // Force reset movement input to ensure it stops
         this.inputDirection.set(0, 0, 0);
     }
-    
+
     /**
      * Updates joystick position and calculates input direction
      * @param touch Touch object
      */
     private static updateJoystickPosition(touch: Touch): void {
         if (!this.joystickStick || !this.joystickContainer) return;
-        
+
         // Update joystick center position dynamically
         this.updateJoystickCenterPosition();
-        
+
         const rect = this.joystickContainer.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        
+
         const touchX = touch.clientX - rect.left;
         const touchY = touch.clientY - rect.top;
-        
+
         const deltaX = touchX - centerX;
         const deltaY = touchY - centerY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        
+
         // Apply deadzone
         if (distance < MOBILE_CONTROLS.JOYSTICK_DEADZONE) {
             this.resetJoystick();
             return;
         }
-        
+
         // Clamp to joystick radius
         const maxDistance = MOBILE_CONTROLS.JOYSTICK_RADIUS - 15; // Leave space for stick
         const clampedDistance = Math.min(distance, maxDistance);
-        
+
         // Calculate normalized direction
         const normalizedX = deltaX / distance;
         const normalizedY = deltaY / distance;
-        
+
         // Update stick position - use percentage-based positioning
         const stickX = (normalizedX * clampedDistance);
         const stickY = (normalizedY * clampedDistance);
-        
+
         this.joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
-        
+
         // Update input direction (invert Y for forward/backward)
         this.inputDirection.x = normalizedX;
         this.inputDirection.z = -normalizedY;
     }
-    
+
     /**
      * Updates joystick position based on pointer event
      * @param e Pointer event
      */
     private static updateJoystickPositionFromPointer(e: PointerEvent): void {
         if (!this.joystickStick || !this.joystickContainer) return;
-        
+
         // Update joystick center position dynamically
         this.updateJoystickCenterPosition();
-        
+
         const rect = this.joystickContainer.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        
+
         const touchX = e.clientX - rect.left;
         const touchY = e.clientY - rect.top;
-        
+
         const deltaX = touchX - centerX;
         const deltaY = touchY - centerY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        
+
         // Apply deadzone
         if (distance < MOBILE_CONTROLS.JOYSTICK_DEADZONE) {
             this.resetJoystick();
             return;
         }
-        
+
         // Clamp to joystick radius
         const maxDistance = MOBILE_CONTROLS.JOYSTICK_RADIUS - 15; // Leave space for stick
         const clampedDistance = Math.min(distance, maxDistance);
-        
+
         // Calculate normalized direction
         const normalizedX = deltaX / distance;
         const normalizedY = deltaY / distance;
-        
+
         // Update stick position - use percentage-based positioning
         const stickX = (normalizedX * clampedDistance);
         const stickY = (normalizedY * clampedDistance);
-        
+
         this.joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
-        
+
         // Update input direction (invert Y for forward/backward)
         this.inputDirection.x = normalizedX;
         this.inputDirection.z = -normalizedY;
     }
-    
+
     /**
      * Updates joystick center position based on current element position
      */
     private static updateJoystickCenterPosition(): void {
         if (!this.joystickContainer) return;
-        
+
         const rect = this.joystickContainer.getBoundingClientRect();
         this.joystickCenter = {
             x: rect.left + rect.width / 2,
             y: rect.top + rect.height / 2
         };
     }
-    
+
     /**
      * Resets joystick to center position
      */
@@ -1077,7 +1077,7 @@ class MobileInputManager {
         }
         this.inputDirection.set(0, 0, 0);
     }
-    
+
     /**
      * Handles jump button touch/pointer start
      * @param e Touch or Pointer event
@@ -1086,18 +1086,18 @@ class MobileInputManager {
         e.preventDefault();
         this.jumpActive = true;
         this.wantJump = true;
-        
+
         if ('touches' in e && e.touches.length > 0) {
             this.jumpTouchId = e.touches[0].identifier;
         } else if ('pointerId' in e) {
             this.jumpTouchId = e.pointerId;
         }
-        
+
         if (this.jumpButton) {
             this.jumpButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_ACTIVE;
         }
     }
-    
+
     /**
      * Handles jump button touch/pointer end
      * @param e Touch or Pointer event
@@ -1107,15 +1107,15 @@ class MobileInputManager {
         this.jumpActive = false;
         this.wantJump = false;
         this.jumpTouchId = null;
-        
+
         if (this.jumpButton) {
             this.jumpButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
         }
-        
+
         // Force reset jump input to ensure it stops
         this.wantJump = false;
     }
-    
+
     /**
      * Handles boost button touch/pointer start
      * @param e Touch or Pointer event
@@ -1124,20 +1124,20 @@ class MobileInputManager {
         e.preventDefault();
         this.boostActive = true;
         this.wantBoost = true;
-        
+
         if ('touches' in e && e.touches.length > 0) {
             this.boostTouchId = e.touches[0].identifier;
         } else if ('pointerId' in e) {
             this.boostTouchId = e.pointerId;
         }
-        
+
         if (this.boostButton) {
             this.boostButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_ACTIVE;
         }
-        
+
 
     }
-    
+
     /**
      * Handles boost button touch/pointer end
      * @param e Touch or Pointer event
@@ -1145,26 +1145,26 @@ class MobileInputManager {
     private static handleBoostTouchEnd(e: TouchEvent | PointerEvent): void {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // Reset all boost states immediately
         this.boostActive = false;
         this.wantBoost = false;
         this.boostTouchId = null;
-        
+
         // Reset visual state
         if (this.boostButton) {
             this.boostButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
         }
-        
+
         // Force reset boost input to ensure it stops
         this.wantBoost = false;
         this.boostActive = false;
-        
+
 
     }
-    
 
-    
+
+
     /**
      * Global touch/pointer end handler to catch any missed touch events
      * @param e Touch or Pointer event
@@ -1176,7 +1176,7 @@ class MobileInputManager {
         this.boostActive = false;
         this.inputDirection.set(0, 0, 0);
     }
-    
+
     /**
      * Gets the current input direction from mobile controls
      * @returns Input direction vector
@@ -1184,7 +1184,7 @@ class MobileInputManager {
     public static getInputDirection(): BABYLON.Vector3 {
         return this.inputDirection.clone();
     }
-    
+
     /**
      * Gets whether jump is requested from mobile controls
      * @returns True if jump is requested
@@ -1192,7 +1192,7 @@ class MobileInputManager {
     public static getWantJump(): boolean {
         return this.wantJump;
     }
-    
+
     /**
      * Gets whether boost is requested from mobile controls
      * @returns True if boost is requested
@@ -1200,7 +1200,7 @@ class MobileInputManager {
     public static getWantBoost(): boolean {
         return this.wantBoost;
     }
-    
+
     /**
      * Checks if mobile controls are active
      * @returns True if mobile controls are being used
@@ -1208,7 +1208,7 @@ class MobileInputManager {
     public static isMobileActive(): boolean {
         return this.joystickActive || this.jumpActive || this.boostActive;
     }
-    
+
     /**
      * Shows or hides mobile controls
      * @param visible Whether to show the controls
@@ -1224,14 +1224,14 @@ class MobileInputManager {
             this.boostButton.style.display = visible ? 'flex' : 'none';
         }
     }
-    
+
     public static isVisible(): boolean {
         if (this.joystickContainer) {
             return this.joystickContainer.style.display !== 'none';
         }
         return false;
     }
-    
+
     /**
      * Updates the position of mobile controls
      * @param controlType The type of control ('joystick', 'jump', 'boost')
@@ -1239,7 +1239,7 @@ class MobileInputManager {
      */
     public static updateControlPosition(controlType: 'joystick' | 'jump' | 'boost', position: { top?: number, bottom?: number, left?: number, right?: number }): void {
         let element: HTMLDivElement | null = null;
-        
+
         switch (controlType) {
             case 'joystick':
                 element = this.joystickContainer;
@@ -1251,7 +1251,7 @@ class MobileInputManager {
                 element = this.boostButton;
                 break;
         }
-        
+
         if (element) {
             if (position.top !== undefined) {
                 element.style.top = `${position.top}px`;
@@ -1265,11 +1265,11 @@ class MobileInputManager {
             if (position.right !== undefined) {
                 element.style.right = `${position.right}px`;
             }
-            
-    
+
+
         }
     }
-    
+
     /**
      * Updates the visibility of individual controls
      * @param controlType The type of control ('joystick', 'jump', 'boost')
@@ -1277,7 +1277,7 @@ class MobileInputManager {
      */
     public static setControlVisibility(controlType: 'joystick' | 'jump' | 'boost', visible: boolean): void {
         let element: HTMLDivElement | null = null;
-        
+
         switch (controlType) {
             case 'joystick':
                 element = this.joystickContainer;
@@ -1289,13 +1289,13 @@ class MobileInputManager {
                 element = this.boostButton;
                 break;
         }
-        
+
         if (element) {
             element.style.display = visible ? (controlType === 'joystick' ? 'block' : 'flex') : 'none';
-    
+
         }
     }
-    
+
     /**
      * Gets the current position of a mobile control
      * @param controlType The type of control ('joystick', 'jump', 'boost')
@@ -1303,7 +1303,7 @@ class MobileInputManager {
      */
     public static getControlPosition(controlType: 'joystick' | 'jump' | 'boost'): { top?: number, bottom?: number, left?: number, right?: number } {
         let element: HTMLDivElement | null = null;
-        
+
         switch (controlType) {
             case 'joystick':
                 element = this.joystickContainer;
@@ -1315,7 +1315,7 @@ class MobileInputManager {
                 element = this.boostButton;
                 break;
         }
-        
+
         if (element) {
             const rect = element.getBoundingClientRect();
             return {
@@ -1325,10 +1325,10 @@ class MobileInputManager {
                 right: window.innerWidth - rect.right
             };
         }
-        
+
         return {};
     }
-    
+
     /**
      * Resets all mobile controls to their default positions
      */
@@ -1337,20 +1337,20 @@ class MobileInputManager {
             bottom: MOBILE_CONTROLS.POSITIONS.JOYSTICK.BOTTOM,
             left: MOBILE_CONTROLS.POSITIONS.JOYSTICK.LEFT
         });
-        
+
         this.updateControlPosition('jump', {
             bottom: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.BOTTOM,
             right: MOBILE_CONTROLS.POSITIONS.JUMP_BUTTON.RIGHT
         });
-        
+
         this.updateControlPosition('boost', {
             bottom: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.BOTTOM,
             right: MOBILE_CONTROLS.POSITIONS.BOOST_BUTTON.RIGHT
         });
-        
+
 
     }
-    
+
     /**
      * Applies visibility settings from the config
      */
@@ -1359,7 +1359,7 @@ class MobileInputManager {
         this.setControlVisibility('jump', MOBILE_CONTROLS.VISIBILITY.SHOW_JUMP_BUTTON);
         this.setControlVisibility('boost', MOBILE_CONTROLS.VISIBILITY.SHOW_BOOST_BUTTON);
     }
-    
+
     /**
      * Forces a reset of all mobile control states
      * Call this if controls get stuck
@@ -1369,22 +1369,22 @@ class MobileInputManager {
         this.joystickActive = false;
         this.jumpActive = false;
         this.boostActive = false;
-        
+
         // Reset all touch IDs
         this.joystickTouchId = null;
         this.jumpTouchId = null;
         this.boostTouchId = null;
-        
+
         // Reset input direction
         this.inputDirection.set(0, 0, 0);
-        
+
         // Reset button states
         this.wantJump = false;
         this.wantBoost = false;
-        
+
         // Reset joystick visual
         this.resetJoystick();
-        
+
         // Reset button colors
         if (this.jumpButton) {
             this.jumpButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
@@ -1393,25 +1393,25 @@ class MobileInputManager {
             this.boostButton.style.backgroundColor = MOBILE_CONTROLS.COLORS.BUTTON_BG;
         }
     }
-    
 
-    
+
+
     /**
      * Disposes mobile input manager
      */
     public static dispose(): void {
 
-        
+
         // Remove event listeners
         document.removeEventListener('touchend', this.handleGlobalTouchEnd.bind(this));
         document.removeEventListener('touchcancel', this.handleGlobalTouchEnd.bind(this));
-        
+
         // Clean up all existing controls
         this.cleanupExistingControls();
-        
+
         // Reset initialization flag
         this.isInitialized = false;
-        
+
 
     }
 }
@@ -1424,7 +1424,7 @@ class EffectsManager {
     private static activeParticleSystems: Map<string, BABYLON.IParticleSystem> = new Map();
     private static activeSounds: Map<string, BABYLON.Sound> = new Map();
     private static scene: BABYLON.Scene | null = null;
-    
+
     /**
      * Initializes the EffectsManager with a scene
      * @param scene The Babylon.js scene
@@ -1432,7 +1432,7 @@ class EffectsManager {
     public static initialize(scene: BABYLON.Scene): void {
         this.scene = scene;
     }
-    
+
     /**
      * Creates a particle system from a snippet by name
      * @param snippetName Name of the particle snippet to create
@@ -1444,36 +1444,36 @@ class EffectsManager {
             console.warn("EffectsManager not initialized. Call initialize() first.");
             return null;
         }
-        
+
         const snippet = CONFIG.EFFECTS.PARTICLE_SNIPPETS.find(s => s.name === snippetName);
         if (!snippet) {
             console.warn(`Particle snippet "${snippetName}" not found.`);
             return null;
         }
-        
+
         try {
             // Create a unique name for the particle system
             const uniqueName = `${snippetName}_${Date.now()}`;
-            
+
             // Parse the snippet from the online editor
             const particleSystem = await BABYLON.ParticleHelper.ParseFromSnippetAsync(snippet.snippetId, this.scene, false);
-            
+
             if (particleSystem && emitter) {
                 particleSystem.emitter = emitter;
             }
-            
+
             if (particleSystem) {
                 this.activeParticleSystems.set(uniqueName, particleSystem);
-        
+
             }
-            
+
             return particleSystem;
         } catch (error) {
             console.error(`Failed to create particle system "${snippetName}":`, error);
             return null;
         }
     }
-    
+
     /**
      * Creates a particle system at a specific position
      * @param snippetName Name of the particle snippet
@@ -1483,7 +1483,7 @@ class EffectsManager {
     public static async createParticleSystemAt(snippetName: string, position: BABYLON.Vector3): Promise<BABYLON.IParticleSystem | null> {
         return this.createParticleSystem(snippetName, position);
     }
-    
+
     /**
      * Stops and removes a particle system by name
      * @param systemName Name of the particle system to remove
@@ -1494,10 +1494,10 @@ class EffectsManager {
             particleSystem.stop();
             particleSystem.dispose();
             this.activeParticleSystems.delete(systemName);
-    
+
         }
     }
-    
+
     /**
      * Stops and removes all active particle systems
      */
@@ -1509,7 +1509,7 @@ class EffectsManager {
         this.activeParticleSystems.clear();
 
     }
-    
+
     /**
      * Gets all available particle snippet names
      * @returns Array of snippet names
@@ -1517,7 +1517,7 @@ class EffectsManager {
     public static getAvailableSnippets(): string[] {
         return CONFIG.EFFECTS.PARTICLE_SNIPPETS.map(snippet => snippet.name);
     }
-    
+
     /**
      * Gets particle snippets by category
      * @param category Category to filter by
@@ -1528,7 +1528,7 @@ class EffectsManager {
             .filter(snippet => snippet.category === category)
             .map(snippet => snippet.name);
     }
-    
+
     /**
      * Gets particle snippet details by name
      * @param snippetName Name of the snippet
@@ -1537,7 +1537,7 @@ class EffectsManager {
     public static getSnippetDetails(snippetName: string): ParticleSnippet | null {
         return CONFIG.EFFECTS.PARTICLE_SNIPPETS.find(snippet => snippet.name === snippetName) || null;
     }
-    
+
     /**
      * Gets all active particle systems
      * @returns Map of active particle systems
@@ -1545,7 +1545,7 @@ class EffectsManager {
     public static getActiveParticleSystems(): Map<string, BABYLON.IParticleSystem> {
         return new Map(this.activeParticleSystems);
     }
-    
+
     /**
      * Pauses all active particle systems
      */
@@ -1554,7 +1554,7 @@ class EffectsManager {
             particleSystem.stop();
         });
     }
-    
+
     /**
      * Resumes all active particle systems
      */
@@ -1563,7 +1563,7 @@ class EffectsManager {
             particleSystem.start();
         });
     }
-    
+
     /**
      * Creates the default particle system if auto-spawn is enabled
      */
@@ -1584,26 +1584,26 @@ class EffectsManager {
             console.warn("EffectsManager not initialized. Call initialize() first.");
             return null;
         }
-        
+
         const soundConfig = CONFIG.EFFECTS.SOUND_EFFECTS.find(s => s.name === soundName);
         if (!soundConfig) {
             console.warn(`Sound effect "${soundName}" not found.`);
             return null;
         }
-        
+
         try {
             const sound = new BABYLON.Sound(soundName, soundConfig.url, this.scene, null, {
                 volume: soundConfig.volume,
                 loop: soundConfig.loop
             });
-            
+
             // Add basic sound event handling
             sound.onended = () => {
-        
+
             };
-            
+
             this.activeSounds.set(soundName, sound);
-    
+
             return sound;
         } catch (error) {
             console.error(`Failed to create sound "${soundName}":`, error);
@@ -1662,7 +1662,7 @@ class EffectsManager {
 class SkyManager {
     private static sky: BABYLON.Mesh | null = null;
     private static skyTexture: BABYLON.Texture | null = null;
-    
+
     /**
      * Creates and applies a sky to the scene
      * @param scene The Babylon.js scene
@@ -1673,30 +1673,30 @@ class SkyManager {
      * @returns The created sky mesh
      */
     public static createSky(
-        scene: BABYLON.Scene, 
+        scene: BABYLON.Scene,
         skyConfig: SkyConfig
     ): BABYLON.Mesh {
         // Remove existing sky if present
         this.removeSky(scene);
-        
+
         // Create sky texture
         this.skyTexture = new BABYLON.Texture(skyConfig.TEXTURE_URL, scene);
-        
+
         // Apply blur if specified
         if (skyConfig.BLUR > 0) {
             this.skyTexture.level = skyConfig.BLUR;
         }
-        
+
         // Create sky based on type
         if (skyConfig.TYPE.toUpperCase() === "SPHERE") {
             this.createSkySphere(scene, skyConfig.ROTATION_Y);
         } else {
             this.createSkyBox(scene, skyConfig.ROTATION_Y);
         }
-        
+
         return this.sky!;
     }
-    
+
     /**
      * Creates a sky sphere (360-degree sphere)
      * @param scene The Babylon.js scene
@@ -1704,11 +1704,11 @@ class SkyManager {
      */
     private static createSkySphere(scene: BABYLON.Scene, rotationY: number): void {
         // Create sphere mesh
-        this.sky = BABYLON.MeshBuilder.CreateSphere("skySphere", { 
+        this.sky = BABYLON.MeshBuilder.CreateSphere("skySphere", {
             diameter: 1000.0,
             segments: 32
         }, scene);
-        
+
         // Create sky material for sphere
         const skyMaterial = new BABYLON.StandardMaterial("skySphere", scene);
         skyMaterial.backFaceCulling = false;
@@ -1716,19 +1716,19 @@ class SkyManager {
         skyMaterial.disableLighting = true;
         skyMaterial.emissiveTexture = this.skyTexture;
         skyMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-        
+
         // Apply material to sky
         this.sky.material = skyMaterial;
-        
+
         // Fix upside-down issue by rotating 180 degrees around X-axis
         this.sky.rotation.x = Math.PI;
-        
+
         // Apply additional rotation
         if (rotationY !== 0) {
             this.sky.rotation.y = rotationY;
         }
     }
-    
+
     /**
      * Creates a sky box (standard cube skybox)
      * @param scene The Babylon.js scene
@@ -1737,10 +1737,10 @@ class SkyManager {
     private static createSkyBox(scene: BABYLON.Scene, rotationY: number): void {
         // Set texture coordinates mode for cube skybox
         this.skyTexture!.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-        
+
         // Create box mesh
         this.sky = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, scene);
-        
+
         // Create sky material for box
         const skyMaterial = new BABYLON.StandardMaterial("skyBox", scene);
         skyMaterial.backFaceCulling = false;
@@ -1748,16 +1748,16 @@ class SkyManager {
         skyMaterial.disableLighting = true;
         skyMaterial.emissiveTexture = this.skyTexture;
         skyMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-        
+
         // Apply material to sky
         this.sky.material = skyMaterial;
-        
+
         // Apply rotation
         if (rotationY !== 0) {
             this.sky.rotation.y = rotationY;
         }
     }
-    
+
     /**
      * Removes the sky from the scene
      * @param scene The Babylon.js scene
@@ -1767,13 +1767,13 @@ class SkyManager {
             this.sky.dispose();
             this.sky = null;
         }
-        
+
         if (this.skyTexture) {
             this.skyTexture.dispose();
             this.skyTexture = null;
         }
     }
-    
+
     /**
      * Updates the sky rotation
      * @param rotationY Y-axis rotation in radians
@@ -1783,7 +1783,7 @@ class SkyManager {
             this.sky.rotation.y = rotationY;
         }
     }
-    
+
     /**
      * Updates the sky blur
      * @param blur Blur amount (0-1)
@@ -1793,7 +1793,7 @@ class SkyManager {
             this.skyTexture.level = blur;
         }
     }
-    
+
     /**
      * Gets the current sky mesh
      * @returns The sky mesh or null if not created
@@ -1801,7 +1801,7 @@ class SkyManager {
     public static getSky(): BABYLON.Mesh | null {
         return this.sky;
     }
-    
+
     /**
      * Checks if a sky exists
      * @returns True if sky exists, false otherwise
@@ -1826,7 +1826,7 @@ class HUDManager {
     private static fpsCounter: number = 0;
     private static fpsLastTime: number = 0;
     private static currentFPS: number = 0;
-    
+
     /**
      * Initializes the HUD with a scene and character controller
      * @param scene The Babylon.js scene
@@ -1837,17 +1837,17 @@ class HUDManager {
         if (this.hudContainer) {
             this.dispose();
         }
-        
+
         this.scene = scene;
         this.characterController = characterController;
         this.startTime = Date.now();
         this.createHUD();
-        
+
         // Detect if this is a mobile device
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                        ('ontouchstart' in window) || 
-                        (navigator.maxTouchPoints > 0);
-        
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            ('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0);
+
         // Set initial visibility for all HUD elements based on device type
         if (isMobile) {
             // Mobile: Only show state, boost, and credits
@@ -1866,24 +1866,24 @@ class HUDManager {
             this.setElementVisibility('boost', CONFIG.HUD.SHOW_BOOST_STATUS);
             this.setElementVisibility('credits', CONFIG.HUD.SHOW_CREDITS);
         }
-        
+
         this.startUpdateLoop();
     }
-    
+
     /**
      * Creates the HUD container and elements
      */
     private static createHUD(): void {
         if (!this.scene) return;
-        
+
         const canvas = this.scene.getEngine().getRenderingCanvas();
         if (!canvas) return;
-        
+
         // Create HUD container
         this.hudContainer = document.createElement('div');
         this.hudContainer.id = 'game-hud';
         this.hudContainer.style.cssText = this.getHUDContainerStyles();
-        
+
         // Create HUD elements
         this.createHUDElement('coordinates', 'Coordinates');
         this.createHUDElement('time', 'Time');
@@ -1891,16 +1891,16 @@ class HUDManager {
         this.createHUDElement('state', 'State');
         this.createHUDElement('boost', 'Boost');
         this.createHUDElement('credits', 'Credits');
-        
+
         // Add CSS animations
         this.addHUDAnimations();
-        
+
         // Add HUD to canvas parent
         const canvasParent = canvas.parentElement;
         if (canvasParent) {
             canvasParent.appendChild(this.hudContainer);
         }
-        
+
         // Set up FPS counter
         this.scene.onBeforeRenderObservable.add(() => {
             this.fpsCounter++;
@@ -1912,7 +1912,7 @@ class HUDManager {
             }
         });
     }
-    
+
     /**
      * Adds CSS animations for HUD effects
      */
@@ -1936,7 +1936,7 @@ class HUDManager {
         `;
         document.head.appendChild(style);
     }
-    
+
     /**
      * Gets the CSS styles for the HUD container based on position
      * @returns CSS styles string
@@ -1944,7 +1944,7 @@ class HUDManager {
     private static getHUDContainerStyles(): string {
         const config = CONFIG.HUD;
         const position = config.POSITION;
-        
+
         let positionStyles = '';
         switch (position) {
             case 'top':
@@ -1960,7 +1960,7 @@ class HUDManager {
                 positionStyles = 'top: 0; right: 0; bottom: 0; flex-direction: column; justify-content: flex-start;';
                 break;
         }
-        
+
         return `
             position: absolute;
             ${positionStyles}
@@ -1973,7 +1973,7 @@ class HUDManager {
             pointer-events: none;
         `;
     }
-    
+
     /**
      * Creates a HUD element
      * @param id Element ID
@@ -1981,17 +1981,17 @@ class HUDManager {
      */
     private static createHUDElement(id: string, label: string): void {
         if (!this.hudContainer) return;
-        
+
         const element = document.createElement('div');
         element.id = `hud-${id}`;
         element.className = 'hud-element';
         element.style.cssText = this.getHUDElementStyles() + 'display: none;'; // Start hidden
-        
+
         const labelSpan = document.createElement('span');
         labelSpan.className = 'hud-label';
         labelSpan.textContent = label;
         labelSpan.style.color = CONFIG.HUD.SECONDARY_COLOR;
-        
+
         const valueSpan = document.createElement('span');
         valueSpan.className = 'hud-value';
         valueSpan.id = `hud-${id}-value`;
@@ -2002,7 +2002,7 @@ class HUDManager {
             valueSpan.style.minWidth = '180px';
             valueSpan.style.display = 'inline-block';
         }
-        
+
         element.appendChild(labelSpan);
         // Only add <br> for non-coordinates elements
         if (id !== 'coordinates') {
@@ -2012,11 +2012,11 @@ class HUDManager {
             labelSpan.style.marginRight = '8px';
         }
         element.appendChild(valueSpan);
-        
+
         this.hudContainer.appendChild(element);
         this.hudElements.set(id, element);
     }
-    
+
     /**
      * Gets the CSS styles for HUD elements
      * @returns CSS styles string
@@ -2039,7 +2039,7 @@ class HUDManager {
             transition: all 0.2s ease;
         `;
     }
-    
+
     /**
      * Starts the HUD update loop
      */
@@ -2048,53 +2048,53 @@ class HUDManager {
             this.updateHUD();
         }, CONFIG.HUD.UPDATE_INTERVAL);
     }
-    
+
     /**
      * Updates all HUD elements
      */
     private static updateHUD(): void {
         if (!this.scene || !this.characterController) return;
-        
+
         const currentTime = Date.now();
         if (currentTime - this.lastUpdateTime < CONFIG.HUD.UPDATE_INTERVAL) return;
         this.lastUpdateTime = currentTime;
-        
+
         // Detect if this is a mobile device
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                        ('ontouchstart' in window) || 
-                        (navigator.maxTouchPoints > 0);
-        
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            ('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0);
+
         // Update coordinates
         if (isMobile ? CONFIG.HUD.MOBILE.SHOW_COORDINATES : CONFIG.HUD.SHOW_COORDINATES) {
             this.updateCoordinates();
         }
-        
+
         // Update time
         if (isMobile ? CONFIG.HUD.MOBILE.SHOW_TIME : CONFIG.HUD.SHOW_TIME) {
             this.updateTime();
         }
-        
+
         // Update FPS
         if (isMobile ? CONFIG.HUD.MOBILE.SHOW_FPS : CONFIG.HUD.SHOW_FPS) {
             this.updateFPS();
         }
-        
+
         // Update state
         if (isMobile ? CONFIG.HUD.MOBILE.SHOW_STATE : CONFIG.HUD.SHOW_STATE) {
             this.updateState();
         }
-        
+
         // Update boost status
         if (isMobile ? CONFIG.HUD.MOBILE.SHOW_BOOST_STATUS : CONFIG.HUD.SHOW_BOOST_STATUS) {
             this.updateBoostStatus();
         }
-        
+
         // Update credits
         if (isMobile ? CONFIG.HUD.MOBILE.SHOW_CREDITS : CONFIG.HUD.SHOW_CREDITS) {
             this.updateCredits();
         }
     }
-    
+
     /**
      * Updates the coordinates display
      */
@@ -2108,40 +2108,40 @@ class HUDManager {
             valueElement.textContent = `X: ${position.x.toFixed(2)} Y: ${position.y.toFixed(2)} Z: ${position.z.toFixed(2)}`;
         }
     }
-    
+
     /**
      * Updates the time display
      */
     private static updateTime(): void {
         const element = this.hudElements.get('time');
         if (!element) return;
-        
+
         const elapsed = Date.now() - this.startTime;
         const seconds = Math.floor(elapsed / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
-        
-        const timeString = hours > 0 
+
+        const timeString = hours > 0
             ? `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
             : `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-        
+
         const valueElement = element.querySelector('#hud-time-value') as HTMLSpanElement;
         if (valueElement) {
             valueElement.textContent = timeString;
         }
     }
-    
+
     /**
      * Updates the FPS display
      */
     private static updateFPS(): void {
         const element = this.hudElements.get('fps');
         if (!element) return;
-        
+
         const valueElement = element.querySelector('#hud-fps-value') as HTMLSpanElement;
         if (valueElement) {
             valueElement.textContent = `${this.currentFPS} FPS`;
-            
+
             // Color code FPS
             if (this.currentFPS >= 55) {
                 valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
@@ -2152,20 +2152,20 @@ class HUDManager {
             }
         }
     }
-    
+
     /**
      * Updates the state display
      */
     private static updateState(): void {
         const element = this.hudElements.get('state');
         if (!element) return;
-        
+
         const valueElement = element.querySelector('#hud-state-value') as HTMLSpanElement;
         if (valueElement) {
             // Get character state (this would need to be exposed from CharacterController)
             const isMoving = this.isCharacterMoving();
             const isOnGround = this.isCharacterOnGround();
-            
+
             let stateText = '';
             if (isMoving && isOnGround) {
                 stateText = 'Walking';
@@ -2180,23 +2180,23 @@ class HUDManager {
                 stateText = 'Idle';
                 valueElement.style.color = CONFIG.HUD.SECONDARY_COLOR;
             }
-            
+
             valueElement.textContent = stateText;
         }
     }
-    
+
     /**
      * Updates the boost status display
      */
     private static updateBoostStatus(): void {
         const element = this.hudElements.get('boost');
         if (!element) return;
-        
+
         const valueElement = element.querySelector('#hud-boost-value') as HTMLSpanElement;
         if (valueElement) {
             // This would need to be exposed from CharacterController
             const isBoosting = this.isCharacterBoosting();
-            
+
             if (isBoosting) {
                 valueElement.textContent = 'ACTIVE';
                 valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
@@ -2208,40 +2208,40 @@ class HUDManager {
             }
         }
     }
-    
+
     /**
      * Checks if character is moving
      */
     private static isCharacterMoving(): boolean {
         return this.characterController?.isMoving() || false;
     }
-    
+
     /**
      * Checks if character is on ground
      */
     private static isCharacterOnGround(): boolean {
         return this.characterController?.isOnGround() || false;
     }
-    
+
     /**
      * Checks if character is boosting
      */
     private static isCharacterBoosting(): boolean {
         return this.characterController?.isBoosting() || false;
     }
-    
+
     /**
      * Updates the credits display
      */
     private static updateCredits(): void {
         const element = this.hudElements.get('credits');
         if (!element) return;
-        
+
         const totalCredits = CollectiblesManager.getTotalCredits();
         const valueElement = element.querySelector('#hud-credits-value') as HTMLSpanElement;
         if (valueElement) {
             valueElement.textContent = `${totalCredits}`;
-            
+
             // Highlight when credits increase
             if (totalCredits > 0) {
                 valueElement.style.color = CONFIG.HUD.HIGHLIGHT_COLOR;
@@ -2250,7 +2250,7 @@ class HUDManager {
             }
         }
     }
-    
+
     /**
      * Shows or hides HUD elements
      * @param elementId Element ID to toggle
@@ -2262,7 +2262,7 @@ class HUDManager {
             element.style.display = visible ? 'block' : 'none';
         }
     }
-    
+
     /**
      * Updates HUD configuration
      * @param newConfig New HUD configuration
@@ -2301,7 +2301,7 @@ class HUDManager {
             this.setElementVisibility('credits', newConfig.SHOW_CREDITS);
         }
     }
-    
+
     /**
      * Changes HUD position dynamically
      * @param position New position ('top', 'bottom', 'left', 'right')
@@ -2309,7 +2309,7 @@ class HUDManager {
     public static setPosition(position: HUDPosition): void {
         this.updateConfig({ POSITION: position });
     }
-    
+
     /**
      * Changes HUD colors dynamically
      * @param primaryColor Primary color
@@ -2322,12 +2322,12 @@ class HUDManager {
         this.hudElements.forEach((element, id) => {
             const label = element.querySelector('.hud-label') as HTMLSpanElement;
             const value = element.querySelector('.hud-value') as HTMLSpanElement;
-            
+
             if (label) label.style.color = secondaryColor;
             if (value) value.style.color = primaryColor;
         });
     }
-    
+
     /**
      * Toggles HUD visibility
      * @param visible Whether to show the HUD
@@ -2337,7 +2337,7 @@ class HUDManager {
             this.hudContainer.style.display = visible ? 'flex' : 'none';
         }
     }
-    
+
     /**
      * Disposes the HUD
      */
@@ -2346,12 +2346,12 @@ class HUDManager {
             clearInterval(this.updateInterval);
             this.updateInterval = null;
         }
-        
+
         if (this.hudContainer) {
             this.hudContainer.remove();
             this.hudContainer = null;
         }
-        
+
         this.hudElements.clear();
         this.scene = null;
         this.characterController = null;
@@ -2373,11 +2373,11 @@ class CollectiblesManager {
     private static collectedItems: Set<string> = new Set();
     private static instanceBasis: BABYLON.Mesh | null = null;
     private static cratePhysicsShape: BABYLON.PhysicsShape | null = null; // Reusable physics shape
-    
+
     // Custom physics ready event system
     private static physicsReadyObservable = new BABYLON.Observable<void>();
     private static physicsReadyObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
-    
+
     /**
      * Waits for physics to be properly initialized
      * @returns Promise that resolves when physics is ready
@@ -2386,11 +2386,11 @@ class CollectiblesManager {
         if (!this.scene) {
             throw new Error("Scene not available for physics initialization check");
         }
-        
+
         // Simple delay to allow physics to initialize
         await new Promise(resolve => setTimeout(resolve, 100));
     }
-    
+
     /**
      * Initializes the CollectiblesManager with a scene and character controller
      * @param scene The Babylon.js scene
@@ -2400,34 +2400,34 @@ class CollectiblesManager {
         this.scene = scene;
         this.characterController = characterController;
         this.totalCredits = 0;
-        
+
         return this.setupCollectibles();
     }
-    
+
     /**
      * Sets up collectibles in the environment
      */
     private static async setupCollectibles(): Promise<void> {
         if (!this.scene) return;
-        
+
         // Wait for physics to be properly initialized
         await this.waitForPhysicsInitialization();
-        
+
         // Create collection sound
         this.collectionSound = new BABYLON.Sound(
-            "collectionSound", 
-            CONFIG.ITEMS.COLLECTION_SOUND, 
-            this.scene, 
-            null, 
+            "collectionSound",
+            CONFIG.ITEMS.COLLECTION_SOUND,
+            this.scene,
+            null,
             { volume: 0.7 }
         );
-        
+
         // Iterate through all items in config
         for (const itemConfig of CONFIG.ITEMS.ITEMS) {
             // Only process collectible items
             if (itemConfig.collectible) {
                 await this.loadItemModel(itemConfig);
-                
+
                 // Create instances for this item
                 for (let i = 0; i < itemConfig.instances.length; i++) {
                     const instance = itemConfig.instances[i];
@@ -2436,21 +2436,21 @@ class CollectiblesManager {
                 }
             }
         }
-        
+
         // Set up physics collision detection
         this.setupCollisionDetection();
     }
-    
+
     /**
      * Loads an item model to use as instance basis
      */
     private static async loadItemModel(itemConfig: ItemConfig): Promise<void> {
         if (!this.scene) return;
-        
+
         try {
 
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
-            
+
             // Rename the root node for better organization
             if (result.meshes && result.meshes.length > 0) {
                 // Find the root mesh (the one without a parent)
@@ -2459,9 +2459,9 @@ class CollectiblesManager {
                     rootMesh.name = `${itemConfig.name.toLowerCase()}_basis`;
                 }
             }
-            
 
-            
+
+
             // Check if any mesh has proper geometry
             const meshWithGeometry = result.meshes.find(mesh => {
                 if (mesh instanceof BABYLON.Mesh) {
@@ -2469,17 +2469,17 @@ class CollectiblesManager {
                 }
                 return false;
             });
-            
+
             if (meshWithGeometry) {
                 // Use the first mesh with geometry as the instance basis
                 this.instanceBasis = meshWithGeometry as BABYLON.Mesh;
-                
+
                 // Make the instance basis invisible and disable it in the scene
                 this.instanceBasis.isVisible = false;
                 this.instanceBasis.setEnabled(false);
-                
 
-                
+
+
                 // Create reusable physics shape for better performance
                 const boundingInfo = this.instanceBasis.getBoundingInfo();
                 if (boundingInfo) {
@@ -2501,7 +2501,7 @@ class CollectiblesManager {
                     );
 
                 }
-                
+
             } else {
                 console.warn("No meshes with geometry found in crate model, creating fallback");
                 this.createFallbackInstanceBasis();
@@ -2512,31 +2512,31 @@ class CollectiblesManager {
             this.createFallbackInstanceBasis();
         }
     }
-    
+
     /**
      * Creates a fallback instance basis using a simple box
      */
     private static createFallbackInstanceBasis(): void {
         if (!this.scene) return;
-        
+
         const itemConfig = CONFIG.ITEMS.ITEMS[0];
-        
+
         // Create a fallback crate using a simple box - CAST TO MESH!
         this.instanceBasis = BABYLON.MeshBuilder.CreateBox("fallback_crate_basis", { size: 2 }, this.scene) as BABYLON.Mesh; // Larger size
-        
+
         // Create a bright baby blue material to make it very visible
         const material = new BABYLON.StandardMaterial("fallback_crate_basis_material", this.scene);
         material.diffuseColor = new BABYLON.Color3(0.5, 0.8, 1); // Baby blue
         material.emissiveColor = new BABYLON.Color3(0.1, 0.2, 0.3); // Subtle blue glow
         material.specularColor = new BABYLON.Color3(1, 1, 1); // Shiny
         this.instanceBasis.material = material;
-        
+
         // Instance basis should not be scaled - scaling will be applied to individual instances
-        
+
         // Make the instance basis invisible and disable it in the scene
         this.instanceBasis.isVisible = false;
         this.instanceBasis.setEnabled(false);
-        
+
         // Create reusable physics shape for fallback crates
         this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
             BABYLON.Vector3.Zero(), // Center - use static zero
@@ -2546,7 +2546,7 @@ class CollectiblesManager {
         );
 
     }
-    
+
     /**
      * Creates a collectible instance from the instance basis
      * @param id Unique identifier for the collectible
@@ -2557,52 +2557,52 @@ class CollectiblesManager {
             console.error("No scene or instance basis available for creating collectible instance");
             return;
         }
-        
+
         try {
             // Create an instance from the loaded model
             const meshInstance = this.instanceBasis.createInstance(id);
-            
+
             // Remove the instance from its parent to make it independent
             if (meshInstance.parent) {
                 meshInstance.setParent(null);
             }
-            
+
             // Apply instance properties
             meshInstance.position = instance.position;
             meshInstance.scaling.setAll(instance.scale);
             meshInstance.rotation = instance.rotation;
-            
+
             // Make it visible and enabled
             meshInstance.isVisible = true;
             meshInstance.setEnabled(true);
-            
+
             // Get the scaled bounding box dimensions after applying instance scaling
             const boundingBox = meshInstance.getBoundingInfo();
             const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
-            
+
             // Create physics body with dynamic box shape based on scaled dimensions
             const physicsAggregate = new BABYLON.PhysicsAggregate(
-                meshInstance, 
-                BABYLON.PhysicsShapeType.BOX, 
+                meshInstance,
+                BABYLON.PhysicsShapeType.BOX,
                 { mass: instance.mass }
             );
-            
+
             // Note: Physics shape size is determined by the mesh's bounding box
             // The scaling applied to the mesh will automatically affect the physics shape
-            
+
             // Store references
             this.collectibles.set(id, meshInstance);
             if (physicsAggregate.body) {
                 this.collectibleBodies.set(id, physicsAggregate.body);
             }
-            
+
             // Add rotation animation
             this.addRotationAnimation(meshInstance);
         } catch (error) {
             console.error(`Failed to create collectible instance ${id}:`, error);
         }
     }
-    
+
     /**
      * Creates a collectible item (legacy method - kept for fallback)
      * @param id Unique identifier for the collectible
@@ -2613,60 +2613,60 @@ class CollectiblesManager {
             console.error("No scene available for creating collectible");
             return;
         }
-        
 
-        
+
+
         // Find the item config that contains this instance
-        const itemConfig = CONFIG.ITEMS.ITEMS.find(item => 
-            item.instances.some(inst => 
-                inst.position.equals(instance.position) && 
-                inst.scale === instance.scale && 
+        const itemConfig = CONFIG.ITEMS.ITEMS.find(item =>
+            item.instances.some(inst =>
+                inst.position.equals(instance.position) &&
+                inst.scale === instance.scale &&
                 inst.mass === instance.mass
             )
         );
-        
+
         if (!itemConfig) {
             console.error(`No item config found for instance ${id}`);
             return;
         }
-        
+
         try {
 
             // Import the item model
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
-            
 
-            
+
+
             if (result.meshes.length > 0) {
                 const mesh = result.meshes[0];
                 mesh.name = id;
-                
+
                 // Apply instance properties
                 mesh.scaling.setAll(instance.scale);
                 mesh.rotation = instance.rotation;
-                
+
                 // Set position BEFORE creating physics body
                 mesh.position = instance.position;
 
-                
+
                 // Make sure the mesh is visible
                 mesh.isVisible = true;
 
-                
+
                 // Get the scaled bounding box dimensions after applying instance scaling
                 const boundingBox = mesh.getBoundingInfo();
                 const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
-                
+
                 // Create physics body with dynamic box shape based on scaled dimensions
                 const physicsAggregate = new BABYLON.PhysicsAggregate(
-                    mesh, 
-                    BABYLON.PhysicsShapeType.BOX, 
+                    mesh,
+                    BABYLON.PhysicsShapeType.BOX,
                     { mass: instance.mass }
                 );
-                
+
                 // Note: Physics shape size is determined by the mesh's bounding box
                 // The scaling applied to the mesh will automatically affect the physics shape
-                
+
                 // Ensure the physics body is positioned correctly
                 if (physicsAggregate.body) {
                     physicsAggregate.body.setMassProperties({ mass: instance.mass });
@@ -2674,13 +2674,13 @@ class CollectiblesManager {
                 } else {
                     console.warn(`Failed to create physics body for ${id}`);
                 }
-                
+
                 // Store references
                 this.collectibles.set(id, mesh);
-                
+
                 // Add rotation animation
                 this.addRotationAnimation(mesh);
-                
+
 
             } else {
                 console.warn(`No meshes found in ${itemConfig.url} for ${id}`);
@@ -2688,39 +2688,39 @@ class CollectiblesManager {
         } catch (error) {
             console.error(`Failed to create collectible ${id}:`, error);
 
-            
+
             // Create a fallback item using a simple box
             const fallbackItem = BABYLON.MeshBuilder.CreateBox(`fallback_${id}`, { size: 1 }, this.scene);
 
-            
+
             // Create a simple material to make it visible
             const material = new BABYLON.StandardMaterial(`fallback_${id}_material`, this.scene);
             material.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.2); // Brown color
             material.emissiveColor = new BABYLON.Color3(0.1, 0.05, 0); // Slight glow
             fallbackItem.material = material;
-            
+
             // Set position and visibility BEFORE creating physics body
             fallbackItem.position = instance.position;
             fallbackItem.isVisible = true;
 
-            
+
             // Apply scaling to the fallback item
             fallbackItem.scaling.setAll(instance.scale);
-            
+
             // Get the scaled bounding box dimensions
             const boundingBox = fallbackItem.getBoundingInfo();
             const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
-            
+
             // Create physics body with dynamic box shape based on scaled dimensions
             const physicsAggregate = new BABYLON.PhysicsAggregate(
-                fallbackItem, 
-                BABYLON.PhysicsShapeType.BOX, 
+                fallbackItem,
+                BABYLON.PhysicsShapeType.BOX,
                 { mass: instance.mass }
             );
-            
+
             // Note: Physics shape size is determined by the mesh's bounding box
             // The scaling applied to the mesh will automatically affect the physics shape
-            
+
             // Ensure the physics body is positioned correctly
             if (physicsAggregate.body) {
                 physicsAggregate.body.setMassProperties({ mass: instance.mass });
@@ -2728,24 +2728,24 @@ class CollectiblesManager {
             } else {
                 console.warn(`Failed to create physics body for fallback ${id}`);
             }
-            
+
             // Store references
             this.collectibles.set(id, fallbackItem);
-            
+
             // Add rotation animation
             this.addRotationAnimation(fallbackItem);
-            
+
 
         }
     }
-    
+
     /**
      * Adds a rotation animation to make collectibles more visible
      * @param mesh The mesh to animate
      */
     private static addRotationAnimation(mesh: BABYLON.AbstractMesh): void {
         if (!this.scene) return;
-        
+
         const animation = new BABYLON.Animation(
             "rotationAnimation",
             "rotation.y",
@@ -2753,51 +2753,51 @@ class CollectiblesManager {
             BABYLON.Animation.ANIMATIONTYPE_FLOAT,
             BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
         );
-        
+
         const keyFrames = [
             { frame: 0, value: 0 },
             { frame: 30, value: 2 * Math.PI }
         ];
-        
+
         animation.setKeys(keyFrames);
         mesh.animations = [animation];
-        
+
         this.scene.beginAnimation(mesh, 0, 30, true);
     }
-    
+
     /**
      * Sets up collision detection for collectibles
      */
     private static setupCollisionDetection(): void {
         if (!this.scene || !this.characterController) return;
-        
+
         // Set up collision detection using scene collision observer
         this.collectionObserver = this.scene.onBeforeRenderObservable.add(() => {
             this.checkCollisions();
         });
     }
-    
+
     /**
      * Checks for collisions between character and collectibles
      */
     private static checkCollisions(): void {
         if (!this.characterController) return;
-        
+
         const characterPosition = this.characterController.getDisplayCapsule().position;
         const collectionRadius = CONFIG.ITEMS.COLLECTION_RADIUS;
-        
+
         for (const [id, mesh] of this.collectibles.entries()) {
             // Skip if already collected
             if (this.collectedItems.has(id)) continue;
-            
+
             const distance = BABYLON.Vector3.Distance(characterPosition, mesh.position);
-            
+
             if (distance <= collectionRadius) {
                 this.attemptCollection(id, mesh);
             }
         }
     }
-    
+
     /**
      * Attempts to collect an item based on velocity
      * @param collectibleId The ID of the collectible
@@ -2805,28 +2805,28 @@ class CollectiblesManager {
      */
     private static attemptCollection(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh): void {
         if (!this.characterController) return;
-        
+
         // Find the item config for this collectible
-        const itemConfig = CONFIG.ITEMS.ITEMS.find(item => 
-            item.collectible && 
-            item.instances.some(instance => 
+        const itemConfig = CONFIG.ITEMS.ITEMS.find(item =>
+            item.collectible &&
+            item.instances.some(instance =>
                 instance.position.equals(collectibleMesh.position)
             )
         );
-        
+
         if (!itemConfig) {
             console.warn(`No item config found for collectible ${collectibleId}`);
             return;
         }
-        
+
         const characterVelocity = this.characterController.getVelocity();
         const speed = characterVelocity.length();
-        
+
         if (speed >= itemConfig.minImpulseForCollection) {
             this.collectItem(collectibleId, collectibleMesh, itemConfig);
         }
     }
-    
+
     /**
      * Collects an item and adds credits
      * @param collectibleId The ID of the collectible
@@ -2835,86 +2835,86 @@ class CollectiblesManager {
     private static collectItem(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh, itemConfig: ItemConfig): void {
         // Mark as collected to prevent multiple collections
         this.collectedItems.add(collectibleId);
-        
+
         // Add credits
         this.totalCredits += itemConfig.creditValue;
-        
+
         // Play collection sound
         if (this.collectionSound) {
             this.collectionSound.play();
         }
-        
+
         // Show collection effects
         if (CONFIG.ITEMS.SHOW_COLLECTION_EFFECTS) {
             this.showCollectionEffects(collectibleMesh.position);
         }
-        
+
         // Remove the collectible
         this.removeCollectible(collectibleId);
-        
+
 
     }
-    
+
     /**
      * Shows collection effects at the specified position
      * @param position Position to show effects
      */
     private static async showCollectionEffects(position: BABYLON.Vector3): Promise<void> {
         if (!this.scene) return;
-        
+
         // Create a particle effect for collection
         const particleSystem = new BABYLON.ParticleSystem("collectionParticles", 50, this.scene);
-        
+
         particleSystem.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", this.scene);
         particleSystem.emitter = position;
         // Use direct object creation for better performance
         particleSystem.minEmitBox = new BABYLON.Vector3(-0.5, -0.5, -0.5);
         particleSystem.maxEmitBox = new BABYLON.Vector3(0.5, 0.5, 0.5);
-        
+
         particleSystem.color1 = new BABYLON.Color4(0.5, 0.8, 1, 1); // Baby blue
         particleSystem.color2 = new BABYLON.Color4(0.2, 0.6, 0.9, 1); // Darker baby blue
         particleSystem.colorDead = new BABYLON.Color4(0, 0.3, 0.6, 0); // Fade to dark blue
-        
+
         particleSystem.minSize = 0.1;
         particleSystem.maxSize = 0.3;
-        
+
         particleSystem.minLifeTime = 0.3;
         particleSystem.maxLifeTime = 0.8;
-        
+
         particleSystem.emitRate = 100;
         particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
-        
+
         particleSystem.gravity = new BABYLON.Vector3(0, -9.81, 0);
-        
+
         particleSystem.direction1 = new BABYLON.Vector3(-2, -2, -2);
         particleSystem.direction2 = new BABYLON.Vector3(2, 2, 2);
-        
+
         particleSystem.minEmitPower = 1;
         particleSystem.maxEmitPower = 3;
         particleSystem.updateSpeed = 0.016;
-        
+
         particleSystem.start();
-        
+
         // Stop the particle system after a short time
         setTimeout(() => {
             particleSystem.stop();
             particleSystem.dispose();
         }, 1000);
     }
-    
+
     /**
      * Removes a collectible from the scene
      * @param collectibleId The ID of the collectible to remove
      */
     private static removeCollectible(collectibleId: string): void {
         const mesh = this.collectibles.get(collectibleId);
-        
+
         if (mesh) {
             mesh.dispose();
             this.collectibles.delete(collectibleId);
         }
     }
-    
+
     /**
      * Gets the total credits collected
      * @returns Total credits
@@ -2922,7 +2922,7 @@ class CollectiblesManager {
     public static getTotalCredits(): number {
         return this.totalCredits;
     }
-    
+
     /**
      * Adds credits manually (for testing or other purposes)
      * @param amount Amount of credits to add
@@ -2930,7 +2930,7 @@ class CollectiblesManager {
     public static addCredits(amount: number): void {
         this.totalCredits += amount;
     }
-    
+
     /**
      * Gets all active collectibles
      * @returns Map of collectible IDs to meshes
@@ -2938,7 +2938,7 @@ class CollectiblesManager {
     public static getCollectibles(): Map<string, BABYLON.AbstractMesh> {
         return new Map(this.collectibles);
     }
-    
+
     /**
      * Disposes the CollectiblesManager
      */
@@ -2947,34 +2947,34 @@ class CollectiblesManager {
         for (const [id, mesh] of this.collectibles.entries()) {
             this.removeCollectible(id);
         }
-        
+
         // Remove collision observer
         if (this.collectionObserver && this.scene) {
             this.scene.onBeforeRenderObservable.remove(this.collectionObserver);
             this.collectionObserver = null;
         }
-        
+
         // Remove physics ready observer
         if (this.physicsReadyObserver && this.scene) {
             this.scene.onBeforeRenderObservable.remove(this.physicsReadyObserver);
             this.physicsReadyObserver = null;
         }
-        
+
         // Clear physics ready observable
         this.physicsReadyObservable.clear();
-        
+
         // Dispose collection sound
         if (this.collectionSound) {
             this.collectionSound.dispose();
             this.collectionSound = null;
         }
-        
+
         // Dispose instance basis
         if (this.instanceBasis) {
             this.instanceBasis.dispose();
             this.instanceBasis = null;
         }
-        
+
         this.scene = null;
         this.characterController = null;
         this.totalCredits = 0;
@@ -2992,11 +2992,11 @@ class SmoothFollowCameraController {
     private readonly target: BABYLON.Mesh;
     private readonly offset: BABYLON.Vector3;
     private readonly dragSensitivity: number;
-    
+
     public isDragging = false;
     public dragDeltaX = 0;
     public dragDeltaZ = 0;
-    
+
     private pointerObserver: BABYLON.Observer<BABYLON.PointerInfo>;
     private beforeRenderObserver: BABYLON.Observer<BABYLON.Scene>;
     private lastPointerX = 0;
@@ -3004,7 +3004,7 @@ class SmoothFollowCameraController {
     private isTwoFingerPanning = false;
     private lastPanPositions: [number, number, number, number] | null = null;
     private canvas: HTMLCanvasElement | null = null;
-    
+
     // Character rotation lerp variables
     public isRotatingCharacter = false;
     private characterRotationStartY = 0;
@@ -3025,14 +3025,14 @@ class SmoothFollowCameraController {
         this.target = target;
         this.offset = offset.clone();
         this.dragSensitivity = dragSensitivity;
-        
+
         this.initializeEventListeners();
     }
 
     private initializeEventListeners(): void {
         this.pointerObserver = this.scene.onPointerObservable.add(this.handlePointer);
         this.beforeRenderObserver = this.scene.onBeforeRenderObservable.add(this.updateCamera);
-        
+
         this.canvas = this.scene.getEngine().getRenderingCanvas();
         if (this.canvas) {
             this.canvas.addEventListener("touchstart", this.handleTouchStart, { passive: false });
@@ -3051,7 +3051,7 @@ class SmoothFollowCameraController {
                 this.dragDeltaX = 0;
                 this.dragDeltaZ = 0;
                 break;
-                
+
             case BABYLON.PointerEventTypes.POINTERUP:
                 this.isDragging = false;
                 this.dragDeltaX = 0;
@@ -3059,7 +3059,7 @@ class SmoothFollowCameraController {
                 // Mark that we should start rotation lerp on first walk activation
                 this.shouldStartRotationOnWalk = true;
                 break;
-                
+
             case BABYLON.PointerEventTypes.POINTERMOVE:
                 if (this.isDragging) {
                     this.handlePointerMove(pointerInfo);
@@ -3084,10 +3084,10 @@ class SmoothFollowCameraController {
     private updateCameraPosition(): void {
         const right = this.camera.getDirection(BABYLON.Vector3.Right());
         this.camera.position.addInPlace(right.scale(this.dragDeltaX));
-        
+
         const up = this.camera.getDirection(BABYLON.Vector3.Up());
         this.camera.position.addInPlace(up.scale(this.dragDeltaZ));
-        
+
         this.camera.setTarget(this.target.position);
     }
 
@@ -3095,8 +3095,8 @@ class SmoothFollowCameraController {
         e.preventDefault();
         this.offset.z += e.deltaX * this.dragSensitivity * 6;
         this.offset.z = BABYLON.Scalar.Clamp(
-            this.offset.z, 
-            CONFIG.CAMERA.ZOOM_MIN, 
+            this.offset.z,
+            CONFIG.CAMERA.ZOOM_MIN,
             CONFIG.CAMERA.ZOOM_MAX
         );
     };
@@ -3136,7 +3136,7 @@ class SmoothFollowCameraController {
 
         const right = this.camera.getDirection(BABYLON.Vector3.Right());
         const forward = this.camera.getDirection(BABYLON.Vector3.Forward());
-        
+
         this.offset.addInPlace(right.scale(-deltaX * this.dragSensitivity * 4));
         this.offset.addInPlace(forward.scale(deltaY * this.dragSensitivity * 4));
 
@@ -3159,7 +3159,7 @@ class SmoothFollowCameraController {
         } else {
             this.updateOffsetY();
         }
-        
+
         // Update character rotation lerp
         this.updateCharacterRotationLerp();
     };
@@ -3169,24 +3169,24 @@ class SmoothFollowCameraController {
         if (this.isRotatingCharacter) {
             return;
         }
-        
+
         const yRot = BABYLON.Quaternion.FromEulerAngles(0, this.target.rotation.y, 0);
         const rotatedOffset = this.offset.rotateByQuaternionToRef(yRot, BABYLON.Vector3.Zero());
         const desiredPos = this.target.position.add(rotatedOffset);
-        
+
         // Calculate dynamic smoothing based on offset.z
         // Closer camera (smaller offset.z) = more responsive (higher smoothing value)
         // Farther camera (larger offset.z) = more relaxed (lower smoothing value)
         const normalizedOffset = (this.offset.z - CONFIG.CAMERA.ZOOM_MIN) / (CONFIG.CAMERA.ZOOM_MAX - CONFIG.CAMERA.ZOOM_MIN);
         const dynamicSmoothing = BABYLON.Scalar.Lerp(0.05, 0.25, normalizedOffset);
-        
+
         BABYLON.Vector3.LerpToRef(
-            this.camera.position, 
-            desiredPos, 
-            dynamicSmoothing, 
+            this.camera.position,
+            desiredPos,
+            dynamicSmoothing,
             this.camera.position
         );
-        
+
         this.camera.lockedTarget = this.target;
     }
 
@@ -3197,18 +3197,18 @@ class SmoothFollowCameraController {
     private startCharacterRotationLerp(): void {
         // Calculate direction from character to camera
         const toCamera = this.camera.position.subtract(this.target.position).normalize();
-        
+
         // Calculate the desired Y rotation (yaw) to face AWAY from the camera
         const targetYaw = Math.atan2(-toCamera.x, -toCamera.z);
-        
+
         // Calculate the shortest rotation path
         const currentYaw = this.target.rotation.y;
         let rotationDifference = targetYaw - currentYaw;
-        
+
         // Normalize to shortest path (-π to π)
         while (rotationDifference > Math.PI) rotationDifference -= 2 * Math.PI;
         while (rotationDifference < -Math.PI) rotationDifference += 2 * Math.PI;
-        
+
         // Start the lerp with the shortest path
         this.isRotatingCharacter = true;
         this.characterRotationStartY = currentYaw;
@@ -3218,23 +3218,23 @@ class SmoothFollowCameraController {
 
     private updateCharacterRotationLerp(): void {
         if (!this.isRotatingCharacter) return;
-        
+
         const currentTime = Date.now();
         const elapsed = (currentTime - this.characterRotationStartTime) / 1000; // Convert to seconds
         const progress = Math.min(elapsed / this.characterRotationDuration, 1.0);
-        
+
         // Use smooth easing function
         const easedProgress = this.easeInOutCubic(progress);
-        
+
         // Lerp the rotation
         const currentRotation = BABYLON.Scalar.Lerp(
-            this.characterRotationStartY, 
-            this.characterRotationTargetY, 
+            this.characterRotationStartY,
+            this.characterRotationTargetY,
             easedProgress
         );
-        
+
         this.target.rotation.y = currentRotation;
-        
+
         // Update quaternion if needed
         if (this.target.rotationQuaternion) {
             BABYLON.Quaternion.FromEulerAnglesToRef(
@@ -3244,7 +3244,7 @@ class SmoothFollowCameraController {
                 this.target.rotationQuaternion
             );
         }
-        
+
         // Stop lerping when complete
         if (progress >= 1.0) {
             this.isRotatingCharacter = false;
@@ -3265,7 +3265,7 @@ class SmoothFollowCameraController {
     public dispose(): void {
         this.scene.onPointerObservable.remove(this.pointerObserver);
         this.scene.onBeforeRenderObservable.remove(this.beforeRenderObserver);
-        
+
         if (this.canvas) {
             this.canvas.removeEventListener("touchstart", this.handleTouchStart);
             this.canvas.removeEventListener("touchmove", this.handleTouchMove);
@@ -3284,7 +3284,7 @@ class CharacterController {
     private readonly characterController: BABYLON.PhysicsCharacterController;
     private readonly displayCapsule: BABYLON.Mesh;
     private playerMesh: BABYLON.AbstractMesh;
-    
+
     private state: CharacterState = CHARACTER_STATES.IN_AIR;
     private wantJump = false;
     private inputDirection = new BABYLON.Vector3(0, 0, 0);
@@ -3294,7 +3294,7 @@ class CharacterController {
     private boostActive = false;
     private playerParticleSystem: BABYLON.IParticleSystem | null = null;
     private thrusterSound: BABYLON.Sound | null = null;
-    
+
     // Mobile device detection - computed once at initialization
     private readonly isMobileDevice: boolean;
     private readonly isIPadWithKeyboard: boolean;
@@ -3305,36 +3305,36 @@ class CharacterController {
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
-        
+
         // Enhanced device detection
         this.isMobileDevice = this.detectMobileDevice();
         this.isIPad = this.detectIPad();
         this.isIPadWithKeyboard = this.detectIPadWithKeyboard();
-        
+
         // Create character physics controller
         this.characterController = new BABYLON.PhysicsCharacterController(
             CONFIG.CHARACTER.START_POSITION,
-            { 
-                capsuleHeight: CONFIG.CHARACTER.HEIGHT, 
-                capsuleRadius: CONFIG.CHARACTER.RADIUS 
+            {
+                capsuleHeight: CONFIG.CHARACTER.HEIGHT,
+                capsuleRadius: CONFIG.CHARACTER.RADIUS
             },
             scene
         );
 
         // Create display capsule for debug
         this.displayCapsule = BABYLON.MeshBuilder.CreateCapsule(
-            "CharacterDisplay", 
-            { 
-                height: CONFIG.CHARACTER.HEIGHT, 
-                radius: CONFIG.CHARACTER.RADIUS 
-            }, 
+            "CharacterDisplay",
+            {
+                height: CONFIG.CHARACTER.HEIGHT,
+                radius: CONFIG.CHARACTER.RADIUS
+            },
             scene
         );
         this.displayCapsule.isVisible = CONFIG.DEBUG.CAPSULE_VISIBLE;
-        
+
         // Initialize player mesh (will be replaced by loaded model)
         this.playerMesh = this.displayCapsule;
-        
+
         this.initializeEventListeners();
     }
 
@@ -3342,32 +3342,32 @@ class CharacterController {
         this.scene.onKeyboardObservable.add(this.handleKeyboard);
         this.scene.onBeforeRenderObservable.add(this.updateCharacter);
         this.scene.onAfterPhysicsObservable.add(this.updatePhysics);
-        
+
         // Initialize mobile controls if on mobile device
         if (this.isMobileDevice) {
             MobileInputManager.initialize(this.scene.getEngine().getRenderingCanvas()!);
         }
     }
-    
+
     private detectMobileDevice(): boolean {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-               ('ontouchstart' in window) ||
-               (navigator.maxTouchPoints > 0);
+            ('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0);
     }
 
     private detectIPad(): boolean {
         // More specific iPad detection
-        return /iPad/i.test(navigator.userAgent) || 
-               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 0);
+        return /iPad/i.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 0);
     }
 
     private detectIPadWithKeyboard(): boolean {
         if (!this.isIPad) return false;
-        
+
         // Check for keyboard presence using various methods
         const hasKeyboard = this.checkForKeyboardPresence();
         const hasExternalKeyboard = this.checkForExternalKeyboard();
-        
+
         return hasKeyboard || hasExternalKeyboard;
     }
 
@@ -3377,7 +3377,7 @@ class CharacterController {
         const viewportHeight = window.innerHeight;
         const screenHeight = window.screen.height;
         const keyboardLikelyPresent = viewportHeight < screenHeight * 0.8;
-        
+
         return keyboardLikelyPresent;
     }
 
@@ -3386,14 +3386,14 @@ class CharacterController {
         // We'll track if we receive keyboard events that suggest an external keyboard
         this.keyboardEventCount = 0;
         const keyboardThreshold = 3; // Number of events to consider keyboard present
-        
+
         const checkKeyboardEvents = (event: KeyboardEvent) => {
             // Only count events that are likely from a physical keyboard
             // (not virtual keyboard events which often have different characteristics)
-            if (event.key.length === 1 || 
+            if (event.key.length === 1 ||
                 ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Shift'].includes(event.key)) {
                 this.keyboardEventCount++;
-                
+
                 if (this.keyboardEventCount >= keyboardThreshold) {
                     // Remove the listener once we've confirmed keyboard presence
                     document.removeEventListener('keydown', checkKeyboardEvents);
@@ -3405,27 +3405,27 @@ class CharacterController {
             }
             return false;
         };
-        
+
         // Add listener for a short period to detect keyboard
         document.addEventListener('keydown', checkKeyboardEvents);
-        
+
         // Remove listener after 5 seconds if no keyboard detected
         this.keyboardDetectionTimeout = window.setTimeout(() => {
             document.removeEventListener('keydown', checkKeyboardEvents);
         }, 5000);
-        
+
         return false; // Will be updated by the event listener
     }
 
     private handleKeyboard = (kbInfo: any): void => {
         const key = kbInfo.event.key.toLowerCase();
-        
+
         switch (kbInfo.type) {
             case BABYLON.KeyboardEventTypes.KEYDOWN:
                 this.keysDown.add(key);
                 this.handleKeyDown(key);
                 break;
-                
+
             case BABYLON.KeyboardEventTypes.KEYUP:
                 this.keysDown.delete(key);
                 this.handleKeyUp(key);
@@ -3459,7 +3459,7 @@ class CharacterController {
         } else if (INPUT_KEYS.HUD_POSITION.includes(key as any)) {
             this.cycleHUDPosition();
         }
-        
+
         // Only update mobile input for iPads with keyboards, not for regular keyboard input
         if (this.isIPadWithKeyboard) {
             this.updateMobileInput();
@@ -3484,30 +3484,30 @@ class CharacterController {
             this.boostActive = false;
             this.updateParticleSystem();
         }
-        
+
         // Only update mobile input for iPads with keyboards, not for regular keyboard input
         if (this.isIPadWithKeyboard) {
             this.updateMobileInput();
         }
     }
-    
+
     private updateMobileInput(): void {
         // Only update mobile input if this is a mobile device
         if (this.isMobileDevice) {
             // Get mobile input direction
             const mobileDirection = MobileInputManager.getInputDirection();
-            
+
             // For iPads with keyboards, allow both keyboard and touch input to work together
             if (this.isIPadWithKeyboard) {
                 // Always allow touch input for rotation (X-axis)
                 if (Math.abs(mobileDirection.x) > 0.1) {
                     this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
                 }
-                
+
                 // For movement (Z-axis), use keyboard if available, otherwise use touch
-                const hasKeyboardMovement = this.keysDown.has('w') || this.keysDown.has('s') || 
-                                         this.keysDown.has('arrowup') || this.keysDown.has('arrowdown');
-                
+                const hasKeyboardMovement = this.keysDown.has('w') || this.keysDown.has('s') ||
+                    this.keysDown.has('arrowup') || this.keysDown.has('arrowdown');
+
                 if (!hasKeyboardMovement && Math.abs(mobileDirection.z) > 0.1) {
                     // Use touch input for forward/backward movement when no keyboard movement
                     this.inputDirection.z = mobileDirection.z;
@@ -3515,11 +3515,11 @@ class CharacterController {
                     // Reset Z movement when no input
                     this.inputDirection.z = 0;
                 }
-                
+
                 // For actions (jump/boost), allow both keyboard and touch
                 const mobileWantJump = MobileInputManager.getWantJump();
                 const mobileWantBoost = MobileInputManager.getWantBoost();
-                
+
                 // Use keyboard input if available, otherwise use touch input
                 if (!this.keysDown.has(' ') && mobileWantJump) {
                     this.wantJump = true;
@@ -3534,27 +3534,27 @@ class CharacterController {
             } else {
                 // Standard mobile behavior - replace keyboard input with touch input
                 this.inputDirection.copyFrom(mobileDirection);
-                
+
                 // Update player rotation based on X-axis (left/right)
                 if (Math.abs(mobileDirection.x) > 0.1) {
                     this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
                 }
-                
+
                 // Set forward/backward movement based on Y-axis
                 if (Math.abs(mobileDirection.z) > 0.1) {
                     this.inputDirection.z = mobileDirection.z;
                 } else {
                     this.inputDirection.z = 0;
                 }
-                
+
                 // Clear X movement since we're using it for rotation
                 this.inputDirection.x = 0;
-                
+
                 // Use mobile input for actions
                 this.wantJump = MobileInputManager.getWantJump();
                 this.boostActive = MobileInputManager.getWantBoost();
             }
-            
+
             // Always update particle system to ensure proper on/off state
             this.updateParticleSystem();
         }
@@ -3584,7 +3584,7 @@ class CharacterController {
                 this.playerParticleSystem.stop();
             }
         }
-        
+
         // Update thruster sound
         if (this.thrusterSound) {
             if (this.boostActive) {
@@ -3602,7 +3602,7 @@ class CharacterController {
     private updateCharacter = (): void => {
         // Update mobile input every frame
         this.updateMobileInput();
-        
+
         this.updateRotation();
         this.updatePosition();
         this.updateAnimations();
@@ -3615,7 +3615,7 @@ class CharacterController {
             this.targetRotationY = this.displayCapsule.rotation.y;
             return;
         }
-        
+
         // Handle rotation based on input
         if (this.keysDown.has('a') || this.keysDown.has('arrowleft')) {
             this.targetRotationY -= CONFIG.CHARACTER.ROTATION_SPEED;
@@ -3623,18 +3623,18 @@ class CharacterController {
         if (this.keysDown.has('d') || this.keysDown.has('arrowright')) {
             this.targetRotationY += CONFIG.CHARACTER.ROTATION_SPEED;
         }
-        
+
         this.displayCapsule.rotation.y += (this.targetRotationY - this.displayCapsule.rotation.y) * CONFIG.CHARACTER.ROTATION_SMOOTHING;
     }
 
     private updatePosition(): void {
         // Update display capsule position
         this.displayCapsule.position.copyFrom(this.characterController.getPosition());
-        
+
         // Update player mesh position
         this.playerMesh.position.copyFrom(this.characterController.getPosition());
         this.playerMesh.position.y += CONFIG.ANIMATION.PLAYER_Y_OFFSET;
-        
+
         // Update player mesh rotation
         if (this.displayCapsule.rotationQuaternion) {
             if (!this.playerMesh.rotationQuaternion) {
@@ -3651,7 +3651,7 @@ class CharacterController {
         if (!playerAnimations.walk || !playerAnimations.idle) return;
 
         const isMoving = this.isAnyMovementKeyPressed();
-        
+
         if (isMoving) {
             if (!playerAnimations.walk.isPlaying) {
                 playerAnimations.idle.stop();
@@ -3672,17 +3672,17 @@ class CharacterController {
     private isAnyMovementKeyPressed(): boolean {
         // Check keyboard input
         const keyboardMoving = INPUT_KEYS.FORWARD.some(key => this.keysDown.has(key)) ||
-                              INPUT_KEYS.BACKWARD.some(key => this.keysDown.has(key)) ||
-                              INPUT_KEYS.LEFT.some(key => this.keysDown.has(key)) ||
-                              INPUT_KEYS.RIGHT.some(key => this.keysDown.has(key)) ||
-                              INPUT_KEYS.STRAFE_LEFT.some(key => this.keysDown.has(key)) ||
-                              INPUT_KEYS.STRAFE_RIGHT.some(key => this.keysDown.has(key));
-        
+            INPUT_KEYS.BACKWARD.some(key => this.keysDown.has(key)) ||
+            INPUT_KEYS.LEFT.some(key => this.keysDown.has(key)) ||
+            INPUT_KEYS.RIGHT.some(key => this.keysDown.has(key)) ||
+            INPUT_KEYS.STRAFE_LEFT.some(key => this.keysDown.has(key)) ||
+            INPUT_KEYS.STRAFE_RIGHT.some(key => this.keysDown.has(key));
+
         // Check mobile input
         if (this.isMobileDevice) {
-            const mobileMoving = MobileInputManager.isMobileActive() && 
-                               (MobileInputManager.getInputDirection().length() > 0.1);
-            
+            const mobileMoving = MobileInputManager.isMobileActive() &&
+                (MobileInputManager.getInputDirection().length() > 0.1);
+
             // For iPads with keyboards, either input can trigger movement
             if (this.isIPadWithKeyboard) {
                 return keyboardMoving || mobileMoving;
@@ -3691,13 +3691,13 @@ class CharacterController {
                 return mobileMoving;
             }
         }
-        
+
         return keyboardMoving;
     }
 
     private updatePhysics = (): void => {
         if (!this.scene.deltaTime) return;
-        
+
         const deltaTime = this.scene.deltaTime / 1000.0;
         if (deltaTime === 0) return;
 
@@ -3709,14 +3709,14 @@ class CharacterController {
 
         const characterOrientation = BABYLON.Quaternion.FromEulerAngles(0, this.displayCapsule.rotation.y, 0);
         const desiredVelocity = this.calculateDesiredVelocity(deltaTime, support, characterOrientation);
-        
+
         this.characterController.setVelocity(desiredVelocity);
         this.characterController.integrate(deltaTime, support, CONFIG.PHYSICS.CHARACTER_GRAVITY);
     };
 
     private calculateDesiredVelocity(
-        deltaTime: number, 
-        supportInfo: BABYLON.CharacterSurfaceInfo, 
+        deltaTime: number,
+        supportInfo: BABYLON.CharacterSurfaceInfo,
         characterOrientation: BABYLON.Quaternion
     ): BABYLON.Vector3 {
         const nextState = this.getNextState(supportInfo);
@@ -3726,7 +3726,7 @@ class CharacterController {
 
         const upWorld = CONFIG.PHYSICS.CHARACTER_GRAVITY.normalizeToNew();
         upWorld.scaleInPlace(-1.0);
-        
+
         const forwardLocalSpace = BABYLON.Vector3.Forward();
         const forwardWorld = forwardLocalSpace.applyRotationQuaternion(characterOrientation);
         const currentVelocity = this.characterController.getVelocity();
@@ -3734,13 +3734,13 @@ class CharacterController {
         switch (this.state) {
             case CHARACTER_STATES.IN_AIR:
                 return this.calculateAirVelocity(deltaTime, forwardWorld, upWorld, currentVelocity, characterOrientation);
-                
+
             case CHARACTER_STATES.ON_GROUND:
                 return this.calculateGroundVelocity(deltaTime, forwardWorld, upWorld, currentVelocity, supportInfo, characterOrientation);
-                
+
             case CHARACTER_STATES.START_JUMP:
                 return this.calculateJumpVelocity(currentVelocity, upWorld);
-                
+
             default:
                 return BABYLON.Vector3.Zero();
         }
@@ -3756,18 +3756,18 @@ class CharacterController {
         const speed = this.boostActive ? CONFIG.CHARACTER.SPEED.IN_AIR * CONFIG.CHARACTER.SPEED.BOOST_MULTIPLIER : CONFIG.CHARACTER.SPEED.IN_AIR;
         const desiredVelocity = this.inputDirection.scale(speed).applyRotationQuaternion(characterOrientation);
         const outputVelocity = this.characterController.calculateMovement(
-            deltaTime, forwardWorld, upWorld, currentVelocity, 
+            deltaTime, forwardWorld, upWorld, currentVelocity,
             BABYLON.Vector3.Zero(), desiredVelocity, upWorld
         );
-        
+
         // Add minimal air resistance to reduce sliding in air
         const airResistance = 0.98; // Reduced air resistance (was 0.95)
         outputVelocity.scaleInPlace(airResistance);
-        
+
         outputVelocity.addInPlace(upWorld.scale(-outputVelocity.dot(upWorld)));
         outputVelocity.addInPlace(upWorld.scale(currentVelocity.dot(upWorld)));
         outputVelocity.addInPlace(CONFIG.PHYSICS.CHARACTER_GRAVITY.scale(deltaTime));
-        
+
         return outputVelocity;
     }
 
@@ -3785,27 +3785,27 @@ class CharacterController {
             deltaTime, forwardWorld, supportInfo.averageSurfaceNormal, currentVelocity,
             supportInfo.averageSurfaceVelocity, desiredVelocity, upWorld
         );
-        
+
         outputVelocity.subtractInPlace(supportInfo.averageSurfaceVelocity);
-        
+
         // Add minimal friction and damping to reduce sliding
         const friction = 0.95; // Reduce velocity by only 5% each frame (was 15%)
         const maxSpeed = speed * 2.0; // Allow higher max speed (was 1.2)
-        
+
         // Apply friction
         outputVelocity.scaleInPlace(friction);
-        
+
         // Clamp velocity to prevent excessive sliding
         const currentSpeed = outputVelocity.length();
         if (currentSpeed > maxSpeed) {
             outputVelocity.normalize().scaleInPlace(maxSpeed);
         }
-        
+
         // Add minimal damping when no input is detected
         if (this.inputDirection.length() < 0.1) {
             outputVelocity.scaleInPlace(0.9); // Reduced damping when not moving (was 0.7)
         }
-        
+
         const inv1k = 1e-3;
         if (outputVelocity.dot(upWorld) > inv1k) {
             const velLen = outputVelocity.length();
@@ -3816,7 +3816,7 @@ class CharacterController {
             newOutputVelocity.scaleInPlace(horizLen);
             return newOutputVelocity;
         }
-        
+
         outputVelocity.addInPlace(supportInfo.averageSurfaceVelocity);
         return outputVelocity;
     }
@@ -3831,19 +3831,19 @@ class CharacterController {
     private getNextState(supportInfo: BABYLON.CharacterSurfaceInfo): CharacterState {
         switch (this.state) {
             case CHARACTER_STATES.IN_AIR:
-                return supportInfo.supportedState === BABYLON.CharacterSupportedState.SUPPORTED 
-                    ? CHARACTER_STATES.ON_GROUND 
+                return supportInfo.supportedState === BABYLON.CharacterSupportedState.SUPPORTED
+                    ? CHARACTER_STATES.ON_GROUND
                     : CHARACTER_STATES.IN_AIR;
-                    
+
             case CHARACTER_STATES.ON_GROUND:
                 if (supportInfo.supportedState !== BABYLON.CharacterSupportedState.SUPPORTED) {
                     return CHARACTER_STATES.IN_AIR;
                 }
                 return this.wantJump ? CHARACTER_STATES.START_JUMP : CHARACTER_STATES.ON_GROUND;
-                
+
             case CHARACTER_STATES.START_JUMP:
                 return CHARACTER_STATES.IN_AIR;
-                
+
             default:
                 return CHARACTER_STATES.IN_AIR;
         }
@@ -3905,7 +3905,7 @@ class CharacterController {
     public isOnGround(): boolean {
         return this.state === CHARACTER_STATES.ON_GROUND;
     }
-    
+
     /**
      * Gets the physics body of the character controller
      * @returns The physics body or null if not available
@@ -3915,7 +3915,7 @@ class CharacterController {
         // We'll use the display capsule for collision detection instead
         return null;
     }
-    
+
     /**
      * Gets the current velocity of the character
      * @returns The current velocity vector
@@ -3931,7 +3931,7 @@ class CharacterController {
     public setVelocity(velocity: BABYLON.Vector3): void {
         this.characterController.setVelocity(velocity);
     }
-    
+
     /**
      * Pauses physics updates for the character
      */
@@ -3939,7 +3939,6 @@ class CharacterController {
         this.physicsPaused = true;
         // Set velocity to zero to stop movement
         this.characterController.setVelocity(new BABYLON.Vector3(0, 0, 0));
-        console.log("Character physics paused");
     }
 
     /**
@@ -3947,7 +3946,6 @@ class CharacterController {
      */
     public resumePhysics(): void {
         this.physicsPaused = false;
-        console.log("Character physics resumed");
     }
 
     /**
@@ -3967,15 +3965,14 @@ class CharacterController {
         this.wantJump = false;
         this.boostActive = false;
         this.state = CHARACTER_STATES.IN_AIR;
-        console.log("Character reset to start position");
     }
 
     public dispose(): void {
 
-        
+
         // Dispose mobile input manager
         MobileInputManager.dispose();
-        
+
 
     }
 }
@@ -3994,7 +3991,7 @@ class SceneManager {
     constructor(engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
         this.scene = new BABYLON.Scene(engine);
         this.camera = new BABYLON.TargetCamera("camera1", CONFIG.CAMERA.START_POSITION, this.scene);
-        
+
         this.initializeScene().catch(error => {
             console.error("Failed to initialize scene:", error);
         });
@@ -4028,7 +4025,7 @@ class SceneManager {
         try {
             EffectsManager.initialize(this.scene);
             await EffectsManager.createDefaultParticleSystem();
-            
+
             // Create thruster sound
             await EffectsManager.createSound("Thruster");
         } catch (error) {
@@ -4046,16 +4043,21 @@ class SceneManager {
 
         try {
             const result = await BABYLON.ImportMeshAsync(environment.model, this.scene);
-            
+
             // Rename the root node to "environment" for better organization
             if (result.meshes && result.meshes.length > 0) {
                 // Find the root mesh (the one without a parent)
                 const rootMesh = result.meshes.find(mesh => !mesh.parent);
                 if (rootMesh) {
                     rootMesh.name = "environment";
+                    if (environment.scale !== 1) {
+                        rootMesh.scaling.x = -environment.scale; // invert X-axis to fix handedness
+                        rootMesh.scaling.y = environment.scale;
+                        rootMesh.scaling.z = environment.scale;
+                    }
                 }
             }
-            
+
             // Set up environment-specific sky if configured
             if (environment.sky) {
                 try {
@@ -4064,9 +4066,9 @@ class SceneManager {
                     console.warn("Failed to create environment sky:", error);
                 }
             }
-            
+
             this.setupEnvironmentPhysics(environment);
-            
+
             // Update current environment tracking
             this.currentEnvironment = environmentName;
         } catch (error) {
@@ -4078,18 +4080,24 @@ class SceneManager {
         this.setupLightmappedMeshes(environment);
         this.setupPhysicsObjects(environment);
         this.setupJoints(environment);
+
+        // Fallback: If no physics objects or lightmapped meshes are configured,
+        // create physics bodies for all environment meshes to prevent falling through
+        if (environment.physicsObjects.length === 0 && environment.lightmappedMeshes.length === 0) {
+            this.setupFallbackPhysics(environment);
+        }
     }
 
     private setupLightmappedMeshes(environment: Environment): void {
         const lightmap = new BABYLON.Texture(environment.lightmap);
-        
+
         environment.lightmappedMeshes.forEach(lightmappedMesh => {
             const mesh = this.scene.getMeshByName(lightmappedMesh.name);
             if (!mesh) return;
-            
+
             new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH);
             mesh.isPickable = false;
-            
+
             if (mesh.material instanceof BABYLON.StandardMaterial || mesh.material instanceof BABYLON.PBRMaterial) {
                 mesh.material.lightmapTexture = lightmap;
                 mesh.material.useLightmapAsShadowmap = true;
@@ -4097,7 +4105,7 @@ class SceneManager {
                 (mesh.material.lightmapTexture as BABYLON.Texture).level = lightmappedMesh.level;
                 (mesh.material.lightmapTexture as BABYLON.Texture).coordinatesIndex = 1;
             }
-            
+
             mesh.freezeWorldMatrix();
             mesh.doNotSyncBoundingInfo = true;
         });
@@ -4111,7 +4119,7 @@ class SceneManager {
                 if (physicsObject.scale !== 1) {
                     mesh.scaling.setAll(physicsObject.scale);
                 }
-                
+
                 new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: physicsObject.mass });
             }
         });
@@ -4120,22 +4128,22 @@ class SceneManager {
     private setupJoints(environment: Environment): void {
         // Find objects with PIVOT_BEAM role
         const pivotBeams = environment.physicsObjects.filter(obj => obj.role === OBJECT_ROLE.PIVOT_BEAM);
-        
+
         pivotBeams.forEach(pivotBeam => {
             const beamMesh = this.scene.getMeshByName(pivotBeam.name);
             if (!beamMesh) return;
-            
+
             // Find a fixed mass object to attach the hinge to
             const fixedMassObject = environment.physicsObjects.find(obj => obj.role === OBJECT_ROLE.DYNAMIC_BOX && obj.mass === 0);
             if (!fixedMassObject) return;
-            
+
             const fixedMesh = this.scene.getMeshByName(fixedMassObject.name);
             if (!fixedMesh) return;
-            
+
             // Create physics aggregates if they don't exist
             const fixedMass = new BABYLON.PhysicsAggregate(fixedMesh, BABYLON.PhysicsShapeType.BOX, { mass: 0 });
             const beam = new BABYLON.PhysicsAggregate(beamMesh, BABYLON.PhysicsShapeType.BOX, { mass: pivotBeam.mass });
-            
+
             // Create hinge constraint
             const joint = new BABYLON.HingeConstraint(
                 new BABYLON.Vector3(0.75, 0, 0),
@@ -4144,33 +4152,53 @@ class SceneManager {
                 new BABYLON.Vector3(0, 0, 1),
                 this.scene
             );
-            
+
             fixedMass.body.addConstraint(beam.body, joint);
         });
     }
 
+    private setupFallbackPhysics(environment: Environment): void {
+        // Find the root environment mesh
+        const rootEnvironmentMesh = this.scene.getMeshByName("environment");
+        if (!rootEnvironmentMesh) return;
+
+        // Collect all meshes in the environment
+        const allEnvironmentMeshes: BABYLON.AbstractMesh[] = [];
+        const collectMeshes = (mesh: BABYLON.AbstractMesh) => {
+            allEnvironmentMeshes.push(mesh);
+            mesh.getChildMeshes().forEach(collectMeshes);
+        };
+        collectMeshes(rootEnvironmentMesh);
+
+        // Create physics bodies for all meshes with geometry
+        allEnvironmentMeshes.forEach(mesh => {
+            if (mesh instanceof BABYLON.Mesh && mesh.geometry && mesh.geometry.getTotalVertices() > 0) {
+                // Create a static physics body (mass = 0) for environment geometry
+                // The physics shape will automatically account for the mesh's current scaling
+                new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, { mass: 0 });
+                mesh.isPickable = false;
+            }
+        });
+    }
+
     private setupCharacter(): void {
-        console.log("Setting up character...");
         this.characterController = new CharacterController(this.scene);
-        
+
         if (this.characterController) {
-            console.log("Character controller created successfully");
             this.smoothFollowController = new SmoothFollowCameraController(
                 this.scene,
                 this.camera,
                 this.characterController.getDisplayCapsule()
             );
-            
+
             // Connect the character controller to the camera controller
             this.characterController.setCameraController(this.smoothFollowController);
-            
+
             // Initialize HUD
             HUDManager.initialize(this.scene, this.characterController);
-            
+
             // Initialize Collectibles after character is set up
             CollectiblesManager.initialize(this.scene, this.characterController);
-            
-            console.log("Character setup complete");
         }
     }
 
@@ -4186,42 +4214,39 @@ class SceneManager {
     }
 
     private loadCharacter(character: Character): void {
-        console.log(`Loading character model: ${character.name}`);
         BABYLON.ImportMeshAsync(character.model, this.scene)
             .then(async result => {
-                console.log(`Character model loaded with ${result.meshes.length} meshes`);
                 // Rename the root node to "player" for better organization
                 if (result.meshes && result.meshes.length > 0) {
                     // Find the root mesh (the one without a parent)
                     const rootMesh = result.meshes.find(mesh => !mesh.parent);
                     if (rootMesh) {
                         rootMesh.name = "player";
-                        console.log(`Root mesh renamed to "player"`);
                     }
                 }
-                
+
                 if (this.characterController && result.meshes[0]) {
                     // Apply character scale to all meshes
                     result.meshes.forEach(mesh => {
                         mesh.scaling.setAll(character.scale);
                     });
-                    
+
                     this.characterController.setPlayerMesh(result.meshes[0]);
-                    
+
                     // Setup animations using character's animation mapping
                     playerAnimations.walk = result.animationGroups.find(a => a.name === character.animations.walk);
                     playerAnimations.idle = result.animationGroups.find(a => a.name === character.animations.idle);
-                    
+
                     // Stop animations initially
                     playerAnimations.walk?.stop();
                     playerAnimations.idle?.stop();
-                    
+
                     // Create particle system attached to player mesh
                     const playerParticleSystem = await EffectsManager.createParticleSystem(CONFIG.EFFECTS.DEFAULT_PARTICLE, result.meshes[0]);
                     if (playerParticleSystem && this.characterController) {
                         this.characterController.setPlayerParticleSystem(playerParticleSystem);
                     }
-                    
+
                     // Set up thruster sound for character controller
                     const thrusterSound = EffectsManager.getSound("Thruster");
                     if (thrusterSound && this.characterController) {
@@ -4247,27 +4272,25 @@ class SceneManager {
      */
     public repositionCharacter(): void {
         if (!this.characterController) return;
-        
+
         // Get the current environment's spawn point
         const environment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
         const spawnPoint = environment?.spawnPoint || CONFIG.CHARACTER.START_POSITION;
-        
+
         // Reset character to environment-specific spawn position
         this.characterController.setPosition(spawnPoint);
         this.characterController.setVelocity(new BABYLON.Vector3(0, 0, 0));
-        
+
         // Also reset the display capsule position
         const displayCapsule = this.characterController.getDisplayCapsule();
         if (displayCapsule) {
             displayCapsule.position.copyFrom(spawnPoint);
         }
-        
-        console.log(`Character repositioned to spawn point: ${spawnPoint.x}, ${spawnPoint.y}, ${spawnPoint.z}`);
     }
 
     public changeCharacter(characterIndexOrName: number | string): void {
         let character: Character | undefined;
-        
+
         if (typeof characterIndexOrName === 'number') {
             // Handle numeric index
             if (characterIndexOrName < 0 || characterIndexOrName >= ASSETS.CHARACTERS.length) {
@@ -4279,7 +4302,7 @@ class SceneManager {
             // Handle character name
             character = ASSETS.CHARACTERS.find(char => char.name === characterIndexOrName);
         }
-        
+
         if (!character) {
             console.error(`Character not found: ${characterIndexOrName}`);
             return;
@@ -4301,7 +4324,7 @@ class SceneManager {
     public clearEnvironment(): void {
         // Find the root environment mesh (always named "environment" by our loading process)
         const rootEnvironmentMesh = this.scene.getMeshByName("environment");
-        
+
         if (rootEnvironmentMesh) {
             // Get all child meshes recursively
             const allEnvironmentMeshes: BABYLON.AbstractMesh[] = [];
@@ -4309,9 +4332,9 @@ class SceneManager {
                 allEnvironmentMeshes.push(mesh);
                 mesh.getChildMeshes().forEach(collectMeshes);
             };
-            
+
             collectMeshes(rootEnvironmentMesh);
-            
+
             // Dispose all environment meshes and their physics objects
             allEnvironmentMeshes.forEach(mesh => {
                 // Dispose physics body if it exists
@@ -4320,13 +4343,11 @@ class SceneManager {
                 }
                 mesh.dispose();
             });
-            
-            console.log(`Cleared ${allEnvironmentMeshes.length} environment meshes (including root and all children)`);
         } else {
             // Fallback: if no "environment" mesh found, clear any meshes that might be environment-related
-            const potentialEnvironmentMeshes = this.scene.meshes.filter(mesh => 
-                !mesh.name.includes("player") && 
-                !mesh.name.includes("camera") && 
+            const potentialEnvironmentMeshes = this.scene.meshes.filter(mesh =>
+                !mesh.name.includes("player") &&
+                !mesh.name.includes("camera") &&
                 !mesh.name.includes("light") &&
                 !mesh.name.includes("sky") &&
                 !mesh.name.includes("capsule") &&
@@ -4336,7 +4357,7 @@ class SceneManager {
                 !mesh.name.includes("CharacterDisplay") && // Don't clear character display capsule
                 mesh !== this.characterController?.getDisplayCapsule()
             );
-            
+
             potentialEnvironmentMeshes.forEach(mesh => {
                 // Dispose physics body if it exists
                 if (mesh.physicsImpostor) {
@@ -4344,8 +4365,6 @@ class SceneManager {
                 }
                 mesh.dispose();
             });
-            
-            console.log(`Cleared ${potentialEnvironmentMeshes.length} potential environment meshes (fallback method)`);
         }
     }
 
@@ -4355,22 +4374,22 @@ class SceneManager {
     public clearItems(): void {
         // Use CollectiblesManager to clear all collectibles
         CollectiblesManager.dispose();
-        
+
         // Also clear any other item meshes that might not be managed by CollectiblesManager
-        const itemMeshes = this.scene.meshes.filter(mesh => 
+        const itemMeshes = this.scene.meshes.filter(mesh =>
             (mesh.name.startsWith("fallback_") ||
-            mesh.name.startsWith("crate_") ||
-            mesh.name.startsWith("item_") ||
-            mesh.name.includes("collectible") ||
-            mesh.name.includes("pickup") ||
-            mesh.name.includes("treasure") ||
-            mesh.name.includes("coin") ||
-            mesh.name.includes("gem") ||
-            mesh.name.includes("crystal")) &&
+                mesh.name.startsWith("crate_") ||
+                mesh.name.startsWith("item_") ||
+                mesh.name.includes("collectible") ||
+                mesh.name.includes("pickup") ||
+                mesh.name.includes("treasure") ||
+                mesh.name.includes("coin") ||
+                mesh.name.includes("gem") ||
+                mesh.name.includes("crystal")) &&
             !mesh.name.includes("player") && // Don't clear player character
             !mesh.name.includes("CharacterDisplay") // Don't clear character display capsule
         );
-        
+
         itemMeshes.forEach(mesh => {
             // Dispose physics body if it exists
             if (mesh.physicsImpostor) {
@@ -4378,8 +4397,6 @@ class SceneManager {
             }
             mesh.dispose();
         });
-        
-        console.log(`Cleared ${itemMeshes.length} additional item meshes`);
     }
 
     /**
@@ -4388,21 +4405,19 @@ class SceneManager {
     public clearParticles(): void {
         // Use EffectsManager to clear all particle systems
         EffectsManager.removeAllParticleSystems();
-        
+
         // Also clear any particle systems that might not be managed by EffectsManager
         const particleSystems = this.scene.particleSystems;
-        const unmanagedParticleSystems = particleSystems.filter(ps => 
-            !ps.name.includes("player") && 
+        const unmanagedParticleSystems = particleSystems.filter(ps =>
+            !ps.name.includes("player") &&
             !ps.name.includes("character") &&
             !ps.name.includes("thruster")
         );
-        
+
         unmanagedParticleSystems.forEach(ps => {
             ps.stop();
             ps.dispose();
         });
-        
-        console.log(`Cleared ${unmanagedParticleSystems.length} unmanaged particle systems`);
     }
 
     /**
@@ -4411,7 +4426,6 @@ class SceneManager {
     public pausePhysics(): void {
         if (this.characterController) {
             this.characterController.pausePhysics();
-            console.log("Physics paused for player character");
         }
     }
 
@@ -4421,7 +4435,6 @@ class SceneManager {
     public resumePhysics(): void {
         if (this.characterController) {
             this.characterController.resumePhysics();
-            console.log("Physics resumed for player character");
         }
     }
 
@@ -4474,10 +4487,10 @@ class SceneManager {
 class Playground {
     public static CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene {
         const sceneManager = new SceneManager(engine, canvas);
-        
+
         // Initialize settings UI with scene manager
         SettingsUI.initialize(canvas, sceneManager);
-        
+
         return sceneManager.getScene();
     }
 }
@@ -4491,54 +4504,54 @@ class SettingsUI {
     private static isPanelOpen = false;
     private static sceneManager: SceneManager | null = null;
     public static isInitializing = false; // Flag to prevent onChange during initialization
-    
+
     // Device detection methods
     private static isMobileDevice(): boolean {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
-    
+
     private static isIPad(): boolean {
         // Modern iPad detection (including iPad Pro)
         const userAgent = navigator.userAgent;
         const isIPadUA = /iPad/i.test(userAgent);
         const isMacWithTouch = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
         const isIPadPro = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
-        
+
         return isIPadUA || isMacWithTouch || isIPadPro;
     }
-    
+
     private static isIPadWithKeyboard(): boolean {
         // Check if it's an iPad first
         if (!this.isIPad()) {
             return false;
         }
-        
+
         // Multiple detection methods for iPad with keyboard
         const isLandscape = window.innerHeight < window.innerWidth;
         const hasExternalKeyboard = this.detectExternalKeyboard();
         const hasKeyboardEvents = this.detectKeyboardEvents();
-        
+
         // Show if any of these conditions are met
         return isLandscape || hasExternalKeyboard || hasKeyboardEvents;
     }
-    
+
     private static detectExternalKeyboard(): boolean {
         // Check for external keyboard indicators
         // This is a simplified check - in real scenarios you might need more sophisticated detection
-        return navigator.maxTouchPoints === 0 || 
-               (navigator.maxTouchPoints === 1 && window.innerWidth > 1024);
+        return navigator.maxTouchPoints === 0 ||
+            (navigator.maxTouchPoints === 1 && window.innerWidth > 1024);
     }
-    
+
     private static detectKeyboardEvents(): boolean {
         // Check if keyboard events have been detected recently
         // This would require tracking keyboard events over time
         // For now, we'll use a simpler approach
         return false; // Placeholder for future keyboard event tracking
     }
-    
+
     private static shouldShowSection(visibility: VisibilityType): boolean {
 
-        
+
         switch (visibility) {
             case "all":
                 return true;
@@ -4550,7 +4563,7 @@ class SettingsUI {
                 return false;
         }
     }
-    
+
     public static initialize(canvas: HTMLCanvasElement, sceneManager?: SceneManager): void {
         this.isInitializing = true; // Prevent onChange during initialization
         this.sceneManager = sceneManager || null;
@@ -4559,7 +4572,7 @@ class SettingsUI {
         this.setupEventListeners();
         this.isInitializing = false; // Allow onChange after initialization
     }
-    
+
     private static createSettingsButton(canvas: HTMLCanvasElement): void {
         // Create settings button
         this.settingsButton = document.createElement('div');
@@ -4570,7 +4583,7 @@ class SettingsUI {
                 <path d="M19.4 15C19.2669 15.3016 19.2272 15.6362 19.286 15.9606C19.3448 16.285 19.4995 16.5843 19.73 16.82L19.79 16.88C19.976 17.0657 20.1235 17.2863 20.2241 17.5291C20.3248 17.7719 20.3766 18.0322 20.3766 18.295C20.3766 18.5578 20.3248 18.8181 20.2241 19.0609C20.1235 19.3037 19.976 19.5243 19.79 19.71C19.6043 19.896 19.3837 20.0435 19.1409 20.1441C18.8981 20.2448 18.6378 20.2966 18.375 20.2966C18.1122 20.2966 17.8519 20.2448 17.6091 20.1441C17.3663 20.0435 17.1457 19.896 16.96 19.71L16.9 19.65C16.6643 19.4195 16.365 19.2648 16.0406 19.206C15.7162 19.1472 15.3816 19.1869 15.08 19.32C14.7842 19.4468 14.532 19.6572 14.3543 19.9255C14.1766 20.1938 14.0813 20.5082 14.08 20.83V21C14.08 21.5304 13.8693 22.0391 13.4942 22.4142C13.1191 22.7893 12.6104 23 12.08 23C11.5496 23 11.0409 22.7893 10.6658 22.4142C10.2907 22.0391 10.08 21.5304 10.08 21V20.91C10.0723 20.579 9.96512 20.2579 9.77251 19.9887C9.5799 19.7195 9.31074 19.5149 9 19.4C8.69838 19.2669 8.36381 19.2272 8.03941 19.286C7.71502 19.3448 7.41568 19.4995 7.18 19.73L7.12 19.79C6.93425 19.976 6.71368 20.1235 6.47088 20.2241C6.22808 20.3248 5.96783 20.3766 5.705 20.3766C5.44217 20.3766 5.18192 20.3248 4.93912 20.2241C4.69632 20.1235 4.47575 19.976 4.29 19.79C4.10405 19.6043 3.95653 19.3837 3.85588 19.1409C3.75523 18.8981 3.70343 18.6378 3.70343 18.375C3.70343 18.1122 3.75523 17.8519 3.85588 17.6091C3.95653 17.3663 4.10405 17.1457 4.29 16.96L4.35 16.9C4.58054 16.6643 4.73519 16.365 4.794 16.0406C4.85282 15.7162 4.81312 15.3816 4.68 15.08C4.55324 14.7842 4.34276 14.532 4.07447 14.3543C3.80618 14.1766 3.49179 14.0813 3.17 14.08H3C2.46957 14.08 1.96086 13.8693 1.58579 13.4942C1.21071 13.1191 1 12.6104 1 12.08C1 11.5496 1.21071 11.0409 1.58579 10.6658C1.96086 10.2907 2.46957 10.08 3 10.08H3.09C3.42099 10.0723 3.74206 9.96512 4.01128 9.77251C4.2805 9.5799 4.48514 9.31074 4.6 9C4.73312 8.69838 4.77282 8.36381 4.714 8.03941C4.65519 7.71502 4.50054 7.41568 4.27 7.18L4.21 7.12C4.02405 6.93425 3.87653 6.71368 3.77588 6.47088C3.67523 6.22808 3.62343 5.96783 3.62343 5.705C3.62343 5.44217 3.67523 5.18192 3.77588 4.93912C3.87653 4.69632 4.02405 4.47575 4.21 4.29C4.39575 4.10405 4.61632 3.95653 4.85912 3.85588C5.10192 3.75523 5.36217 3.70343 5.625 3.70343C5.88783 3.70343 6.14808 3.75523 6.39088 3.85588C6.63368 3.95653 6.85425 4.10405 7.04 4.29L7.1 4.35C7.33568 4.58054 7.63502 4.73519 7.95941 4.794C8.28381 4.85282 8.61838 4.81312 8.92 4.68H9C9.29577 4.55324 9.54802 4.34276 9.72569 4.07447C9.90337 3.80618 9.99872 3.49179 10 3.17V3C10 2.46957 10.2107 1.96086 10.5858 1.58579C10.9609 1.21071 11.4696 1 12 1C12.5304 1 13.0391 1.21071 13.4142 1.58579C13.7893 1.96086 14 2.46957 14 3V3.09C14.0013 3.41179 14.0966 3.72618 14.2743 3.99447C14.452 4.26276 14.7042 4.47324 15 4.6C15.3016 4.73312 15.6362 4.77282 15.9606 4.714C16.285 4.65519 16.5843 4.50054 16.82 4.27L16.88 4.21C17.0657 4.02405 17.2863 3.87653 17.5291 3.77588C17.7719 3.67523 18.0322 3.62343 18.295 3.62343C18.5578 3.62343 18.8181 3.67523 19.0609 3.77588C19.3037 3.87653 19.5243 4.02405 19.71 4.21C19.896 4.39575 20.0435 4.61632 20.1441 4.85912C20.2448 5.10192 20.2966 5.36217 20.2966 5.625C20.2966 5.88783 20.2448 6.14808 20.1441 6.39088C20.0435 6.63368 19.896 6.85425 19.71 7.04L19.65 7.1C19.4195 7.33568 19.2648 7.63502 19.206 7.95941C19.1472 8.28381 19.1869 8.61838 19.32 8.92V9C19.4468 9.29577 19.6572 9.54802 19.9255 9.72569C20.1938 9.90337 20.5082 9.99872 20.83 10H21C21.5304 10 22.0391 10.2107 22.4142 10.5858C22.7893 10.9609 23 11.4696 23 12C23 12.5304 22.7893 13.0391 22.4142 13.4142C22.0391 13.7893 21.5304 14 21 14H20.91C20.5882 14.0013 20.2738 14.0966 20.0055 14.2743C19.7372 14.452 19.5268 14.7042 19.4 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
-        
+
         // Style the button
         this.settingsButton.style.cssText = `
             position: fixed;
@@ -4590,35 +4603,35 @@ class SettingsUI {
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         `;
-        
+
         // Add hover effects
         this.settingsButton.addEventListener('mouseenter', () => {
             this.settingsButton!.style.background = 'rgba(0, 0, 0, 0.9)';
             this.settingsButton!.style.borderColor = 'rgba(255, 255, 255, 0.6)';
             this.settingsButton!.style.transform = 'scale(1.1)';
         });
-        
+
         this.settingsButton.addEventListener('mouseleave', () => {
             this.settingsButton!.style.background = 'rgba(0, 0, 0, 0.7)';
             this.settingsButton!.style.borderColor = 'rgba(255, 255, 255, 0.3)';
             this.settingsButton!.style.transform = 'scale(1)';
         });
-        
+
         document.body.appendChild(this.settingsButton);
     }
-    
+
     private static createSettingsPanel(canvas: HTMLCanvasElement): void {
         // Create settings panel
         this.settingsPanel = document.createElement('div');
         this.settingsPanel.id = 'settings-panel';
-        
+
         // Calculate panel width (1/3 of view width with minimum 500px)
         const viewWidth = window.innerWidth;
         const panelWidth = Math.max(viewWidth / 3, 500);
-        
+
         // Generate sections HTML
         const sectionsHTML = this.generateSectionsHTML();
-        
+
         this.settingsPanel.innerHTML = `
             <div class="settings-header">
                 <h2>${CONFIG.SETTINGS.HEADING_TEXT}</h2>
@@ -4627,7 +4640,7 @@ class SettingsUI {
                 ${sectionsHTML}
             </div>
         `;
-        
+
         // Style the panel
         this.settingsPanel.style.cssText = `
             position: fixed;
@@ -4644,7 +4657,7 @@ class SettingsUI {
             font-family: Arial, sans-serif;
             overflow-y: auto;
         `;
-        
+
         // Style the header
         const header = this.settingsPanel.querySelector('.settings-header') as HTMLElement;
         header.style.cssText = `
@@ -4657,7 +4670,7 @@ class SettingsUI {
             box-sizing: border-box;
             max-width: 100%;
         `;
-        
+
         // Style the header title
         const headerTitle = header.querySelector('h2') as HTMLElement;
         headerTitle.style.cssText = `
@@ -4666,9 +4679,9 @@ class SettingsUI {
             font-weight: bold;
             color: white;
         `;
-        
 
-        
+
+
         // Style the content area
         const content = this.settingsPanel.querySelector('.settings-content') as HTMLElement;
         content.style.cssText = `
@@ -4677,7 +4690,7 @@ class SettingsUI {
             max-width: 100%;
             overflow-x: hidden;
         `;
-        
+
         // Style sections
         const sections = this.settingsPanel.querySelectorAll('.settings-section');
         sections.forEach(section => {
@@ -4689,7 +4702,7 @@ class SettingsUI {
                 border: 1px solid rgba(255, 255, 255, 0.1);
             `;
         });
-        
+
         // Style section headers
         const sectionHeaders = this.settingsPanel.querySelectorAll('.section-header');
         sectionHeaders.forEach(header => {
@@ -4700,7 +4713,7 @@ class SettingsUI {
                 margin-bottom: 10px;
             `;
         });
-        
+
         // Style section titles
         const sectionTitles = this.settingsPanel.querySelectorAll('.section-header h3');
         sectionTitles.forEach(title => {
@@ -4711,7 +4724,7 @@ class SettingsUI {
                 color: white;
             `;
         });
-        
+
         // Style toggle switches
         const toggleSwitches = this.settingsPanel.querySelectorAll('.toggle-switch');
         toggleSwitches.forEach(toggleSwitch => {
@@ -4722,7 +4735,7 @@ class SettingsUI {
                 height: 24px;
             `;
         });
-        
+
         const toggleInputs = this.settingsPanel.querySelectorAll('.toggle-switch input');
         toggleInputs.forEach(input => {
             (input as HTMLElement).style.cssText = `
@@ -4731,7 +4744,7 @@ class SettingsUI {
                 height: 0;
             `;
         });
-        
+
         const toggleSliders = this.settingsPanel.querySelectorAll('.toggle-slider');
         toggleSliders.forEach(slider => {
             (slider as HTMLElement).style.cssText = `
@@ -4745,11 +4758,11 @@ class SettingsUI {
                 transition: 0.3s;
                 border-radius: 24px;
             `;
-            
+
             // Add pseudo-element for the toggle circle
             slider.innerHTML = '<span style="position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;"></span>';
         });
-        
+
         // Style dropdowns
         const selects = this.settingsPanel.querySelectorAll('select');
         selects.forEach(select => {
@@ -4763,51 +4776,51 @@ class SettingsUI {
                 cursor: pointer;
             `;
         });
-        
+
         document.body.appendChild(this.settingsPanel);
-        
+
         // Setup section event listeners
         this.setupSectionEventListeners();
-        
+
         // Listen for orientation changes to re-evaluate section visibility
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 this.regenerateSections();
             }, 100); // Small delay to ensure orientation change is complete
         });
-        
+
         // Also listen for resize events
         window.addEventListener('resize', () => {
             this.regenerateSections();
         });
     }
-    
+
     private static regenerateSections(): void {
         if (!this.settingsPanel) return;
-        
+
         // Regenerate sections HTML
         const sectionsHTML = this.generateSectionsHTML();
         const content = this.settingsPanel.querySelector('.settings-content');
         if (content) {
             content.innerHTML = sectionsHTML;
         }
-        
+
         // Re-setup event listeners and toggle state handlers
         this.setupSectionEventListeners();
         this.setupToggleStateHandlers();
     }
-    
+
     private static generateSectionsHTML(): string {
         let sectionsHTML = '';
-        
+
         CONFIG.SETTINGS.SECTIONS.forEach((section, index) => {
             // Check if section should be visible
             if (!this.shouldShowSection(section.visibility)) {
                 return;
             }
-            
+
             const sectionId = `section-${index}`;
-            
+
             if (section.uiElement === 'toggle') {
                 // Get current state for mobile controls
                 let defaultValue = section.defaultValue as boolean ?? false;
@@ -4815,7 +4828,7 @@ class SettingsUI {
                     // For Screen Controls, always default to true (visible) since controls are shown by default
                     defaultValue = true;
                 }
-                
+
                 sectionsHTML += `
                     <div class="settings-section" id="${sectionId}">
                         <div class="section-header">
@@ -4829,23 +4842,23 @@ class SettingsUI {
                 `;
             } else if (section.uiElement === 'dropdown') {
                 const defaultValue = section.defaultValue as string ?? (section.options?.[0] ?? '');
-                
+
                 // Special handling for Character and Environment dropdowns to show names
                 let optionsHTML = '';
                 if (section.title === "Character") {
-                    optionsHTML = ASSETS.CHARACTERS.map((character) => 
+                    optionsHTML = ASSETS.CHARACTERS.map((character) =>
                         `<option value="${character.name}" ${character.name === defaultValue ? 'selected' : ''}>${character.name}</option>`
                     ).join('');
                 } else if (section.title === "Environment") {
-                    optionsHTML = ASSETS.ENVIRONMENTS.map((environment) => 
+                    optionsHTML = ASSETS.ENVIRONMENTS.map((environment) =>
                         `<option value="${environment.name}" ${environment.name === defaultValue ? 'selected' : ''}>${environment.name}</option>`
                     ).join('');
                 } else {
-                    optionsHTML = section.options?.map(option => 
+                    optionsHTML = section.options?.map(option =>
                         `<option value="${option}" ${option === defaultValue ? 'selected' : ''}>${option}</option>`
                     ).join('') || '';
                 }
-                
+
                 sectionsHTML += `
                     <div class="settings-section" id="${sectionId}">
                         <div class="section-header">
@@ -4858,10 +4871,10 @@ class SettingsUI {
                 `;
             }
         });
-        
+
         return sectionsHTML;
     }
-    
+
     private static setupSectionEventListeners(): void {
         // Setup toggle switches
         const toggles = this.settingsPanel!.querySelectorAll('input[type="checkbox"]');
@@ -4870,13 +4883,13 @@ class SettingsUI {
                 const target = e.target as HTMLInputElement;
                 const sectionIndex = parseInt(target.dataset.sectionIndex!);
                 const section = CONFIG.SETTINGS.SECTIONS[sectionIndex];
-                
+
                 if (section && section.onChange) {
                     await section.onChange(target.checked);
                 }
             });
         });
-        
+
         // Setup dropdown selects
         const selects = this.settingsPanel!.querySelectorAll('select');
         selects.forEach(select => {
@@ -4884,17 +4897,17 @@ class SettingsUI {
                 const target = e.target as HTMLSelectElement;
                 const sectionIndex = parseInt(target.dataset.sectionIndex!);
                 const section = CONFIG.SETTINGS.SECTIONS[sectionIndex];
-                
+
                 if (section && section.onChange && !this.isInitializing) {
                     await section.onChange(target.value);
                 }
             });
         });
-        
+
         // Add toggle state change handlers
         this.setupToggleStateHandlers();
     }
-    
+
     private static setupToggleStateHandlers(): void {
         const toggleInputs = this.settingsPanel!.querySelectorAll('.toggle-switch input');
         toggleInputs.forEach(input => {
@@ -4902,7 +4915,7 @@ class SettingsUI {
                 const target = e.target as HTMLInputElement;
                 const slider = target.nextElementSibling as HTMLElement;
                 const toggleCircle = slider.querySelector('span') as HTMLElement;
-                
+
                 if (target.checked) {
                     slider.style.backgroundColor = 'rgba(0, 255, 136, 0.8)';
                     toggleCircle.style.transform = 'translateX(26px)';
@@ -4913,24 +4926,24 @@ class SettingsUI {
             });
         });
     }
-    
+
     private static setupEventListeners(): void {
         // Settings button click
         this.settingsButton!.addEventListener('click', () => {
             this.togglePanel();
         });
-        
 
-        
+
+
         // Close panel when clicking outside
         document.addEventListener('click', (e) => {
-            if (this.isPanelOpen && 
-                !this.settingsPanel!.contains(e.target as Node) && 
+            if (this.isPanelOpen &&
+                !this.settingsPanel!.contains(e.target as Node) &&
                 !this.settingsButton!.contains(e.target as Node)) {
                 this.closePanel();
             }
         });
-        
+
         // Handle window resize
         window.addEventListener('resize', () => {
             if (this.isPanelOpen) {
@@ -4938,7 +4951,7 @@ class SettingsUI {
             }
         });
     }
-    
+
     private static togglePanel(): void {
         if (this.isPanelOpen) {
             this.closePanel();
@@ -4946,7 +4959,7 @@ class SettingsUI {
             this.openPanel();
         }
     }
-    
+
     private static openPanel(): void {
         this.settingsPanel!.style.left = '0px';
         this.isPanelOpen = true;
@@ -4955,7 +4968,7 @@ class SettingsUI {
         this.settingsButton!.style.background = 'rgba(0, 0, 0, 0.9)';
         this.settingsButton!.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString(); // Ensure button stays on top
     }
-    
+
     private static closePanel(): void {
         const panelWidth = this.settingsPanel!.offsetWidth;
         this.settingsPanel!.style.left = `-${panelWidth}px`;
@@ -4964,10 +4977,10 @@ class SettingsUI {
         this.settingsButton!.style.background = 'rgba(0, 0, 0, 0.7)';
         this.settingsButton!.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString(); // Reset z-index
     }
-    
+
     private static updatePanelWidth(): void {
         const viewWidth = window.innerWidth;
-        
+
         // If screen width is less than threshold, use full viewport width (100vw)
         // Otherwise use the configured ratio
         if (viewWidth < CONFIG.SETTINGS.FULL_SCREEN_THRESHOLD) {
@@ -4984,13 +4997,13 @@ class SettingsUI {
             this.settingsPanel!.style.padding = '';
             this.settingsPanel!.style.margin = '';
         }
-        
+
         if (!this.isPanelOpen) {
             const currentWidth = this.settingsPanel!.style.width;
             this.settingsPanel!.style.left = `-${currentWidth}`;
         }
     }
-    
+
     public static dispose(): void {
         if (this.settingsButton) {
             this.settingsButton.remove();
@@ -5015,27 +5028,23 @@ class SettingsUI {
             if (currentEnvironment === environmentName) {
                 return; // No change needed
             }
-            
-            console.log(`Switching environment from "${currentEnvironment}" to "${environmentName}"`);
-            
+
             // Pause physics to prevent character from falling during environment change
             this.sceneManager.pausePhysics();
-            
+
             // Clear existing environment, items, and particles
             this.sceneManager.clearEnvironment();
             this.sceneManager.clearItems();
             this.sceneManager.clearParticles();
-            
+
             // Load the new environment
             await this.sceneManager.loadEnvironment(environmentName);
-            
+
             // Reposition character to safe location in new environment
             this.sceneManager.repositionCharacter();
-            
+
             // Resume physics after environment is loaded
             this.sceneManager.resumePhysics();
-            
-            console.log(`Environment switch complete. Current character count: ${this.sceneManager.getScene().meshes.filter(m => m.name.includes('player')).length}`);
         }
     }
 }
