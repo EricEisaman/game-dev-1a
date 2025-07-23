@@ -72,14 +72,20 @@ interface EffectsConfig {
     readonly SOUND_EFFECTS: readonly SoundEffect[];
 }
 
+interface ItemInstance {
+    readonly position: BABYLON.Vector3;
+    readonly scale: number;
+    readonly rotation: BABYLON.Vector3;
+    readonly mass: number;
+}
+
 interface ItemConfig {
     readonly name: string;
     readonly url: string;
-    readonly mass: number;
     readonly collectible: boolean;
     readonly creditValue: number;
     readonly minImpulseForCollection: number;
-    readonly scale: number;
+    readonly instances: readonly ItemInstance[];
 }
 
 interface ItemsConfig {
@@ -362,11 +368,41 @@ const CONFIG: GameConfig = {
             {
                 name: "Crate",
                 url: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/items/stylized_crate_asset.glb",
-                mass: 0.5,
                 collectible: true,
                 creditValue: 100,
                 minImpulseForCollection: 0.5,
-                scale: 0.5
+                instances: [
+                    {
+                        position: new BABYLON.Vector3(1, 0.5, -8),
+                        scale: 0.5,
+                        rotation: new BABYLON.Vector3(0, 0, 0),
+                        mass: 0.5
+                    },
+                    {
+                        position: new BABYLON.Vector3(5, 0.5, -8),
+                        scale: 0.5,
+                        rotation: new BABYLON.Vector3(0, 0, 0),
+                        mass: 0.5
+                    },
+                    {
+                        position: new BABYLON.Vector3(0, 0.5, -5),
+                        scale: 0.5,
+                        rotation: new BABYLON.Vector3(0, 0, 0),
+                        mass: 0.5
+                    },
+                    {
+                        position: new BABYLON.Vector3(1, 0.5, -11),
+                        scale: 0.5,
+                        rotation: new BABYLON.Vector3(0, 0, 0),
+                        mass: 0.5
+                    },
+                    {
+                        position: new BABYLON.Vector3(5, 3.5, -11),
+                        scale: 0.5,
+                        rotation: new BABYLON.Vector3(0, 0, 0),
+                        mass: 0.5
+                    }
+                ]
             }
         ],
         COLLECTION_RADIUS: 1.5,
@@ -2322,20 +2358,19 @@ class CollectiblesManager {
             { volume: 0.7 }
         );
         
-        // Load the crate model once to use as instance basis
-        await this.loadCrateModel();
-        
-        // Create 5 crate instances at different positions - closer to player
-        const cratePositions = [
-            new BABYLON.Vector3(1, 0.5, -8),  // Right side of player
-            new BABYLON.Vector3(5, 0.5, -8), // Left side of player
-            new BABYLON.Vector3(0, 0.5, -5),  // In front of player
-            new BABYLON.Vector3(1, 0.5, -11), // Behind and right
-            new BABYLON.Vector3(5, 3.5, -11) // Behind and left
-        ];
-        
-        for (let i = 0; i < cratePositions.length; i++) {
-            await this.createCollectibleInstance(`crate_instance_${i + 1}`, cratePositions[i]);
+        // Iterate through all items in config
+        for (const itemConfig of CONFIG.ITEMS.ITEMS) {
+            // Only process collectible items
+            if (itemConfig.collectible) {
+                await this.loadItemModel(itemConfig);
+                
+                // Create instances for this item
+                for (let i = 0; i < itemConfig.instances.length; i++) {
+                    const instance = itemConfig.instances[i];
+                    const instanceId = `${itemConfig.name.toLowerCase()}_instance_${i + 1}`;
+                    await this.createCollectibleInstance(instanceId, instance);
+                }
+            }
         }
         
         // Set up physics collision detection
@@ -2343,27 +2378,25 @@ class CollectiblesManager {
     }
     
     /**
-     * Loads the crate model once to use as instance basis
+     * Loads an item model to use as instance basis
      */
-    private static async loadCrateModel(): Promise<void> {
+    private static async loadItemModel(itemConfig: ItemConfig): Promise<void> {
         if (!this.scene) return;
         
-        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use the crate configuration
-        
         try {
-            console.log(`Loading crate model from: ${itemConfig.url}`);
+            console.log(`Loading ${itemConfig.name} model from: ${itemConfig.url}`);
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
             
-            // Rename the root node to "crate_basis" for better organization
+            // Rename the root node for better organization
             if (result.meshes && result.meshes.length > 0) {
                 // Find the root mesh (the one without a parent)
                 const rootMesh = result.meshes.find(mesh => !mesh.parent);
                 if (rootMesh) {
-                    rootMesh.name = "crate_basis";
+                    rootMesh.name = `${itemConfig.name.toLowerCase()}_basis`;
                 }
             }
             
-            console.log(`Crate model loaded successfully. Meshes found: ${result.meshes.length}`);
+            console.log(`${itemConfig.name} model loaded successfully. Meshes found: ${result.meshes.length}`);
             
             // Check if any mesh has proper geometry
             const meshWithGeometry = result.meshes.find(mesh => {
@@ -2377,14 +2410,11 @@ class CollectiblesManager {
                 // Use the first mesh with geometry as the instance basis
                 this.instanceBasis = meshWithGeometry as BABYLON.Mesh;
                 
-                // Scale the instance basis - make it larger and more visible
-                this.instanceBasis.scaling.setAll(itemConfig.scale); // Use original scale
-                
                 // Make the instance basis invisible and disable it in the scene
                 this.instanceBasis.isVisible = false;
                 this.instanceBasis.setEnabled(false);
                 
-                console.log("Crate instance basis created and disabled");
+                console.log(`${itemConfig.name} instance basis created and disabled`);
                 console.log("Mesh geometry vertices:", this.instanceBasis.geometry?.getTotalVertices());
                 console.log("Mesh bounding box:", this.instanceBasis.getBoundingInfo()?.boundingBox);
                 
@@ -2439,8 +2469,7 @@ class CollectiblesManager {
         material.specularColor = new BABYLON.Color3(1, 1, 1); // Shiny
         this.instanceBasis.material = material;
         
-        // Scale the instance basis - make it larger and more visible
-        this.instanceBasis.scaling.setAll(itemConfig.scale); // Use original scale
+        // Instance basis should not be scaled - scaling will be applied to individual instances
         
         // Make the instance basis invisible and disable it in the scene
         this.instanceBasis.isVisible = false;
@@ -2460,43 +2489,54 @@ class CollectiblesManager {
     /**
      * Creates a collectible instance from the instance basis
      * @param id Unique identifier for the collectible
-     * @param position Position to place the collectible
+     * @param instance ItemInstance configuration for the collectible
      */
-    private static async createCollectibleInstance(id: string, position: BABYLON.Vector3): Promise<void> {
+    private static async createCollectibleInstance(id: string, instance: ItemInstance): Promise<void> {
         if (!this.scene || !this.instanceBasis) {
             console.error("No scene or instance basis available for creating collectible instance");
             return;
         }
         
         try {
-            // Create an instance from the loaded crate model
-            const instance = this.instanceBasis.createInstance(id);
+            // Create an instance from the loaded model
+            const meshInstance = this.instanceBasis.createInstance(id);
             
             // Remove the instance from its parent to make it independent
-            if (instance.parent) {
-                instance.setParent(null);
+            if (meshInstance.parent) {
+                meshInstance.setParent(null);
             }
             
-            // Set position and make it visible
-            instance.position = position;
-            instance.isVisible = true;
-            instance.setEnabled(true);
+            // Apply instance properties
+            meshInstance.position = instance.position;
+            meshInstance.scaling.setAll(instance.scale);
+            meshInstance.rotation = instance.rotation;
             
-            // Ensure the instance is properly scaled
-            const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Get the crate configuration
-            instance.scaling.setAll(itemConfig.scale);
+            // Make it visible and enabled
+            meshInstance.isVisible = true;
+            meshInstance.setEnabled(true);
             
-            // Create physics body using PhysicsAggregate for better performance
-            const physicsAggregate = new BABYLON.PhysicsAggregate(instance, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+            // Get the scaled bounding box dimensions after applying instance scaling
+            const boundingBox = meshInstance.getBoundingInfo();
+            const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
+            
+            // Create physics body with dynamic box shape based on scaled dimensions
+            const physicsAggregate = new BABYLON.PhysicsAggregate(
+                meshInstance, 
+                BABYLON.PhysicsShapeType.BOX, 
+                { mass: instance.mass }
+            );
+            
+            // Note: Physics shape size is determined by the mesh's bounding box
+            // The scaling applied to the mesh will automatically affect the physics shape
             
             // Store references
-            this.collectibles.set(id, instance);
+            this.collectibles.set(id, meshInstance);
             if (physicsAggregate.body) {
                 this.collectibleBodies.set(id, physicsAggregate.body);
             }
             
             // Add rotation animation
-            this.addRotationAnimation(instance);
+            this.addRotationAnimation(meshInstance);
         } catch (error) {
             console.error(`Failed to create collectible instance ${id}:`, error);
         }
@@ -2505,17 +2545,29 @@ class CollectiblesManager {
     /**
      * Creates a collectible item (legacy method - kept for fallback)
      * @param id Unique identifier for the collectible
-     * @param position Position to place the collectible
+     * @param instance ItemInstance configuration for the collectible
      */
-    private static async createCollectible(id: string, position: BABYLON.Vector3): Promise<void> {
+    private static async createCollectible(id: string, instance: ItemInstance): Promise<void> {
         if (!this.scene) {
             console.error("No scene available for creating collectible");
             return;
         }
         
-        console.log(`Starting to create collectible ${id} at ${position.toString()}`);
+        console.log(`Starting to create collectible ${id} at ${instance.position.toString()}`);
         
-        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use the crate configuration
+        // Find the item config that contains this instance
+        const itemConfig = CONFIG.ITEMS.ITEMS.find(item => 
+            item.instances.some(inst => 
+                inst.position.equals(instance.position) && 
+                inst.scale === instance.scale && 
+                inst.mass === instance.mass
+            )
+        );
+        
+        if (!itemConfig) {
+            console.error(`No item config found for instance ${id}`);
+            return;
+        }
         
         try {
             console.log(`Attempting to load model from: ${itemConfig.url}`);
@@ -2528,24 +2580,36 @@ class CollectiblesManager {
                 const mesh = result.meshes[0];
                 mesh.name = id;
                 
-                // Scale the mesh appropriately and make it more visible
-                mesh.scaling.setAll(itemConfig.scale);
+                // Apply instance properties
+                mesh.scaling.setAll(instance.scale);
+                mesh.rotation = instance.rotation;
                 
                 // Set position BEFORE creating physics body
-                mesh.position = position;
-                console.log(`Model crate positioned at: ${mesh.position.toString()}`);
+                mesh.position = instance.position;
+                console.log(`Model positioned at: ${mesh.position.toString()}`);
                 
                 // Make sure the mesh is visible
                 mesh.isVisible = true;
-                console.log(`Model crate visibility: ${mesh.isVisible}`);
+                console.log(`Model visibility: ${mesh.isVisible}`);
                 
-                // Create physics body exactly like environment meshes
-                const physicsAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+                // Get the scaled bounding box dimensions after applying instance scaling
+                const boundingBox = mesh.getBoundingInfo();
+                const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
+                
+                // Create physics body with dynamic box shape based on scaled dimensions
+                const physicsAggregate = new BABYLON.PhysicsAggregate(
+                    mesh, 
+                    BABYLON.PhysicsShapeType.BOX, 
+                    { mass: instance.mass }
+                );
+                
+                // Note: Physics shape size is determined by the mesh's bounding box
+                // The scaling applied to the mesh will automatically affect the physics shape
                 
                 // Ensure the physics body is positioned correctly
                 if (physicsAggregate.body) {
-                    physicsAggregate.body.setMassProperties({ mass: 0.1 });
-                    console.log(`Physics body created for ${id} at ${position.toString()}`);
+                    physicsAggregate.body.setMassProperties({ mass: instance.mass });
+                    console.log(`Physics body created for ${id} at ${instance.position.toString()}`);
                 } else {
                     console.warn(`Failed to create physics body for ${id}`);
                 }
@@ -2556,7 +2620,7 @@ class CollectiblesManager {
                 // Add rotation animation
                 this.addRotationAnimation(mesh);
                 
-                console.log(`Created collectible: ${id} at ${position.toString()}`);
+                console.log(`Created collectible: ${id} at ${instance.position.toString()}`);
             } else {
                 console.warn(`No meshes found in ${itemConfig.url} for ${id}`);
             }
@@ -2564,39 +2628,53 @@ class CollectiblesManager {
             console.error(`Failed to create collectible ${id}:`, error);
             console.log("Creating fallback crate instead...");
             
-            // Create a fallback crate using a simple box
-            const fallbackCrate = BABYLON.MeshBuilder.CreateBox(`fallback_${id}`, { size: 1 }, this.scene);
-            console.log(`Created fallback crate mesh: ${fallbackCrate.name}`);
+            // Create a fallback item using a simple box
+            const fallbackItem = BABYLON.MeshBuilder.CreateBox(`fallback_${id}`, { size: 1 }, this.scene);
+            console.log(`Created fallback item mesh: ${fallbackItem.name}`);
             
             // Create a simple material to make it visible
             const material = new BABYLON.StandardMaterial(`fallback_${id}_material`, this.scene);
             material.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.2); // Brown color
             material.emissiveColor = new BABYLON.Color3(0.1, 0.05, 0); // Slight glow
-            fallbackCrate.material = material;
+            fallbackItem.material = material;
             
             // Set position and visibility BEFORE creating physics body
-            fallbackCrate.position = position;
-            fallbackCrate.isVisible = true;
-            console.log(`Fallback crate positioned at: ${fallbackCrate.position.toString()}, visible: ${fallbackCrate.isVisible}`);
+            fallbackItem.position = instance.position;
+            fallbackItem.isVisible = true;
+            console.log(`Fallback item positioned at: ${fallbackItem.position.toString()}, visible: ${fallbackItem.isVisible}`);
             
-            // Create physics body exactly like environment meshes
-            const physicsAggregate = new BABYLON.PhysicsAggregate(fallbackCrate, BABYLON.PhysicsShapeType.BOX, { mass: 0.1 });
+            // Apply scaling to the fallback item
+            fallbackItem.scaling.setAll(instance.scale);
+            
+            // Get the scaled bounding box dimensions
+            const boundingBox = fallbackItem.getBoundingInfo();
+            const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
+            
+            // Create physics body with dynamic box shape based on scaled dimensions
+            const physicsAggregate = new BABYLON.PhysicsAggregate(
+                fallbackItem, 
+                BABYLON.PhysicsShapeType.BOX, 
+                { mass: instance.mass }
+            );
+            
+            // Note: Physics shape size is determined by the mesh's bounding box
+            // The scaling applied to the mesh will automatically affect the physics shape
             
             // Ensure the physics body is positioned correctly
             if (physicsAggregate.body) {
-                physicsAggregate.body.setMassProperties({ mass: 0.1 });
-                console.log(`Physics body created for fallback ${id} at ${position.toString()}`);
+                physicsAggregate.body.setMassProperties({ mass: instance.mass });
+                console.log(`Physics body created for fallback ${id} at ${instance.position.toString()}`);
             } else {
                 console.warn(`Failed to create physics body for fallback ${id}`);
             }
             
             // Store references
-            this.collectibles.set(id, fallbackCrate);
+            this.collectibles.set(id, fallbackItem);
             
             // Add rotation animation
-            this.addRotationAnimation(fallbackCrate);
+            this.addRotationAnimation(fallbackItem);
             
-            console.log(`Created fallback collectible: ${id} at ${position.toString()}`);
+            console.log(`Created fallback collectible: ${id} at ${instance.position.toString()}`);
         }
     }
     
@@ -2667,12 +2745,24 @@ class CollectiblesManager {
     private static attemptCollection(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh): void {
         if (!this.characterController) return;
         
-        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use crate configuration
+        // Find the item config for this collectible
+        const itemConfig = CONFIG.ITEMS.ITEMS.find(item => 
+            item.collectible && 
+            item.instances.some(instance => 
+                instance.position.equals(collectibleMesh.position)
+            )
+        );
+        
+        if (!itemConfig) {
+            console.warn(`No item config found for collectible ${collectibleId}`);
+            return;
+        }
+        
         const characterVelocity = this.characterController.getVelocity();
         const speed = characterVelocity.length();
         
         if (speed >= itemConfig.minImpulseForCollection) {
-            this.collectItem(collectibleId, collectibleMesh);
+            this.collectItem(collectibleId, collectibleMesh, itemConfig);
         }
     }
     
@@ -2681,9 +2771,7 @@ class CollectiblesManager {
      * @param collectibleId The ID of the collectible
      * @param collectibleMesh The mesh of the collectible
      */
-    private static collectItem(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh): void {
-        const itemConfig = CONFIG.ITEMS.ITEMS[0]; // Use crate configuration
-        
+    private static collectItem(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh, itemConfig: ItemConfig): void {
         // Mark as collected to prevent multiple collections
         this.collectedItems.add(collectibleId);
         
