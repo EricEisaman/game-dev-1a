@@ -153,7 +153,6 @@ interface GameConfig {
     readonly DEBUG: DebugConfig;
     readonly EFFECTS: EffectsConfig;
     readonly HUD: HUDConfig;
-    readonly ITEMS: ItemsConfig;
     readonly SETTINGS: SettingsConfig;
 }
 
@@ -187,6 +186,7 @@ interface Environment {
     readonly sky?: SkyConfig; // Optional sky configuration for this environment
     readonly spawnPoint: BABYLON.Vector3; // Spawn point for this environment
     readonly particles?: readonly EnvironmentParticle[]; // Optional environment particles
+    readonly items?: readonly ItemConfig[]; // Optional items configuration for this environment
 }
 
 interface EnvironmentParticle {
@@ -272,6 +272,47 @@ const ASSETS = {
                     name: "Magic Sparkles",
                     position: new BABYLON.Vector3(-2, 0, -8), // Left of player start
                     updateSpeed: 0.007
+                }
+            ],
+            items: [
+                {
+                    name: "Crate",
+                    url: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/items/stylized_crate_asset.glb",
+                    collectible: true,
+                    creditValue: 100,
+                    minImpulseForCollection: 0.5,
+                    instances: [
+                        {
+                            position: new BABYLON.Vector3(1, 0.5, -8),
+                            scale: 0.5,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 0.5
+                        },
+                        {
+                            position: new BABYLON.Vector3(5, 0.5, -8),
+                            scale: 0.5,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 0.5
+                        },
+                        {
+                            position: new BABYLON.Vector3(0, 0.5, -5),
+                            scale: 0.5,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 0.5
+                        },
+                        {
+                            position: new BABYLON.Vector3(1, 0.5, -11),
+                            scale: 0.5,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 0.5
+                        },
+                        {
+                            position: new BABYLON.Vector3(5, 3.5, -11),
+                            scale: 0.5,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 0.5
+                        }
+                    ]
                 }
             ]
         },
@@ -456,53 +497,7 @@ const CONFIG = {
         }
     },
 
-    // Items Settings
-    ITEMS: {
-        ITEMS: [
-            {
-                name: "Crate",
-                url: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/items/stylized_crate_asset.glb",
-                collectible: true,
-                creditValue: 100,
-                minImpulseForCollection: 0.5,
-                instances: [
-                    {
-                        position: new BABYLON.Vector3(1, 0.5, -8),
-                        scale: 0.5,
-                        rotation: new BABYLON.Vector3(0, 0, 0),
-                        mass: 0.5
-                    },
-                    {
-                        position: new BABYLON.Vector3(5, 0.5, -8),
-                        scale: 0.5,
-                        rotation: new BABYLON.Vector3(0, 0, 0),
-                        mass: 0.5
-                    },
-                    {
-                        position: new BABYLON.Vector3(0, 0.5, -5),
-                        scale: 0.5,
-                        rotation: new BABYLON.Vector3(0, 0, 0),
-                        mass: 0.5
-                    },
-                    {
-                        position: new BABYLON.Vector3(1, 0.5, -11),
-                        scale: 0.5,
-                        rotation: new BABYLON.Vector3(0, 0, 0),
-                        mass: 0.5
-                    },
-                    {
-                        position: new BABYLON.Vector3(5, 3.5, -11),
-                        scale: 0.5,
-                        rotation: new BABYLON.Vector3(0, 0, 0),
-                        mass: 0.5
-                    }
-                ]
-            }
-        ],
-        COLLECTION_RADIUS: 1.5,
-        COLLECTION_SOUND: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/sounds/effects/collect.m4a",
-        SHOW_COLLECTION_EFFECTS: true
-    },
+
 
     // Settings Panel Configuration
     SETTINGS: {
@@ -2560,29 +2555,48 @@ class CollectiblesManager {
         this.characterController = characterController;
         this.totalCredits = 0;
 
-        return this.setupCollectibles();
+        // Initialize with empty state - items will be loaded per environment
+        return Promise.resolve();
+    }
+
+    public static async setupEnvironmentItems(environment: Environment): Promise<void> {
+        if (!this.scene || !environment.items) {
+            console.warn("CollectiblesManager not properly initialized or no items in environment");
+            return;
+        }
+
+        // Clear any existing state
+        this.collectibles.clear();
+        this.collectibleBodies.clear();
+        this.collectedItems.clear();
+
+        // Set up collectibles for this environment
+        await this.setupCollectiblesForEnvironment(environment);
     }
 
     /**
-     * Sets up collectibles in the environment
+     * Sets up collectibles for a specific environment
      */
-    private static async setupCollectibles(): Promise<void> {
-        if (!this.scene) return;
+    private static async setupCollectiblesForEnvironment(environment: Environment): Promise<void> {
+        if (!this.scene || !environment.items) {
+            console.warn("Scene or items not available in setupCollectiblesForEnvironment");
+            return;
+        }
 
         // Wait for physics to be properly initialized
         await this.waitForPhysicsInitialization();
 
-        // Create collection sound
+        // Create collection sound (using default sound for now)
         this.collectionSound = new BABYLON.Sound(
             "collectionSound",
-            CONFIG.ITEMS.COLLECTION_SOUND,
+            "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/sounds/effects/collect.m4a",
             this.scene,
             null,
             { volume: 0.7 }
         );
 
-        // Iterate through all items in config
-        for (const itemConfig of CONFIG.ITEMS.ITEMS) {
+        // Iterate through all items in environment
+        for (const itemConfig of environment.items) {
             // Only process collectible items
             if (itemConfig.collectible) {
                 await this.loadItemModel(itemConfig);
@@ -2604,10 +2618,12 @@ class CollectiblesManager {
      * Loads an item model to use as instance basis
      */
     private static async loadItemModel(itemConfig: ItemConfig): Promise<void> {
-        if (!this.scene) return;
+        if (!this.scene) {
+            console.warn("Scene not available in loadItemModel");
+            return;
+        }
 
         try {
-
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
 
             // Rename the root node for better organization
@@ -2678,8 +2694,6 @@ class CollectiblesManager {
      */
     private static createFallbackInstanceBasis(): void {
         if (!this.scene) return;
-
-        const itemConfig = CONFIG.ITEMS.ITEMS[0];
 
         // Create a fallback item using a simple box - CAST TO MESH!
         this.instanceBasis = BABYLON.MeshBuilder.CreateBox("fallback_item_basis", { size: 2 }, this.scene) as BABYLON.Mesh; // Larger size
@@ -2769,134 +2783,10 @@ class CollectiblesManager {
      * @param instance ItemInstance configuration for the collectible
      */
     private static async createCollectible(id: string, instance: ItemInstance): Promise<void> {
-        if (!this.scene) {
-            console.error("No scene available for creating collectible");
-            return;
-        }
-
-
-
-        // Find the item config that contains this instance
-        const itemConfig = CONFIG.ITEMS.ITEMS.find(item =>
-            item.instances.some(inst =>
-                inst.position.equals(instance.position) &&
-                inst.scale === instance.scale &&
-                inst.mass === instance.mass
-            )
-        );
-
-        if (!itemConfig) {
-            console.error(`No item config found for instance ${id}`);
-            return;
-        }
-
-        try {
-
-            // Import the item model
-            const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
-
-
-
-            if (result.meshes.length > 0) {
-                const mesh = result.meshes[0];
-                mesh.name = id;
-
-                // Apply instance properties
-                mesh.scaling.setAll(instance.scale);
-                mesh.rotation = instance.rotation;
-
-                // Set position BEFORE creating physics body
-                mesh.position = instance.position;
-
-
-                // Make sure the mesh is visible
-                mesh.isVisible = true;
-
-
-                // Get the scaled bounding box dimensions after applying instance scaling
-                const boundingBox = mesh.getBoundingInfo();
-                const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
-
-                // Create physics body with dynamic box shape based on scaled dimensions
-                const physicsAggregate = new BABYLON.PhysicsAggregate(
-                    mesh,
-                    BABYLON.PhysicsShapeType.BOX,
-                    { mass: instance.mass }
-                );
-
-                // Note: Physics shape size is determined by the mesh's bounding box
-                // The scaling applied to the mesh will automatically affect the physics shape
-
-                // Ensure the physics body is positioned correctly
-                if (physicsAggregate.body) {
-                    physicsAggregate.body.setMassProperties({ mass: instance.mass });
-
-                } else {
-                    console.warn(`Failed to create physics body for ${id}`);
-                }
-
-                // Store references
-                this.collectibles.set(id, mesh);
-
-                // Add rotation animation
-                this.addRotationAnimation(mesh);
-
-
-            } else {
-                console.warn(`No meshes found in ${itemConfig.url} for ${id}`);
-            }
-        } catch (error) {
-            console.error(`Failed to create collectible ${id}:`, error);
-
-
-            // Create a fallback item using a simple box
-            const fallbackItem = BABYLON.MeshBuilder.CreateBox(`fallback_${id}`, { size: 1 }, this.scene);
-
-
-            // Create a simple material to make it visible
-            const material = new BABYLON.StandardMaterial(`fallback_${id}_material`, this.scene);
-            material.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.2); // Brown color
-            material.emissiveColor = new BABYLON.Color3(0.1, 0.05, 0); // Slight glow
-            fallbackItem.material = material;
-
-            // Set position and visibility BEFORE creating physics body
-            fallbackItem.position = instance.position;
-            fallbackItem.isVisible = true;
-
-
-            // Apply scaling to the fallback item
-            fallbackItem.scaling.setAll(instance.scale);
-
-            // Get the scaled bounding box dimensions
-            const boundingBox = fallbackItem.getBoundingInfo();
-            const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
-
-            // Create physics body with dynamic box shape based on scaled dimensions
-            const physicsAggregate = new BABYLON.PhysicsAggregate(
-                fallbackItem,
-                BABYLON.PhysicsShapeType.BOX,
-                { mass: instance.mass }
-            );
-
-            // Note: Physics shape size is determined by the mesh's bounding box
-            // The scaling applied to the mesh will automatically affect the physics shape
-
-            // Ensure the physics body is positioned correctly
-            if (physicsAggregate.body) {
-                physicsAggregate.body.setMassProperties({ mass: instance.mass });
-
-            } else {
-                console.warn(`Failed to create physics body for fallback ${id}`);
-            }
-
-            // Store references
-            this.collectibles.set(id, fallbackItem);
-
-            // Add rotation animation
-            this.addRotationAnimation(fallbackItem);
-
-
-        }
+        // Since we've moved to environment-specific items, this method is no longer used
+        // The createCollectibleInstance method handles individual item creation
+        console.warn(`createCollectible method is deprecated. Use createCollectibleInstance instead.`);
+        return;
     }
 
     /**
@@ -2944,7 +2834,7 @@ class CollectiblesManager {
         if (!this.characterController) return;
 
         const characterPosition = this.characterController.getDisplayCapsule().position;
-        const collectionRadius = CONFIG.ITEMS.COLLECTION_RADIUS;
+        const collectionRadius = 1.5; // Default collection radius
 
         for (const [id, mesh] of this.collectibles.entries()) {
             // Skip if already collected
@@ -2966,13 +2856,14 @@ class CollectiblesManager {
     private static attemptCollection(collectibleId: string, collectibleMesh: BABYLON.AbstractMesh): void {
         if (!this.characterController) return;
 
-        // Find the item config for this collectible
-        const itemConfig = CONFIG.ITEMS.ITEMS.find(item =>
-            item.collectible &&
-            item.instances.some(instance =>
-                instance.position.equals(collectibleMesh.position)
-            )
-        );
+        // For now, use a default item config since we don't have access to the environment items here
+        // In a more complete implementation, we would store the item config with each collectible
+        const itemConfig = {
+            name: "Crate",
+            collectible: true,
+            creditValue: 100,
+            minImpulseForCollection: 0.5
+        } as ItemConfig;
 
         if (!itemConfig) {
             console.warn(`No item config found for collectible ${collectibleId}`);
@@ -3005,7 +2896,7 @@ class CollectiblesManager {
         }
 
         // Show collection effects
-        if (CONFIG.ITEMS.SHOW_COLLECTION_EFFECTS) {
+        if (true) { // Default to showing collection effects
             this.showCollectionEffects(collectibleMesh.position);
         }
 
@@ -3100,6 +2991,33 @@ class CollectiblesManager {
      */
     public static getCollectibles(): Map<string, BABYLON.AbstractMesh> {
         return new Map(this.collectibles);
+    }
+
+    /**
+     * Clears all collectibles without disposing of the manager
+     */
+    public static clearCollectibles(): void {
+        // Remove all collectibles
+        for (const [id, mesh] of this.collectibles.entries()) {
+            this.removeCollectible(id);
+        }
+
+        // Clear collections but keep manager initialized
+        this.collectibles.clear();
+        this.collectibleBodies.clear();
+        this.collectedItems.clear();
+
+        // Dispose collection sound
+        if (this.collectionSound) {
+            this.collectionSound.dispose();
+            this.collectionSound = null;
+        }
+
+        // Dispose instance basis
+        if (this.instanceBasis) {
+            this.instanceBasis.dispose();
+            this.instanceBasis = null;
+        }
     }
 
     /**
@@ -4174,6 +4092,9 @@ class SceneManager {
         await this.loadEnvironment("Level Test");
         this.setupCharacter();
         this.loadCharacterModel();
+        
+        // Set up environment items after character is fully loaded
+        await this.setupEnvironmentItems();
     }
 
     private setupLighting(): void {
@@ -4255,6 +4176,9 @@ class SceneManager {
                     console.warn("Failed to create environment particles:", error);
                 }
             }
+
+            // Environment items will be set up after character is fully loaded
+            // This ensures CollectiblesManager is properly initialized
 
             // Update current environment tracking
             this.currentEnvironment = environmentName;
@@ -4456,6 +4380,21 @@ class SceneManager {
     }
 
     /**
+     * Sets up environment items after character is fully loaded
+     */
+    public async setupEnvironmentItems(): Promise<void> {
+        const environment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
+        
+        if (environment && environment.items) {
+            try {
+                await CollectiblesManager.setupEnvironmentItems(environment);
+            } catch (error) {
+                console.warn("Failed to setup environment items:", error);
+            }
+        }
+    }
+
+    /**
      * Repositions the character to a safe location in the new environment
      */
     public repositionCharacter(): void {
@@ -4560,8 +4499,8 @@ class SceneManager {
      * Clears all items and their instances
      */
     public clearItems(): void {
-        // Use CollectiblesManager to clear all collectibles
-        CollectiblesManager.dispose();
+        // Clear collectibles without disposing of the CollectiblesManager
+        CollectiblesManager.clearCollectibles();
 
         // Also clear any other item meshes that might not be managed by CollectiblesManager
         const itemMeshes = this.scene.meshes.filter(mesh =>
@@ -5219,8 +5158,11 @@ class SettingsUI {
             // Check if the environment is actually different from current
             const currentEnvironment = this.sceneManager.getCurrentEnvironment();
             if (currentEnvironment === environmentName) {
+                console.log(`Environment ${environmentName} is already loaded, skipping change`);
                 return; // No change needed
             }
+
+            console.log(`Changing environment from ${currentEnvironment} to ${environmentName}`);
 
             // Pause physics to prevent character from falling during environment change
             this.sceneManager.pausePhysics();
@@ -5231,13 +5173,20 @@ class SettingsUI {
             this.sceneManager.clearParticles();
 
             // Load the new environment
+            console.log(`Loading environment: ${environmentName}`);
             await this.sceneManager.loadEnvironment(environmentName);
+
+            // Set up environment items for the new environment
+            console.log(`Setting up environment items for: ${environmentName}`);
+            await this.sceneManager.setupEnvironmentItems();
 
             // Reposition character to safe location in new environment
             this.sceneManager.repositionCharacter();
 
             // Resume physics after environment is loaded
             this.sceneManager.resumePhysics();
+            
+            console.log(`Environment change to ${environmentName} completed`);
         }
     }
 }
