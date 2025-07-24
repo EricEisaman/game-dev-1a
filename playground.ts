@@ -250,7 +250,7 @@ const ASSETS = {
                 { name: "Cube.003", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.004", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.005", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
-                { name: "Cube.006", mass: 0.1, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
+                { name: "Cube.006", mass: 0.01, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
                 { name: "Cube.007", mass: 0, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX }
             ],
             sky: {
@@ -2500,7 +2500,7 @@ class CollectiblesManager {
     private static collectionObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
     private static collectedItems: Set<string> = new Set();
     private static instanceBasis: BABYLON.Mesh | null = null;
-    private static cratePhysicsShape: BABYLON.PhysicsShape | null = null; // Reusable physics shape
+    private static physicsShape: BABYLON.PhysicsShape | null = null; // Reusable physics shape
 
     // Custom physics ready event system
     private static physicsReadyObservable = new BABYLON.Observable<void>();
@@ -2585,6 +2585,7 @@ class CollectiblesManager {
                 const rootMesh = result.meshes.find(mesh => !mesh.parent);
                 if (rootMesh) {
                     rootMesh.name = `${itemConfig.name.toLowerCase()}_basis`;
+                    rootMesh.setEnabled(false);
                 }
             }
 
@@ -2612,7 +2613,7 @@ class CollectiblesManager {
                 const boundingInfo = this.instanceBasis.getBoundingInfo();
                 if (boundingInfo) {
                     const size = boundingInfo.boundingBox.maximumWorld.subtract(boundingInfo.boundingBox.minimumWorld);
-                    this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
+                    this.physicsShape = new BABYLON.PhysicsShapeBox(
                         BABYLON.Vector3.Zero(), // Center - use static zero
                         BABYLON.Quaternion.Identity(), // Rotation - use static identity
                         size.scale(0.5), // Half-size for box shape
@@ -2621,7 +2622,7 @@ class CollectiblesManager {
 
                 } else {
                     // Fallback to default size
-                    this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
+                    this.physicsShape = new BABYLON.PhysicsShapeBox(
                         BABYLON.Vector3.Zero(), // Center - use static zero
                         BABYLON.Quaternion.Identity(), // Rotation - use static identity
                         BABYLON.Vector3.One(), // Size - use static one
@@ -2631,11 +2632,11 @@ class CollectiblesManager {
                 }
 
             } else {
-                console.warn("No meshes with geometry found in crate model, creating fallback");
+                console.warn("No meshes with geometry found in item model, creating fallback");
                 this.createFallbackInstanceBasis();
             }
         } catch (error) {
-            console.error("Failed to load crate model:", error);
+            console.error("Failed to load item model:", error);
 
             this.createFallbackInstanceBasis();
         }
@@ -2649,11 +2650,11 @@ class CollectiblesManager {
 
         const itemConfig = CONFIG.ITEMS.ITEMS[0];
 
-        // Create a fallback crate using a simple box - CAST TO MESH!
-        this.instanceBasis = BABYLON.MeshBuilder.CreateBox("fallback_crate_basis", { size: 2 }, this.scene) as BABYLON.Mesh; // Larger size
+        // Create a fallback item using a simple box - CAST TO MESH!
+        this.instanceBasis = BABYLON.MeshBuilder.CreateBox("fallback_item_basis", { size: 2 }, this.scene) as BABYLON.Mesh; // Larger size
 
         // Create a bright baby blue material to make it very visible
-        const material = new BABYLON.StandardMaterial("fallback_crate_basis_material", this.scene);
+        const material = new BABYLON.StandardMaterial("fallback_item_basis_material", this.scene);
         material.diffuseColor = new BABYLON.Color3(0.5, 0.8, 1); // Baby blue
         material.emissiveColor = new BABYLON.Color3(0.1, 0.2, 0.3); // Subtle blue glow
         material.specularColor = new BABYLON.Color3(1, 1, 1); // Shiny
@@ -2665,8 +2666,8 @@ class CollectiblesManager {
         this.instanceBasis.isVisible = false;
         this.instanceBasis.setEnabled(false);
 
-        // Create reusable physics shape for fallback crates
-        this.cratePhysicsShape = new BABYLON.PhysicsShapeBox(
+        // Create reusable physics shape for fallback items
+        this.physicsShape = new BABYLON.PhysicsShapeBox(
             BABYLON.Vector3.Zero(), // Center - use static zero
             BABYLON.Quaternion.Identity(), // Rotation - use static identity
             BABYLON.Vector3.One(), // Size - use static one
@@ -4268,6 +4269,7 @@ class SceneManager {
 
         pivotBeams.forEach(pivotBeam => {
             const beamMesh = this.scene.getMeshByName(pivotBeam.name);
+            beamMesh.scaling.set(3, 0.05, 1);
             if (!beamMesh) return;
 
             // Find a fixed mass object to attach the hinge to
