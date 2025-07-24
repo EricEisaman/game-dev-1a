@@ -1422,6 +1422,8 @@ class MobileInputManager {
 
 class EffectsManager {
     private static activeParticleSystems: Map<string, BABYLON.IParticleSystem> = new Map();
+    private static environmentParticleSystems: Map<string, BABYLON.IParticleSystem> = new Map();
+    private static itemParticleSystems: Map<string, BABYLON.IParticleSystem> = new Map();
     private static activeSounds: Map<string, BABYLON.Sound> = new Map();
     private static scene: BABYLON.Scene | null = null;
 
@@ -1452,9 +1454,6 @@ class EffectsManager {
         }
 
         try {
-            // Create a unique name for the particle system
-            const uniqueName = `${snippetName}_${Date.now()}`;
-
             // Parse the snippet from the online editor
             const particleSystem = await BABYLON.ParticleHelper.ParseFromSnippetAsync(snippet.snippetId, this.scene, false);
 
@@ -1463,14 +1462,85 @@ class EffectsManager {
             }
 
             if (particleSystem) {
-                this.activeParticleSystems.set(uniqueName, particleSystem);
-
+                // Special handling for Magic Sparkles - if it has a mesh emitter, it's for the player
+                let usageCategory = this.determineUsageCategory(snippetName, snippet.category);
+                if (snippetName === "Magic Sparkles" && emitter && emitter instanceof BABYLON.AbstractMesh) {
+                    usageCategory = "PLAYER";
+                }
+                
+                const descriptiveName = `${snippetName}_${usageCategory}`;
+                
+                // Set a descriptive name for the particle system
+                particleSystem.name = descriptiveName;
+                
+                this.activeParticleSystems.set(descriptiveName, particleSystem);
+                
+                // Categorize the particle system based on its usage
+                this.categorizeParticleSystem(descriptiveName, particleSystem, snippet.category);
             }
 
             return particleSystem;
         } catch (error) {
             console.error(`Failed to create particle system "${snippetName}":`, error);
             return null;
+        }
+    }
+
+    /**
+     * Determines the usage category of a particle system based on its name and category
+     * @param snippetName The name of the particle snippet
+     * @param category The category of the particle snippet
+     * @returns The usage category (ENVIRONMENT, ITEMS, or PLAYER)
+     */
+    private static determineUsageCategory(snippetName: string, category: ParticleSnippet['category']): string {
+        // Environment particles are typically ambient, atmospheric, or background effects
+        if (snippetName.includes("environment") || 
+            snippetName.includes("ambient") || 
+            snippetName.includes("atmosphere") ||
+            snippetName.includes("background") ||
+            category === "nature") {
+            return "ENVIRONMENT";
+        }
+        // Item particles are typically collection effects, pickups, or item-related
+        else if (snippetName.includes("item") || 
+                 snippetName.includes("collectible") || 
+                 snippetName.includes("collection") ||
+                 snippetName.includes("pickup") ||
+                 (category === "magic" && snippetName !== "Magic Sparkles")) {
+            return "ITEMS";
+        }
+        // Magic Sparkles is special - it can be either ENVIRONMENT (at startup) or PLAYER (for boost)
+        // We'll determine this based on whether it has an emitter (player) or not (environment)
+        else if (snippetName === "Magic Sparkles") {
+            return "ENVIRONMENT"; // Default to environment, will be overridden for player
+        }
+        // Player particles (boost, thruster, etc.) - default to PLAYER
+        else {
+            return "PLAYER";
+        }
+    }
+
+    /**
+     * Categorizes a particle system based on its name and category
+     * @param name The name of the particle system
+     * @param particleSystem The particle system to categorize
+     * @param category The category of the particle snippet
+     */
+    private static categorizeParticleSystem(name: string, particleSystem: BABYLON.IParticleSystem, category: ParticleSnippet['category']): void {
+        // Environment particles are typically ambient, atmospheric, or background effects
+        if (name.includes("ENVIRONMENT")) {
+            this.environmentParticleSystems.set(name, particleSystem);
+            console.log(`Categorized particle system "${name}" as ENVIRONMENT`);
+        }
+        // Item particles are typically collection effects, pickups, or item-related
+        else if (name.includes("ITEMS")) {
+            this.itemParticleSystems.set(name, particleSystem);
+            console.log(`Categorized particle system "${name}" as ITEM`);
+        }
+        // Player particles (boost, thruster, etc.) are not categorized - they stay in activeParticleSystems only
+        // This ensures they're never disposed by the focused removal methods
+        else {
+            console.log(`Categorized particle system "${name}" as PLAYER/UNCATEGORIZED`);
         }
     }
 
@@ -1507,7 +1577,65 @@ class EffectsManager {
             particleSystem.dispose();
         });
         this.activeParticleSystems.clear();
+    }
 
+    /**
+     * Removes only environment-related particle systems
+     */
+    public static removeEnvironmentParticles(): void {
+        // Remove all cached environment particle systems
+        this.environmentParticleSystems.forEach((particleSystem, name) => {
+            particleSystem.stop();
+            particleSystem.dispose();
+            this.activeParticleSystems.delete(name);
+        });
+        
+        // Clear the environment cache
+        this.environmentParticleSystems.clear();
+    }
+
+    /**
+     * Removes only item/collectible-related particle systems
+     */
+    public static removeItemParticles(): void {
+        // Remove all cached item particle systems
+        this.itemParticleSystems.forEach((particleSystem, name) => {
+            particleSystem.stop();
+            particleSystem.dispose();
+            this.activeParticleSystems.delete(name);
+        });
+        
+        // Clear the item cache
+        this.itemParticleSystems.clear();
+    }
+
+    /**
+     * Adds a particle system to the active systems with a given name
+     * @param name The name for the particle system
+     * @param particleSystem The particle system to add
+     */
+    public static addParticleSystem(name: string, particleSystem: BABYLON.IParticleSystem): void {
+        this.activeParticleSystems.set(name, particleSystem);
+    }
+
+    /**
+     * Adds a particle system to the environment category
+     * @param name The name for the particle system
+     * @param particleSystem The particle system to add
+     */
+    public static addEnvironmentParticleSystem(name: string, particleSystem: BABYLON.IParticleSystem): void {
+        this.activeParticleSystems.set(name, particleSystem);
+        this.environmentParticleSystems.set(name, particleSystem);
+    }
+
+    /**
+     * Adds a particle system to the item category
+     * @param name The name for the particle system
+     * @param particleSystem The particle system to add
+     */
+    public static addItemParticleSystem(name: string, particleSystem: BABYLON.IParticleSystem): void {
+        this.activeParticleSystems.set(name, particleSystem);
+        this.itemParticleSystems.set(name, particleSystem);
     }
 
     /**
@@ -2863,7 +2991,7 @@ class CollectiblesManager {
         if (!this.scene) return;
 
         // Create a particle effect for collection
-        const particleSystem = new BABYLON.ParticleSystem("collectionParticles", 50, this.scene);
+        const particleSystem = new BABYLON.ParticleSystem("Magic Sparkles_ITEMS", 50, this.scene);
 
         particleSystem.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", this.scene);
         particleSystem.emitter = position;
@@ -2894,6 +3022,9 @@ class CollectiblesManager {
         particleSystem.updateSpeed = 0.016;
 
         particleSystem.start();
+        
+        // Add to item particle systems for proper cleanup
+        EffectsManager.addItemParticleSystem("Magic Sparkles_ITEMS", particleSystem);
 
         // Stop the particle system after a short time
         setTimeout(() => {
@@ -3862,10 +3993,16 @@ class CharacterController {
         this.cameraController = cameraController;
     }
 
-    public setPlayerParticleSystem(particleSystem: BABYLON.IParticleSystem): void {
+    public setPlayerParticleSystem(particleSystem: BABYLON.IParticleSystem | null): void {
         this.playerParticleSystem = particleSystem;
-        // Start with particle system stopped
-        particleSystem.stop();
+        // Start with particle system stopped if it exists
+        if (particleSystem) {
+            particleSystem.stop();
+        }
+    }
+
+    public getPlayerParticleSystem(): BABYLON.IParticleSystem | null {
+        return this.playerParticleSystem;
     }
 
     public setThrusterSound(sound: BABYLON.Sound): void {
@@ -4400,18 +4537,23 @@ class SceneManager {
     }
 
     /**
-     * Clears all particle systems
+     * Clears environment and item particle systems, preserving player particles
      */
     public clearParticles(): void {
-        // Use EffectsManager to clear all particle systems
-        EffectsManager.removeAllParticleSystems();
+        // Remove only environment-related particle systems
+        EffectsManager.removeEnvironmentParticles();
+        
+        // Remove only item-related particle systems  
+        EffectsManager.removeItemParticles();
 
-        // Also clear any particle systems that might not be managed by EffectsManager
+        // Also clear any unmanaged particle systems that might not be in EffectsManager
         const particleSystems = this.scene.particleSystems;
         const unmanagedParticleSystems = particleSystems.filter(ps =>
+            !ps.name.includes("PLAYER") &&
             !ps.name.includes("player") &&
             !ps.name.includes("character") &&
-            !ps.name.includes("thruster")
+            !ps.name.includes("thruster") &&
+            !ps.name.includes("boost")
         );
 
         unmanagedParticleSystems.forEach(ps => {
