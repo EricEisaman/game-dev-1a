@@ -186,6 +186,13 @@ interface Environment {
     readonly physicsObjects: readonly PhysicsObject[];
     readonly sky?: SkyConfig; // Optional sky configuration for this environment
     readonly spawnPoint: BABYLON.Vector3; // Spawn point for this environment
+    readonly particles?: readonly EnvironmentParticle[]; // Optional environment particles
+}
+
+interface EnvironmentParticle {
+    readonly name: string; // Name of the particle snippet to use
+    readonly position: BABYLON.Vector3; // Position where the particle should be created
+    readonly updateSpeed?: number; // Optional update speed for the particle system
 }
 
 // Asset Types
@@ -259,7 +266,14 @@ const ASSETS = {
                 BLUR: 0.3,
                 TYPE: "SPHERE" as SkyType
             },
-            spawnPoint: new BABYLON.Vector3(3, 0.3, -8)
+            spawnPoint: new BABYLON.Vector3(3, 0.3, -8),
+            particles: [
+                {
+                    name: "Magic Sparkles",
+                    position: new BABYLON.Vector3(-2, 0, -8), // Left of player start
+                    updateSpeed: 0.007
+                }
+            ]
         },
         {
             name: "Firefox Reality",
@@ -280,7 +294,7 @@ const ASSETS = {
 } as const;
 
 // Configuration Constants
-const CONFIG: GameConfig = {
+const CONFIG = {
     // Character Settings
     CHARACTER: {
         HEIGHT: 1.8,
@@ -1472,6 +1486,8 @@ class EffectsManager {
                 
                 // Set a descriptive name for the particle system
                 particleSystem.name = descriptiveName;
+                
+
                 
                 this.activeParticleSystems.set(descriptiveName, particleSystem);
                 
@@ -4162,7 +4178,6 @@ class SceneManager {
     private async setupEffects(): Promise<void> {
         try {
             EffectsManager.initialize(this.scene);
-            await EffectsManager.createDefaultParticleSystem();
 
             // Create thruster sound
             await EffectsManager.createSound("Thruster");
@@ -4178,6 +4193,9 @@ class SceneManager {
             console.error(`Environment "${environmentName}" not found in ASSETS.ENVIRONMENTS`);
             return;
         }
+
+        // Clear existing environment particles before creating new ones
+        this.clearParticles();
 
         try {
             const result = await BABYLON.ImportMeshAsync(environment.model, this.scene);
@@ -4206,6 +4224,22 @@ class SceneManager {
             }
 
             this.setupEnvironmentPhysics(environment);
+
+            // Set up environment-specific particles if configured
+            if (environment.particles) {
+                try {
+                    for (const particle of environment.particles) {
+                        const particleSystem = await EffectsManager.createParticleSystem(particle.name, particle.position);
+                        
+                        // Apply environment-specific settings if provided
+                        if (particleSystem && particle.updateSpeed !== undefined) {
+                            particleSystem.updateSpeed = particle.updateSpeed;
+                        }
+                    }
+                } catch (error) {
+                    console.warn("Failed to create environment particles:", error);
+                }
+            }
 
             // Update current environment tracking
             this.currentEnvironment = environmentName;
@@ -4957,7 +4991,7 @@ class SettingsUI {
     private static generateSectionsHTML(): string {
         let sectionsHTML = '';
 
-        CONFIG.SETTINGS.SECTIONS.forEach((section, index) => {
+        CONFIG.SETTINGS.SECTIONS.forEach((section: SettingsSection, index) => {
             // Check if section should be visible
             if (!this.shouldShowSection(section.visibility)) {
                 return;
@@ -5026,7 +5060,7 @@ class SettingsUI {
             toggle.addEventListener('change', async (e) => {
                 const target = e.target as HTMLInputElement;
                 const sectionIndex = parseInt(target.dataset.sectionIndex!);
-                const section = CONFIG.SETTINGS.SECTIONS[sectionIndex];
+                const section: SettingsSection = CONFIG.SETTINGS.SECTIONS[sectionIndex];
 
                 if (section && section.onChange) {
                     await section.onChange(target.checked);
@@ -5040,7 +5074,7 @@ class SettingsUI {
             select.addEventListener('change', async (e) => {
                 const target = e.target as HTMLSelectElement;
                 const sectionIndex = parseInt(target.dataset.sectionIndex!);
-                const section = CONFIG.SETTINGS.SECTIONS[sectionIndex];
+                const section: SettingsSection = CONFIG.SETTINGS.SECTIONS[sectionIndex];
 
                 if (section && section.onChange && !this.isInitializing) {
                     await section.onChange(target.value);
