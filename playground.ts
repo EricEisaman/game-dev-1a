@@ -298,7 +298,7 @@ const ASSETS = {
             lightmappedMeshes: [],
             physicsObjects: [],
             sky: {
-                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/orange-desert-night.png",
+                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/happy_fluffy_sky.png",
                 ROTATION_Y: 0,
                 BLUR: 0.2,
                 TYPE: "SPHERE" as SkyType
