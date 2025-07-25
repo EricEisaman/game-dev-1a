@@ -3343,6 +3343,17 @@ class SmoothFollowCameraController {
         }
     }
 
+    /**
+     * Force activate smooth following, useful after environment transitions
+     */
+    public forceActivateSmoothFollow(): void {
+        this.shouldStartRotationOnWalk = false;
+        this.isRotatingCharacter = false;
+        this.isDragging = false;
+        this.dragDeltaX = 0;
+        this.dragDeltaZ = 0;
+    }
+
     public dispose(): void {
         this.scene.onPointerObservable.remove(this.pointerObserver);
         this.scene.onBeforeRenderObservable.remove(this.beforeRenderObserver);
@@ -4581,6 +4592,15 @@ class SceneManager {
     }
 
     /**
+     * Force activate smooth camera following, useful after environment transitions
+     */
+    public forceActivateSmoothFollow(): void {
+        if (this.smoothFollowController) {
+            this.smoothFollowController.forceActivateSmoothFollow();
+        }
+    }
+
+    /**
      * Example usage for environment and item management:
      * 
      * // Pause physics to prevent character from falling
@@ -5182,6 +5202,9 @@ class SettingsUI {
 
             // Reposition character to safe location in new environment
             this.sceneManager.repositionCharacter();
+
+            // Force activate smooth camera following after environment transition
+            this.sceneManager.forceActivateSmoothFollow();
 
             // Resume physics after environment is loaded
             this.sceneManager.resumePhysics();
