@@ -637,6 +637,15 @@ class AnimationController {
     public setCharacter(character: Character): void {
         this.currentCharacter = character;
         this.blendDuration = character.animationBlend || 400;
+        
+        // Reset animation state when character changes
+        this.currentAnimation = null;
+        this.previousAnimation = null;
+        this.isBlending = false;
+        this.weightedAnimation = null;
+        
+        // Don't stop all animations here - let the character loading process handle it
+        // The new character's animations will be set up properly in loadCharacter
     }
 
     /**
@@ -645,16 +654,16 @@ class AnimationController {
     public updateAnimation(isMoving: boolean): void {
         if (!this.currentCharacter) return;
 
-        const targetAnimation = isMoving ? 'walk' : 'idle';
+        const targetAnimationName = isMoving ? this.currentCharacter.animations.walk : this.currentCharacter.animations.idle;
         
         // If animation is already playing and no change needed, do nothing
-        if (this.currentAnimation === targetAnimation && !this.isBlending) {
+        if (this.currentAnimation === targetAnimationName && !this.isBlending) {
             return;
         }
 
         // If no animation is currently playing, start the target animation
         if (!this.currentAnimation) {
-            this.startAnimation(targetAnimation);
+            this.startAnimation(targetAnimationName);
             return;
         }
 
@@ -665,31 +674,61 @@ class AnimationController {
 
         // If the character has animationBlend set to 0, skip weighted blending
         if (this.currentCharacter.animationBlend === 0) {
-            this.switchAnimationDirectly(targetAnimation);
+            this.switchAnimationDirectly(targetAnimationName);
             return;
         }
 
         // Start weighted blending between current and target animation
-        this.startWeightedBlend(targetAnimation);
+        this.startWeightedBlend(targetAnimationName);
     }
 
     /**
      * Starts a new animation directly (no blending)
      */
     private startAnimation(animationName: string): void {
-        const animation = playerAnimations[animationName];
-        if (!animation) return;
+        // First try to find the animation by exact name
+        let animation = this.scene.getAnimationGroupByName(animationName);
+        
+        // If not found, try to find it by partial name match
+        if (!animation) {
+            animation = this.scene.animationGroups.find(anim => 
+                anim.name.toLowerCase().includes(animationName.toLowerCase()) ||
+                animationName.toLowerCase().includes(anim.name.toLowerCase())
+            );
+        }
+        
+        // If still not found, try common fallbacks
+        if (!animation) {
+            if (animationName.toLowerCase().includes('idle')) {
+                animation = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('idle') || 
+                    anim.name.toLowerCase().includes('stand')
+                );
+            } else if (animationName.toLowerCase().includes('walk')) {
+                animation = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('walk') || 
+                    anim.name.toLowerCase().includes('run') ||
+                    anim.name.toLowerCase().includes('move')
+                );
+            }
+        }
+        
+        if (!animation) {
+            console.warn(`Animation not found: ${animationName}. Available animations:`, 
+                this.scene.animationGroups.map(a => a.name));
+            return;
+        }
 
-        // Stop all other animations
-        Object.values(playerAnimations).forEach(anim => {
-            if (anim && anim !== animation) {
+        // Stop all other animation groups in the scene
+        this.scene.animationGroups.forEach(anim => {
+            if (anim !== animation) {
                 anim.stop();
             }
         });
 
         // Start the new animation
         animation.start(true);
-        this.currentAnimation = animationName;
+        this.currentAnimation = animation.name; // Use the actual animation name
         this.previousAnimation = null;
         this.isBlending = false;
         this.weightedAnimation = null;
@@ -699,10 +738,37 @@ class AnimationController {
      * Switches animation directly without blending
      */
     private switchAnimationDirectly(targetAnimation: string): void {
-        const currentAnim = playerAnimations[this.currentAnimation!];
-        const targetAnim = playerAnimations[targetAnimation];
+        const currentAnim = this.scene.getAnimationGroupByName(this.currentAnimation!);
+        let targetAnim = this.scene.getAnimationGroupByName(targetAnimation);
 
-        if (!currentAnim || !targetAnim) return;
+        // If target animation not found, try partial match
+        if (!targetAnim) {
+            targetAnim = this.scene.animationGroups.find(anim => 
+                anim.name.toLowerCase().includes(targetAnimation.toLowerCase()) ||
+                targetAnimation.toLowerCase().includes(anim.name.toLowerCase())
+            );
+        }
+
+        // If still not found, try common fallbacks
+        if (!targetAnim) {
+            if (targetAnimation.toLowerCase().includes('idle')) {
+                targetAnim = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('idle') || 
+                    anim.name.toLowerCase().includes('stand')
+                );
+            } else if (targetAnimation.toLowerCase().includes('walk')) {
+                targetAnim = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('walk') || 
+                    anim.name.toLowerCase().includes('run') ||
+                    anim.name.toLowerCase().includes('move')
+                );
+            }
+        }
+
+        if (!currentAnim || !targetAnim) {
+            console.warn(`Animation not found: current=${this.currentAnimation}, target=${targetAnimation}`);
+            return;
+        }
 
         // Stop current animation
         currentAnim.stop();
@@ -711,7 +777,7 @@ class AnimationController {
         targetAnim.start(true);
 
         this.previousAnimation = this.currentAnimation;
-        this.currentAnimation = targetAnimation;
+        this.currentAnimation = targetAnim.name; // Use the actual animation name
         this.isBlending = false;
         this.weightedAnimation = null;
     }
@@ -720,10 +786,37 @@ class AnimationController {
      * Starts weighted blending between two animations
      */
     private startWeightedBlend(targetAnimation: string): void {
-        const currentAnim = playerAnimations[this.currentAnimation!];
-        const targetAnim = playerAnimations[targetAnimation];
+        const currentAnim = this.scene.getAnimationGroupByName(this.currentAnimation!);
+        let targetAnim = this.scene.getAnimationGroupByName(targetAnimation);
 
-        if (!currentAnim || !targetAnim) return;
+        // If target animation not found, try partial match
+        if (!targetAnim) {
+            targetAnim = this.scene.animationGroups.find(anim => 
+                anim.name.toLowerCase().includes(targetAnimation.toLowerCase()) ||
+                targetAnimation.toLowerCase().includes(anim.name.toLowerCase())
+            );
+        }
+
+        // If still not found, try common fallbacks
+        if (!targetAnim) {
+            if (targetAnimation.toLowerCase().includes('idle')) {
+                targetAnim = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('idle') || 
+                    anim.name.toLowerCase().includes('stand')
+                );
+            } else if (targetAnimation.toLowerCase().includes('walk')) {
+                targetAnim = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('walk') || 
+                    anim.name.toLowerCase().includes('run') ||
+                    anim.name.toLowerCase().includes('move')
+                );
+            }
+        }
+
+        if (!currentAnim || !targetAnim) {
+            console.warn(`Animation not found: current=${this.currentAnimation}, target=${targetAnimation}`);
+            return;
+        }
 
         // For now, use a simpler approach: start both animations with different weights
         // and gradually adjust them over time
@@ -736,7 +829,7 @@ class AnimationController {
 
         // Set up blend state
         this.previousAnimation = this.currentAnimation;
-        this.currentAnimation = targetAnimation;
+        this.currentAnimation = targetAnim.name; // Use the actual animation name
         this.blendStartTime = Date.now();
         this.isBlending = true;
     }
@@ -756,8 +849,8 @@ class AnimationController {
 
         // Update animation weights
         if (this.previousAnimation && this.currentAnimation) {
-            const previousAnim = playerAnimations[this.previousAnimation];
-            const currentAnim = playerAnimations[this.currentAnimation];
+            const previousAnim = this.scene.getAnimationGroupByName(this.previousAnimation);
+            const currentAnim = this.scene.getAnimationGroupByName(this.currentAnimation);
 
             if (previousAnim && currentAnim) {
                 // Update weights directly on the animation groups
@@ -780,14 +873,14 @@ class AnimationController {
 
         // Stop the previous animation
         if (this.previousAnimation) {
-            const previousAnim = playerAnimations[this.previousAnimation];
+            const previousAnim = this.scene.getAnimationGroupByName(this.previousAnimation);
             if (previousAnim) {
                 previousAnim.stop();
             }
         }
 
         // Ensure the target animation is running with full weight
-        const targetAnim = playerAnimations[this.currentAnimation];
+        const targetAnim = this.scene.getAnimationGroupByName(this.currentAnimation);
         if (targetAnim) {
             targetAnim.weight = 1.0;
         }
@@ -809,10 +902,8 @@ class AnimationController {
      * Stops all animations
      */
     public stopAllAnimations(): void {
-        Object.values(playerAnimations).forEach(anim => {
-            if (anim) {
-                anim.stop();
-            }
+        this.scene.animationGroups.forEach(anim => {
+            anim.stop();
         });
 
         this.currentAnimation = null;
@@ -4561,6 +4652,9 @@ class SceneManager {
     }
 
     private loadCharacter(character: Character): void {
+        // Remove all animation groups from the scene before loading a new character
+        this.scene.animationGroups.slice().forEach(group => group.dispose());
+        
         BABYLON.ImportMeshAsync(character.model, this.scene)
             .then(async result => {
                 // Rename the root node to "player" for better organization
@@ -4580,13 +4674,30 @@ class SceneManager {
 
                     this.characterController.setPlayerMesh(result.meshes[0]);
 
-                    // Setup animations using character's animation mapping
-                    playerAnimations.walk = result.animationGroups.find(a => a.name === character.animations.walk);
-                    playerAnimations.idle = result.animationGroups.find(a => a.name === character.animations.idle);
+                                    // Setup animations using character's animation mapping with fallbacks
+                playerAnimations.walk = result.animationGroups.find(a => a.name === character.animations.walk) ||
+                    result.animationGroups.find(a => a.name.toLowerCase().includes('walk')) ||
+                    result.animationGroups.find(a => a.name.toLowerCase().includes('run')) ||
+                    result.animationGroups.find(a => a.name.toLowerCase().includes('move'));
+                
+                playerAnimations.idle = result.animationGroups.find(a => a.name === character.animations.idle) ||
+                    result.animationGroups.find(a => a.name.toLowerCase().includes('idle')) ||
+                    result.animationGroups.find(a => a.name.toLowerCase().includes('stand'));
 
-                    // Stop animations initially
-                    playerAnimations.walk?.stop();
-                    playerAnimations.idle?.stop();
+                // Debug: Log animation setup results
+                if (!playerAnimations.walk || !playerAnimations.idle) {
+                    console.warn(`Animation setup for ${character.name}:`, {
+                        available: result.animationGroups.map(a => a.name),
+                        found: {
+                            walk: playerAnimations.walk?.name || 'NOT FOUND',
+                            idle: playerAnimations.idle?.name || 'NOT FOUND'
+                        }
+                    });
+                }
+
+                // Stop animations initially
+                playerAnimations.walk?.stop();
+                playerAnimations.idle?.stop();
 
                     // Set character in animation controller
                     this.characterController.animationController.setCharacter(character);
