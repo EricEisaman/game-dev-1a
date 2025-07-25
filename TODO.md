@@ -1,3 +1,3 @@
 # TODO
 
-## Put the initial environment particle system into the Environment type data structure by adding a particles property to the Environment type that takes an array of particles. That way whenever the environment is loaded it will also load its environment particles.
+## Add the ability for the system to look for mesh names including #nmSnippetId in both environment and item models. Then have the system create and apply a node material from snippet to that mesh.
