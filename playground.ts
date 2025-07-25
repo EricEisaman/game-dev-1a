@@ -349,6 +349,21 @@ const ASSETS = {
                 TYPE: "SPHERE" as SkyType
             },
             spawnPoint: new BABYLON.Vector3(-15, 15, 0)
+        },
+        {
+            name: "Mansion",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/mansion/mansion.glb",
+            lightmap: "",
+            scale: 10,
+            lightmappedMeshes: [],
+            physicsObjects: [],
+            sky: {
+                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/light-blue-sky-over-grassy-plain.png",
+                ROTATION_Y: 0,
+                BLUR: 0.2,
+                TYPE: "SPHERE" as SkyType
+            },
+            spawnPoint: new BABYLON.Vector3(0, 15, -20)
         }
     ] as readonly Environment[]
 } as const;
