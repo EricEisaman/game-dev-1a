@@ -229,7 +229,7 @@ const ASSETS = {
                 idle: "idle",
                 walk: "run"
             },
-            scale: 1.7,
+            scale: 1.3,
             animationBlend: 400
         },
         {
