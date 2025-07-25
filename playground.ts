@@ -1556,17 +1556,17 @@ class EffectsManager {
         // Environment particles are typically ambient, atmospheric, or background effects
         if (name.includes("ENVIRONMENT")) {
             this.environmentParticleSystems.set(name, particleSystem);
-            console.log(`Categorized particle system "${name}" as ENVIRONMENT`);
+    
         }
         // Item particles are typically collection effects, pickups, or item-related
         else if (name.includes("ITEMS")) {
             this.itemParticleSystems.set(name, particleSystem);
-            console.log(`Categorized particle system "${name}" as ITEM`);
+    
         }
         // Player particles (boost, thruster, etc.) are not categorized - they stay in activeParticleSystems only
         // This ensures they're never disposed by the focused removal methods
         else {
-            console.log(`Categorized particle system "${name}" as PLAYER/UNCATEGORIZED`);
+    
         }
     }
 
@@ -5178,11 +5178,11 @@ class SettingsUI {
             // Check if the environment is actually different from current
             const currentEnvironment = this.sceneManager.getCurrentEnvironment();
             if (currentEnvironment === environmentName) {
-                console.log(`Environment ${environmentName} is already loaded, skipping change`);
+    
                 return; // No change needed
             }
 
-            console.log(`Changing environment from ${currentEnvironment} to ${environmentName}`);
+
 
             // Pause physics to prevent character from falling during environment change
             this.sceneManager.pausePhysics();
@@ -5193,11 +5193,11 @@ class SettingsUI {
             this.sceneManager.clearParticles();
 
             // Load the new environment
-            console.log(`Loading environment: ${environmentName}`);
+
             await this.sceneManager.loadEnvironment(environmentName);
 
             // Set up environment items for the new environment
-            console.log(`Setting up environment items for: ${environmentName}`);
+
             await this.sceneManager.setupEnvironmentItems();
 
             // Reposition character to safe location in new environment
@@ -5209,7 +5209,7 @@ class SettingsUI {
             // Resume physics after environment is loaded
             this.sceneManager.resumePhysics();
             
-            console.log(`Environment change to ${environmentName} completed`);
+
         }
     }
 }
