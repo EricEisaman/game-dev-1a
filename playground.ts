@@ -2944,6 +2944,9 @@ class CollectiblesManager {
         try {
             const result = await BABYLON.ImportMeshAsync(itemConfig.url, this.scene);
 
+            // Process node materials for item meshes
+            await NodeMaterialManager.processImportResult(result);
+
             // Rename the root node for better organization
             if (result.meshes && result.meshes.length > 0) {
                 // Find the root mesh (the one without a parent)
@@ -4440,6 +4443,7 @@ class SceneManager {
     private async setupEffects(): Promise<void> {
         try {
             EffectsManager.initialize(this.scene);
+            NodeMaterialManager.initialize(this.scene);
 
             // Create thruster sound
             await EffectsManager.createSound("Thruster");
@@ -4461,6 +4465,9 @@ class SceneManager {
 
         try {
             const result = await BABYLON.ImportMeshAsync(environment.model, this.scene);
+
+            // Process node materials for environment meshes
+            await NodeMaterialManager.processImportResult(result);
 
             // Rename the root node to "environment" for better organization
             if (result.meshes && result.meshes.length > 0) {
@@ -4502,6 +4509,9 @@ class SceneManager {
                     console.warn("Failed to create environment particles:", error);
                 }
             }
+
+            // Process any existing meshes for node materials
+            await NodeMaterialManager.processMeshesForNodeMaterials();
 
             // Environment items will be set up after character is fully loaded
             // This ensures CollectiblesManager is properly initialized
@@ -4657,6 +4667,9 @@ class SceneManager {
         
         BABYLON.ImportMeshAsync(character.model, this.scene)
             .then(async result => {
+                // Process node materials for character meshes
+                await NodeMaterialManager.processImportResult(result);
+
                 // Rename the root node to "player" for better organization
                 if (result.meshes && result.meshes.length > 0) {
                     // Find the root mesh (the one without a parent)
@@ -4961,6 +4974,7 @@ class SceneManager {
     public dispose(): void {
         HUDManager.dispose();
         CollectiblesManager.dispose();
+        NodeMaterialManager.dispose();
         if (this.smoothFollowController) {
             this.smoothFollowController.dispose();
         }
@@ -5549,6 +5563,147 @@ class SettingsUI {
             
 
         }
+    }
+}
+
+// ============================================================================
+// NODE MATERIAL MANAGER
+// ============================================================================
+
+class NodeMaterialManager {
+    private static scene: BABYLON.Scene | null = null;
+    private static activeNodeMaterials: Map<string, BABYLON.NodeMaterial> = new Map();
+    private static processedMeshes: Set<string> = new Set();
+
+    /**
+     * Initializes the NodeMaterialManager with a scene
+     * @param scene The Babylon.js scene
+     */
+    public static initialize(scene: BABYLON.Scene): void {
+        this.scene = scene;
+    }
+
+    /**
+     * Processes all meshes in the scene to look for #nmSnippetId patterns
+     * and applies node materials accordingly
+     */
+    public static async processMeshesForNodeMaterials(): Promise<void> {
+        if (!this.scene) {
+            console.warn("NodeMaterialManager not initialized. Call initialize() first.");
+            return;
+        }
+
+        const meshes = this.scene.meshes;
+        for (const mesh of meshes) {
+            if (mesh instanceof BABYLON.Mesh && !this.processedMeshes.has(mesh.name)) {
+                await this.processMeshForNodeMaterial(mesh);
+            }
+        }
+    }
+
+    /**
+     * Processes a specific mesh to check for #nmSnippetId pattern and apply node material
+     * @param mesh The mesh to process
+     */
+    public static async processMeshForNodeMaterial(mesh: BABYLON.Mesh): Promise<void> {
+        if (!this.scene) {
+            console.warn("NodeMaterialManager not initialized. Call initialize() first.");
+            return;
+        }
+
+        // Check if mesh name contains #nm pattern
+        const nmMatch = mesh.name.match(/#nm([A-Z0-9]+)/);
+        if (!nmMatch) {
+            return; // No node material snippet ID found
+        }
+
+        const snippetId = nmMatch[1];
+        const meshName = mesh.name;
+
+        // Skip if already processed
+        if (this.processedMeshes.has(meshName)) {
+            return;
+        }
+
+        try {
+            console.log(`Processing mesh "${meshName}" for node material snippet "${snippetId}"`);
+
+            // Parse the node material from the snippet
+            const nodeMaterial = await BABYLON.NodeMaterial.ParseFromSnippetAsync(snippetId, this.scene);
+            
+            if (nodeMaterial) {
+                // Apply the node material to the mesh
+                mesh.material = nodeMaterial;
+                
+                // Store the node material for potential reuse
+                this.activeNodeMaterials.set(snippetId, nodeMaterial);
+                
+                // Mark as processed
+                this.processedMeshes.add(meshName);
+                
+                console.log(`Successfully applied node material "${snippetId}" to mesh "${meshName}"`);
+            } else {
+                console.warn(`Failed to parse node material from snippet "${snippetId}" for mesh "${meshName}"`);
+            }
+        } catch (error) {
+            console.error(`Failed to apply node material "${snippetId}" to mesh "${meshName}":`, error);
+        }
+    }
+
+    /**
+     * Processes meshes from a model import result
+     * @param result The result from ImportMeshAsync
+     */
+    public static async processImportResult(result: { meshes: BABYLON.AbstractMesh[] }): Promise<void> {
+        if (!this.scene) {
+            console.warn("NodeMaterialManager not initialized. Call initialize() first.");
+            return;
+        }
+
+        if (result.meshes) {
+            for (const mesh of result.meshes) {
+                if (mesh instanceof BABYLON.Mesh) {
+                    await this.processMeshForNodeMaterial(mesh);
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets a cached node material by snippet ID
+     * @param snippetId The snippet ID
+     * @returns The cached node material or null if not found
+     */
+    public static getCachedNodeMaterial(snippetId: string): BABYLON.NodeMaterial | null {
+        return this.activeNodeMaterials.get(snippetId) || null;
+    }
+
+    /**
+     * Clears all cached node materials
+     */
+    public static clearCachedNodeMaterials(): void {
+        this.activeNodeMaterials.clear();
+        this.processedMeshes.clear();
+    }
+
+    /**
+     * Gets all active node materials
+     * @returns Map of snippet IDs to node materials
+     */
+    public static getActiveNodeMaterials(): Map<string, BABYLON.NodeMaterial> {
+        return new Map(this.activeNodeMaterials);
+    }
+
+    /**
+     * Disposes all node materials and clears the manager
+     */
+    public static dispose(): void {
+        this.activeNodeMaterials.forEach((nodeMaterial) => {
+            nodeMaterial.dispose();
+        });
+        this.activeNodeMaterials.clear();
+        this.processedMeshes.clear();
+        this.scene = null;
     }
 }
 
