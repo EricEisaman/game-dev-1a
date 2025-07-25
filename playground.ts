@@ -206,6 +206,7 @@ interface Character {
     readonly model: string;
     readonly animations: CharacterAnims;
     readonly scale: number;
+    readonly animationBlend?: number; // Animation blend time in milliseconds, defaults to 400
 }
 
 // Asset URLs
@@ -218,7 +219,8 @@ const ASSETS = {
                 idle: "idle",
                 walk: "walk"
             },
-            scale: 1
+            scale: 1,
+            animationBlend: 400
         },
         {
             name: "Tech Girl",
@@ -227,7 +229,8 @@ const ASSETS = {
                 idle: "Idel",
                 walk: "Walk"
             },
-            scale: 1.7
+            scale: 1.7,
+            animationBlend: 400
         },
         {
             name: "Zombie",
@@ -236,7 +239,8 @@ const ASSETS = {
                 idle: "Idle",
                 walk: "Run_InPlace"
             },
-            scale: 1.25
+            scale: 1.25,
+            animationBlend: 400
         }
     ] as readonly Character[],
     ENVIRONMENTS: [
@@ -608,6 +612,229 @@ type CharacterState = typeof CHARACTER_STATES[keyof typeof CHARACTER_STATES];
 
 // Animation Groups
 const playerAnimations: Record<string, BABYLON.AnimationGroup | undefined> = {};
+
+// ============================================================================
+// ANIMATION CONTROLLER
+// ============================================================================
+
+class AnimationController {
+    private scene: BABYLON.Scene;
+    private currentCharacter: Character | null = null;
+    private currentAnimation: string | null = null;
+    private previousAnimation: string | null = null;
+    private blendStartTime: number = 0;
+    private blendDuration: number = 400; // Default blend duration in milliseconds
+    private isBlending: boolean = false;
+    private weightedAnimation: BABYLON.AnimationGroup | null = null;
+
+    constructor(scene: BABYLON.Scene) {
+        this.scene = scene;
+    }
+
+    /**
+     * Sets the current character and its animation blend settings
+     */
+    public setCharacter(character: Character): void {
+        this.currentCharacter = character;
+        this.blendDuration = character.animationBlend || 400;
+    }
+
+    /**
+     * Updates the animation state based on character movement
+     */
+    public updateAnimation(isMoving: boolean): void {
+        if (!this.currentCharacter) return;
+
+        const targetAnimation = isMoving ? 'walk' : 'idle';
+        
+        // If animation is already playing and no change needed, do nothing
+        if (this.currentAnimation === targetAnimation && !this.isBlending) {
+            return;
+        }
+
+        // If no animation is currently playing, start the target animation
+        if (!this.currentAnimation) {
+            this.startAnimation(targetAnimation);
+            return;
+        }
+
+        // If we're already blending, let the blend complete
+        if (this.isBlending) {
+            return;
+        }
+
+        // If the character has animationBlend set to 0, skip weighted blending
+        if (this.currentCharacter.animationBlend === 0) {
+            this.switchAnimationDirectly(targetAnimation);
+            return;
+        }
+
+        // Start weighted blending between current and target animation
+        this.startWeightedBlend(targetAnimation);
+    }
+
+    /**
+     * Starts a new animation directly (no blending)
+     */
+    private startAnimation(animationName: string): void {
+        const animation = playerAnimations[animationName];
+        if (!animation) return;
+
+        // Stop all other animations
+        Object.values(playerAnimations).forEach(anim => {
+            if (anim && anim !== animation) {
+                anim.stop();
+            }
+        });
+
+        // Start the new animation
+        animation.start(true);
+        this.currentAnimation = animationName;
+        this.previousAnimation = null;
+        this.isBlending = false;
+        this.weightedAnimation = null;
+    }
+
+    /**
+     * Switches animation directly without blending
+     */
+    private switchAnimationDirectly(targetAnimation: string): void {
+        const currentAnim = playerAnimations[this.currentAnimation!];
+        const targetAnim = playerAnimations[targetAnimation];
+
+        if (!currentAnim || !targetAnim) return;
+
+        // Stop current animation
+        currentAnim.stop();
+
+        // Start target animation
+        targetAnim.start(true);
+
+        this.previousAnimation = this.currentAnimation;
+        this.currentAnimation = targetAnimation;
+        this.isBlending = false;
+        this.weightedAnimation = null;
+    }
+
+    /**
+     * Starts weighted blending between two animations
+     */
+    private startWeightedBlend(targetAnimation: string): void {
+        const currentAnim = playerAnimations[this.currentAnimation!];
+        const targetAnim = playerAnimations[targetAnimation];
+
+        if (!currentAnim || !targetAnim) return;
+
+        // For now, use a simpler approach: start both animations with different weights
+        // and gradually adjust them over time
+        currentAnim.start(true);
+        targetAnim.start(true);
+
+        // Set initial weights
+        currentAnim.weight = 1.0;
+        targetAnim.weight = 0.0;
+
+        // Set up blend state
+        this.previousAnimation = this.currentAnimation;
+        this.currentAnimation = targetAnimation;
+        this.blendStartTime = Date.now();
+        this.isBlending = true;
+    }
+
+    /**
+     * Updates the weighted animation blend weights
+     */
+    public updateBlend(): void {
+        if (!this.isBlending) return;
+
+        const elapsedTime = Date.now() - this.blendStartTime;
+        const blendProgress = Math.min(elapsedTime / this.blendDuration, 1.0);
+
+        // Calculate weights using smooth easing
+        const previousWeight = 1.0 - this.easeInOutCubic(blendProgress);
+        const currentWeight = this.easeInOutCubic(blendProgress);
+
+        // Update animation weights
+        if (this.previousAnimation && this.currentAnimation) {
+            const previousAnim = playerAnimations[this.previousAnimation];
+            const currentAnim = playerAnimations[this.currentAnimation];
+
+            if (previousAnim && currentAnim) {
+                // Update weights directly on the animation groups
+                previousAnim.weight = previousWeight;
+                currentAnim.weight = currentWeight;
+            }
+        }
+
+        // Check if blend is complete
+        if (blendProgress >= 1.0) {
+            this.completeBlend();
+        }
+    }
+
+    /**
+     * Completes the animation blend
+     */
+    private completeBlend(): void {
+        if (!this.currentAnimation) return;
+
+        // Stop the previous animation
+        if (this.previousAnimation) {
+            const previousAnim = playerAnimations[this.previousAnimation];
+            if (previousAnim) {
+                previousAnim.stop();
+            }
+        }
+
+        // Ensure the target animation is running with full weight
+        const targetAnim = playerAnimations[this.currentAnimation];
+        if (targetAnim) {
+            targetAnim.weight = 1.0;
+        }
+
+        // Reset blend state
+        this.isBlending = false;
+        this.weightedAnimation = null;
+        this.previousAnimation = null;
+    }
+
+    /**
+     * Smooth easing function for animation blending
+     */
+    private easeInOutCubic(t: number): number {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    /**
+     * Stops all animations
+     */
+    public stopAllAnimations(): void {
+        Object.values(playerAnimations).forEach(anim => {
+            if (anim) {
+                anim.stop();
+            }
+        });
+
+        this.currentAnimation = null;
+        this.previousAnimation = null;
+        this.isBlending = false;
+        this.weightedAnimation = null;
+    }
+
+    /**
+     * Gets the current animation state
+     */
+    public getCurrentAnimation(): string | null {
+        return this.currentAnimation;
+    }
+
+    /**
+     * Checks if currently blending animations
+     */
+    public isCurrentlyBlending(): boolean {
+        return this.isBlending;
+    }
+}
 
 // ============================================================================
 // MOBILE INPUT MANAGER
@@ -3386,6 +3613,7 @@ class CharacterController {
     private boostActive = false;
     private playerParticleSystem: BABYLON.IParticleSystem | null = null;
     private thrusterSound: BABYLON.Sound | null = null;
+    public animationController: AnimationController;
 
     // Mobile device detection - computed once at initialization
     private readonly isMobileDevice: boolean;
@@ -3426,6 +3654,9 @@ class CharacterController {
 
         // Initialize player mesh (will be replaced by loaded model)
         this.playerMesh = this.displayCapsule;
+
+        // Initialize animation controller
+        this.animationController = new AnimationController(scene);
 
         this.initializeEventListeners();
     }
@@ -3740,24 +3971,17 @@ class CharacterController {
     }
 
     private updateAnimations(): void {
-        if (!playerAnimations.walk || !playerAnimations.idle) return;
-
         const isMoving = this.isAnyMovementKeyPressed();
 
-        if (isMoving) {
-            if (!playerAnimations.walk.isPlaying) {
-                playerAnimations.idle.stop();
-                playerAnimations.walk.start(true);
-                // Check for walk activation to trigger character rotation
-                if (this.cameraController) {
-                    this.cameraController.checkForWalkActivation();
-                }
-            }
-        } else {
-            if (!playerAnimations.idle.isPlaying) {
-                playerAnimations.walk.stop();
-                playerAnimations.idle.start(true);
-            }
+        // Update animation controller
+        this.animationController.updateAnimation(isMoving);
+
+        // Update blend weights if currently blending
+        this.animationController.updateBlend();
+
+        // Check for walk activation to trigger character rotation
+        if (isMoving && this.cameraController) {
+            this.cameraController.checkForWalkActivation();
         }
     }
 
@@ -4363,6 +4587,9 @@ class SceneManager {
                     // Stop animations initially
                     playerAnimations.walk?.stop();
                     playerAnimations.idle?.stop();
+
+                    // Set character in animation controller
+                    this.characterController.animationController.setCharacter(character);
 
                     // Create particle system attached to player mesh
                     const playerParticleSystem = await EffectsManager.createParticleSystem(CONFIG.EFFECTS.DEFAULT_PARTICLE, result.meshes[0]);
