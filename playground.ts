@@ -5588,7 +5588,6 @@ class SettingsUI {
 class NodeMaterialManager {
     private static scene: BABYLON.Scene | null = null;
     private static activeNodeMaterials: Map<string, BABYLON.NodeMaterial> = new Map();
-    private static processedMeshes: Set<string> = new Set();
 
     /**
      * Initializes the NodeMaterialManager with a scene
@@ -5610,7 +5609,7 @@ class NodeMaterialManager {
 
         const meshes = this.scene.meshes;
         for (const mesh of meshes) {
-            if (mesh instanceof BABYLON.Mesh && !this.processedMeshes.has(mesh.name)) {
+            if (mesh instanceof BABYLON.Mesh) {
                 await this.processMeshForNodeMaterial(mesh);
             }
         }
@@ -5635,27 +5634,29 @@ class NodeMaterialManager {
         const snippetId = nmMatch[1];
         const meshName = mesh.name;
 
-        // Skip if already processed
-        if (this.processedMeshes.has(meshName)) {
-            return;
-        }
-
         try {
             console.log(`Processing mesh "${meshName}" for node material snippet "${snippetId}"`);
 
-            // Parse the node material from the snippet
-            const nodeMaterial = await BABYLON.NodeMaterial.ParseFromSnippetAsync(snippetId, this.scene);
+            // Check if we already have this node material cached
+            let nodeMaterial = this.activeNodeMaterials.get(snippetId);
+            
+            if (!nodeMaterial) {
+                // Parse the node material from the snippet only if not cached
+                console.log(`Parsing new node material from snippet "${snippetId}"`);
+                nodeMaterial = await BABYLON.NodeMaterial.ParseFromSnippetAsync(snippetId, this.scene);
+                
+                if (nodeMaterial) {
+                    // Store the node material for reuse
+                    this.activeNodeMaterials.set(snippetId, nodeMaterial);
+                    console.log(`Cached node material "${snippetId}" for future use`);
+                }
+            } else {
+                console.log(`Using cached node material "${snippetId}"`);
+            }
             
             if (nodeMaterial) {
                 // Apply the node material to the mesh
                 mesh.material = nodeMaterial;
-                
-                // Store the node material for potential reuse
-                this.activeNodeMaterials.set(snippetId, nodeMaterial);
-                
-                // Mark as processed
-                this.processedMeshes.add(meshName);
-                
                 console.log(`Successfully applied node material "${snippetId}" to mesh "${meshName}"`);
             } else {
                 console.warn(`Failed to parse node material from snippet "${snippetId}" for mesh "${meshName}"`);
@@ -5698,7 +5699,6 @@ class NodeMaterialManager {
      */
     public static clearCachedNodeMaterials(): void {
         this.activeNodeMaterials.clear();
-        this.processedMeshes.clear();
     }
 
     /**
@@ -5717,7 +5717,6 @@ class NodeMaterialManager {
             nodeMaterial.dispose();
         });
         this.activeNodeMaterials.clear();
-        this.processedMeshes.clear();
         this.scene = null;
     }
 }
