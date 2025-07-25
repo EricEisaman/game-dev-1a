@@ -226,8 +226,8 @@ const ASSETS = {
             name: "Tech Girl",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/techGirl/tech_girl.glb",
             animations: {
-                idle: "Idel",
-                walk: "Walk"
+                idle: "idle",
+                walk: "run"
             },
             scale: 1.7,
             animationBlend: 400
