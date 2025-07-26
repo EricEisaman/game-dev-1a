@@ -3956,8 +3956,8 @@ class CharacterController {
 
             // For iPads with keyboards, allow both keyboard and touch input to work together
             if (this.isIPadWithKeyboard) {
-                // Always allow touch input for rotation (X-axis)
-                if (Math.abs(mobileDirection.x) > 0.1) {
+                // Only allow touch input for rotation (X-axis) when not in air
+                if (this.state !== CHARACTER_STATES.IN_AIR && Math.abs(mobileDirection.x) > 0.1) {
                     this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
                 }
 
@@ -3992,8 +3992,8 @@ class CharacterController {
                 // Standard mobile behavior - replace keyboard input with touch input
                 this.inputDirection.copyFrom(mobileDirection);
 
-                // Update player rotation based on X-axis (left/right)
-                if (Math.abs(mobileDirection.x) > 0.1) {
+                // Only update player rotation based on X-axis (left/right) when not in air
+                if (this.state !== CHARACTER_STATES.IN_AIR && Math.abs(mobileDirection.x) > 0.1) {
                     this.targetRotationY += mobileDirection.x * CONFIG.CHARACTER.ROTATION_SPEED;
                 }
 
@@ -4070,6 +4070,11 @@ class CharacterController {
         if (this.cameraController && this.cameraController.isRotatingCharacter) {
             // Update target rotation to match current rotation to prevent jerking
             this.targetRotationY = this.displayCapsule.rotation.y;
+            return;
+        }
+
+        // Prevent rotation while in air for more realistic physics
+        if (this.state === CHARACTER_STATES.IN_AIR) {
             return;
         }
 
