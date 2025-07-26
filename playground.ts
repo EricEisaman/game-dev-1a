@@ -222,7 +222,7 @@ const ASSETS = {
                 jump: "jump",
             },
             scale: 1,
-            animationBlend: 400
+            animationBlend: 200
         },
         {
             name: "Tech Girl",
@@ -233,7 +233,7 @@ const ASSETS = {
                 jump: "jump"
             },
             scale: 1.3,
-            animationBlend: 400
+            animationBlend: 200
         },
         {
             name: "Zombie",
@@ -244,7 +244,7 @@ const ASSETS = {
                 jump: "Jump"
             },
             scale: 1.25,
-            animationBlend: 400
+            animationBlend: 200
         }
     ] as readonly Character[],
     ENVIRONMENTS: [
@@ -668,12 +668,21 @@ class AnimationController {
     }
 
     /**
-     * Updates the animation state based on character movement
+     * Updates the animation state based on character movement and state
      */
-    public updateAnimation(isMoving: boolean): void {
+    public updateAnimation(isMoving: boolean, characterState?: CharacterState): void {
         if (!this.currentCharacter) return;
 
-        const targetAnimationName = isMoving ? this.currentCharacter.animations.walk : this.currentCharacter.animations.idle;
+        let targetAnimationName: string;
+        
+        // Determine animation based on character state first, then movement
+        if (characterState === CHARACTER_STATES.IN_AIR) {
+            targetAnimationName = this.currentCharacter.animations.jump;
+        } else if (isMoving) {
+            targetAnimationName = this.currentCharacter.animations.walk;
+        } else {
+            targetAnimationName = this.currentCharacter.animations.idle;
+        }
         
         // If animation is already playing and no change needed, do nothing
         if (this.currentAnimation === targetAnimationName && !this.isBlending) {
@@ -728,6 +737,12 @@ class AnimationController {
                     anim.name.toLowerCase().includes('walk') || 
                     anim.name.toLowerCase().includes('run') ||
                     anim.name.toLowerCase().includes('move')
+                );
+            } else if (animationName.toLowerCase().includes('jump')) {
+                animation = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('jump') || 
+                    anim.name.toLowerCase().includes('leap') ||
+                    anim.name.toLowerCase().includes('hop')
                 );
             }
         }
@@ -828,6 +843,12 @@ class AnimationController {
                     anim.name.toLowerCase().includes('walk') || 
                     anim.name.toLowerCase().includes('run') ||
                     anim.name.toLowerCase().includes('move')
+                );
+            } else if (targetAnimation.toLowerCase().includes('jump')) {
+                targetAnim = this.scene.animationGroups.find(anim => 
+                    anim.name.toLowerCase().includes('jump') || 
+                    anim.name.toLowerCase().includes('leap') ||
+                    anim.name.toLowerCase().includes('hop')
                 );
             }
         }
@@ -4086,8 +4107,8 @@ class CharacterController {
     private updateAnimations(): void {
         const isMoving = this.isAnyMovementKeyPressed();
 
-        // Update animation controller
-        this.animationController.updateAnimation(isMoving);
+        // Update animation controller with character state
+        this.animationController.updateAnimation(isMoving, this.state);
 
         // Update blend weights if currently blending
         this.animationController.updateBlend();
