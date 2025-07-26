@@ -1,5 +1,5 @@
 # TODO
 
-## Jump Delay
+## Maintain Initial Jump Velocity
 
-The Character type should get a jumpDelay property taking a number value in milliseconds.  The jumpDelay value will be implemented to determine how long after a character is "In Air" state before they switch to the jump animation.  This will avoid awkward jump transitions when the user is very briefly "In Air" while moving over objects and terrain.
+The Character should not be able to alter their jump velocity while "In Air", this breaks the illusion and is very disruptive to the game play because it is not natural. That is not how the physics of jumping works.
