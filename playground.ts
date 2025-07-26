@@ -199,6 +199,7 @@ interface EnvironmentParticle {
 interface CharacterAnims {
     readonly idle: string;
     readonly walk: string;
+    readonly jump: string;
 }
 
 interface Character {
@@ -214,10 +215,11 @@ const ASSETS = {
     CHARACTERS: [
         {
             name: "Red",
-            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/among_us_anims.glb",
+            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/red.glb",
             animations: {
                 idle: "idle",
-                walk: "walk"
+                walk: "walk",
+                jump: "jump",
             },
             scale: 1,
             animationBlend: 400
@@ -227,7 +229,8 @@ const ASSETS = {
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/techGirl/tech_girl.glb",
             animations: {
                 idle: "idle",
-                walk: "run"
+                walk: "run",
+                jump: "jump"
             },
             scale: 1.3,
             animationBlend: 400
@@ -237,7 +240,8 @@ const ASSETS = {
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/zombie/zombie.glb",
             animations: {
                 idle: "Idle",
-                walk: "Run_InPlace"
+                walk: "Run_InPlace",
+                jump: "Jump"
             },
             scale: 1.25,
             animationBlend: 400
