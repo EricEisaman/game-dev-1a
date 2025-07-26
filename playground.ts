@@ -208,6 +208,7 @@ interface Character {
     readonly animations: CharacterAnims;
     readonly scale: number;
     readonly animationBlend?: number; // Animation blend time in milliseconds, defaults to 400
+    readonly jumpDelay?: number; // Jump animation delay in milliseconds, defaults to 100
 }
 
 // Asset URLs
@@ -222,7 +223,8 @@ const ASSETS = {
                 jump: "jump",
             },
             scale: 1,
-            animationBlend: 200
+            animationBlend: 200,
+            jumpDelay: 200
         },
         {
             name: "Tech Girl",
@@ -233,7 +235,8 @@ const ASSETS = {
                 jump: "jump"
             },
             scale: 1.3,
-            animationBlend: 200
+            animationBlend: 200,
+            jumpDelay: 200
         },
         {
             name: "Zombie",
@@ -244,7 +247,8 @@ const ASSETS = {
                 jump: "Jump"
             },
             scale: 1.25,
-            animationBlend: 200
+            animationBlend: 200,
+            jumpDelay: 200
         }
     ] as readonly Character[],
     ENVIRONMENTS: [
@@ -645,6 +649,11 @@ class AnimationController {
     private blendDuration: number = 400; // Default blend duration in milliseconds
     private isBlending: boolean = false;
     private weightedAnimation: BABYLON.AnimationGroup | null = null;
+    
+    // Jump delay tracking
+    private jumpDelayStartTime: number = 0;
+    private isJumpDelayed: boolean = false;
+    private lastCharacterState: CharacterState | null = null;
 
     constructor(scene: BABYLON.Scene) {
         this.scene = scene;
@@ -663,6 +672,11 @@ class AnimationController {
         this.isBlending = false;
         this.weightedAnimation = null;
         
+        // Reset jump delay state
+        this.isJumpDelayed = false;
+        this.jumpDelayStartTime = 0;
+        this.lastCharacterState = null;
+        
         // Don't stop all animations here - let the character loading process handle it
         // The new character's animations will be set up properly in loadCharacter
     }
@@ -673,10 +687,13 @@ class AnimationController {
     public updateAnimation(isMoving: boolean, characterState?: CharacterState): void {
         if (!this.currentCharacter) return;
 
+        // Handle jump delay logic
+        this.handleJumpDelay(characterState);
+
         let targetAnimationName: string;
         
         // Determine animation based on character state first, then movement
-        if (characterState === CHARACTER_STATES.IN_AIR) {
+        if (characterState === CHARACTER_STATES.IN_AIR && !this.isJumpDelayed) {
             targetAnimationName = this.currentCharacter.animations.jump;
         } else if (isMoving) {
             targetAnimationName = this.currentCharacter.animations.walk;
@@ -950,6 +967,38 @@ class AnimationController {
         this.previousAnimation = null;
         this.isBlending = false;
         this.weightedAnimation = null;
+    }
+
+    /**
+     * Handles jump delay logic to avoid awkward jump transitions
+     */
+    private handleJumpDelay(characterState?: CharacterState): void {
+        if (!this.currentCharacter || !characterState) return;
+
+        const jumpDelay = this.currentCharacter.jumpDelay || 100; // Default to 100ms
+
+        // Check if we just entered IN_AIR state
+        if (characterState === CHARACTER_STATES.IN_AIR && this.lastCharacterState !== CHARACTER_STATES.IN_AIR) {
+            // Start jump delay
+            this.isJumpDelayed = true;
+            this.jumpDelayStartTime = Date.now();
+        }
+        // Check if we left IN_AIR state
+        else if (characterState !== CHARACTER_STATES.IN_AIR && this.lastCharacterState === CHARACTER_STATES.IN_AIR) {
+            // Reset jump delay when leaving air state
+            this.isJumpDelayed = false;
+            this.jumpDelayStartTime = 0;
+        }
+        // Check if jump delay has expired
+        else if (this.isJumpDelayed && characterState === CHARACTER_STATES.IN_AIR) {
+            const elapsedTime = Date.now() - this.jumpDelayStartTime;
+            if (elapsedTime >= jumpDelay) {
+                this.isJumpDelayed = false;
+            }
+        }
+
+        // Update last character state
+        this.lastCharacterState = characterState;
     }
 
     /**
