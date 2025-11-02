@@ -91,20 +91,20 @@ export class SceneManager {
         this.smoothFollowController.forceActivateSmoothFollow();
     }
 
-    private loadCharacterModel(character?: Character): void {
+    private loadCharacterModel(character?: Character, preservedPosition?: BABYLON.Vector3 | null): void {
         // Load the specified character or the first character from the CHARACTERS array
         const characterToLoad = character ?? ASSETS.CHARACTERS[0];
-        this.loadCharacter(characterToLoad);
+        this.loadCharacter(characterToLoad, preservedPosition);
     }
 
-    private loadCharacter(character: Character): void {
+    private loadCharacter(character: Character, preservedPosition?: BABYLON.Vector3 | null): void {
         if (!this.characterController) {
             return;
         }
 
         // Check if character is already cached
         if (this.currentCharacterName === character.name && this.characterCache.has(character.name)) {
-            this.activateCachedCharacter(character);
+            this.activateCachedCharacter(character, preservedPosition);
             return;
         }
 
@@ -143,8 +143,15 @@ export class SceneManager {
                     this.characterController.setPlayerMesh(result.meshes[0]);
 
                     // Determine position for new character
-                    const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
-                    const characterPosition = currentEnvironment?.spawnPoint ?? new BABYLON.Vector3(0, 0, 0);
+                    let characterPosition: BABYLON.Vector3;
+                    if (preservedPosition) {
+                        // Use preserved position when switching characters
+                        characterPosition = preservedPosition;
+                    } else {
+                        // Use spawn point when loading character for the first time or after environment change
+                        const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
+                        characterPosition = currentEnvironment ? currentEnvironment.spawnPoint : new BABYLON.Vector3(0, 0, 0);
+                    }
 
                     // Update character physics with determined position
                     this.characterController.updateCharacterPhysics(character, characterPosition);
@@ -471,9 +478,18 @@ export class SceneManager {
             character = ASSETS.CHARACTERS.find(c => c.name === characterIndexOrName);
         }
 
-        if (character) {
-            this.loadCharacterModel(character);
+        if (!character) {
+            return;
         }
+
+        // Save current character position before switching
+        let currentPosition: BABYLON.Vector3 | null = null;
+        if (this.characterController) {
+            currentPosition = this.characterController.getPosition().clone();
+        }
+
+        // Load the new character with preserved position
+        this.loadCharacterModel(character, currentPosition);
     }
 
     public clearEnvironment(): void {
@@ -589,7 +605,7 @@ export class SceneManager {
     /**
      * Activates a cached character by showing its meshes and setting up the controller
      */
-    private activateCachedCharacter(character: Character): void {
+    private activateCachedCharacter(character: Character, preservedPosition?: BABYLON.Vector3 | null): void {
         if (!this.characterController || !this.characterCache.has(character.name)) return;
 
         const cachedMeshes = this.characterCache.get(character.name)!;
@@ -603,8 +619,15 @@ export class SceneManager {
         this.characterController.setPlayerMesh(cachedMeshes[0]);
 
         // Determine position for character
-        const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
-        const characterPosition = currentEnvironment?.spawnPoint ?? new BABYLON.Vector3(0, 0, 0);
+        let characterPosition: BABYLON.Vector3;
+        if (preservedPosition) {
+            // Use preserved position when switching characters
+            characterPosition = preservedPosition;
+        } else {
+            // Use spawn point when loading character for the first time or after environment change
+            const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
+            characterPosition = currentEnvironment ? currentEnvironment.spawnPoint : new BABYLON.Vector3(0, 0, 0);
+        }
 
         // Update character physics with determined position
         this.characterController.updateCharacterPhysics(character, characterPosition);
