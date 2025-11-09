@@ -18,6 +18,8 @@ export class SettingsUI {
     private static playgroundUICache: Map<HTMLElement, string> = new Map();
     // Cache for pg-split element
     private static pgSplitElement: HTMLElement | null = null;
+    // Cache for HUD container original display style
+    private static hudDisplayCache: string | null = null;
 
     // Device detection methods
     private static isMobileDevice(): boolean {
@@ -558,6 +560,7 @@ export class SettingsUI {
         // Use requestAnimationFrame to ensure DOM is ready
         requestAnimationFrame(() => {
             this.syncSplitRenderingToggleState();
+            this.syncGameHUDToggleState();
         });
     }
 
@@ -938,9 +941,9 @@ export class SettingsUI {
     private static syncSplitRenderingToggleState(): void {
         if (!this.settingsPanel) return;
 
-        // Find the Editor section index
+        // Find the Full Screen section index
         const sectionIndex = CONFIG.SETTINGS.SECTIONS.findIndex(
-            section => section.title === 'Editor'
+            section => section.title === 'Full Screen'
         );
 
         if (sectionIndex === -1) return;
@@ -955,6 +958,90 @@ export class SettingsUI {
 
         // Get actual element state (true if disabled, false if enabled)
         const actualState = this.getSplitRenderingState();
+
+        // Update toggle UI to match actual state
+        if (toggleInput.checked !== actualState) {
+            toggleInput.checked = actualState;
+            // Trigger visual update
+            const slider = toggleInput.nextElementSibling;
+            if (slider instanceof HTMLElement) {
+                const toggleCircle = slider.querySelector('span');
+                if (toggleCircle instanceof HTMLElement) {
+                    if (actualState) {
+                        slider.style.backgroundColor = 'rgba(0, 255, 136, 0.8)';
+                        toggleCircle.style.transform = 'translateX(26px)';
+                    } else {
+                        slider.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                        toggleCircle.style.transform = 'translateX(0)';
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets the current visibility state of the Game HUD
+     * @returns true if HUD is visible, false if hidden or not found
+     */
+    public static getGameHUDState(): boolean {
+        const hudElement = document.getElementById('game-hud');
+        if (hudElement instanceof HTMLElement) {
+            const computedStyle = window.getComputedStyle(hudElement);
+            const display = computedStyle.display;
+            return display !== 'none';
+        }
+        // If element doesn't exist, assume visible (default state)
+        return true;
+    }
+
+    /**
+     * Toggles the visibility of the Game HUD container
+     * @param visible - true to show HUD, false to hide HUD
+     */
+    public static toggleGameHUD(visible: boolean): void {
+        const hudElement = document.getElementById('game-hud');
+        if (hudElement instanceof HTMLElement) {
+            if (visible) {
+                // Restore cached display style, or default to 'flex' if cache is null
+                const displayValue = this.hudDisplayCache ?? 'flex';
+                hudElement.style.display = displayValue;
+            } else {
+                // Cache the current display style if not already cached
+                if (this.hudDisplayCache === null) {
+                    const computedStyle = window.getComputedStyle(hudElement);
+                    this.hudDisplayCache = computedStyle.display;
+                }
+                hudElement.style.display = 'none';
+            }
+        }
+        // If element doesn't exist yet, it will be handled when HUD is created
+        // The toggle state will be synced when settings panel opens
+    }
+
+    /**
+     * Syncs the toggle UI state with the actual HUD visibility state
+     * Should be called when settings panel opens
+     */
+    private static syncGameHUDToggleState(): void {
+        if (!this.settingsPanel) return;
+
+        // Find the Game HUD section index
+        const sectionIndex = CONFIG.SETTINGS.SECTIONS.findIndex(
+            section => section.title === 'Game HUD'
+        );
+
+        if (sectionIndex === -1) return;
+
+        // Find the toggle input for this section
+        const toggleInputElement = this.settingsPanel.querySelector(
+            `input[data-section-index="${sectionIndex}"]`
+        );
+
+        if (!(toggleInputElement instanceof HTMLInputElement)) return;
+        const toggleInput = toggleInputElement;
+
+        // Get actual HUD visibility state
+        const actualState = this.getGameHUDState();
 
         // Update toggle UI to match actual state
         if (toggleInput.checked !== actualState) {
@@ -1016,5 +1103,7 @@ export class SettingsUI {
         this.playgroundUICache.clear();
         // Clear pg-split element cache
         this.pgSplitElement = null;
+        // Clear HUD display cache
+        this.hudDisplayCache = null;
     }
 }

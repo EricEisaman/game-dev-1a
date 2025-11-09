@@ -216,13 +216,24 @@ export const CONFIG: GameConfig = {
                 }
             },
             {
-                title: "Editor",
+                title: "Full Screen",
                 uiElement: "toggle",
                 visibility: "all",
                 defaultValue: false, // Default state, will be synced with actual element state
                 onChange: (value: boolean | string) => {
                     if (typeof value === 'boolean') {
                         SettingsUI.toggleSplitRendering(value);
+                    }
+                }
+            },
+            {
+                title: "Game HUD",
+                uiElement: "toggle",
+                visibility: "all",
+                defaultValue: true, // Default to showing HUD elements
+                onChange: (value: boolean | string) => {
+                    if (typeof value === 'boolean') {
+                        SettingsUI.toggleGameHUD(value);
                     }
                 }
             }
