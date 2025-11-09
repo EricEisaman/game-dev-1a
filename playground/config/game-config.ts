@@ -203,6 +203,17 @@ export const CONFIG: GameConfig = {
                         await SettingsUI.changeEnvironment(value);
                     }
                 }
+            },
+            {
+                title: "Babylon Playground UI",
+                uiElement: "toggle",
+                visibility: "all",
+                defaultValue: true, // Default to showing playground UI elements
+                onChange: (value: boolean | string) => {
+                    if (typeof value === 'boolean') {
+                        SettingsUI.togglePlaygroundUI(value);
+                    }
+                }
             }
         ]
     },

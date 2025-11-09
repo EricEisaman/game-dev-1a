@@ -14,6 +14,8 @@ export class SettingsUI {
     private static isPanelOpen = false;
     private static sceneManager: SceneManager | null = null;
     public static isInitializing = false; // Flag to prevent onChange during initialization
+    // Cache for Babylon Playground UI element display styles
+    private static playgroundUICache: Map<HTMLElement, string> = new Map();
 
     // Device detection methods
     private static isMobileDevice(): boolean {
@@ -626,6 +628,139 @@ export class SettingsUI {
     }
 
     /**
+     * Toggles visibility of Babylon Playground UI elements
+     * These elements are created by the Babylon Playground infrastructure, not our codebase
+     * @param visible - true to show elements, false to hide them
+     */
+    public static togglePlaygroundUI(visible: boolean): void {
+        // CSS classes for Babylon Playground UI elements (external to our codebase)
+        const playgroundUIClasses = [
+            'command-bar',
+            'logo-area',
+            'version-number',
+            'hamburger-button',
+            'fps',
+            'links'
+        ];
+
+        // Find all elements with target classes
+        const elements: HTMLElement[] = [];
+        playgroundUIClasses.forEach(className => {
+            const foundElements = document.querySelectorAll(`.${className}`);
+            foundElements.forEach(element => {
+                if (element instanceof HTMLElement) {
+                    elements.push(element);
+                }
+            });
+        });
+
+        // Cache initial display styles on first toggle OFF
+        if (!visible && this.playgroundUICache.size === 0) {
+            elements.forEach(element => {
+                if (!this.playgroundUICache.has(element)) {
+                    const computedStyle = window.getComputedStyle(element);
+                    const displayValue = computedStyle.display;
+                    this.playgroundUICache.set(element, displayValue);
+                }
+            });
+        }
+
+        // Apply visibility changes
+        if (visible) {
+            // Restore from cache
+            this.playgroundUICache.forEach((displayValue, element) => {
+                if (element.isConnected) {
+                    element.style.display = displayValue;
+                }
+            });
+        } else {
+            // Hide elements
+            elements.forEach(element => {
+                // Cache if not already cached
+                if (!this.playgroundUICache.has(element)) {
+                    const computedStyle = window.getComputedStyle(element);
+                    const displayValue = computedStyle.display;
+                    this.playgroundUICache.set(element, displayValue);
+                }
+                element.style.display = 'none';
+            });
+        }
+
+        // If no elements found, try again with delayed initialization
+        if (elements.length === 0) {
+            this.attemptDelayedPlaygroundUIToggle(visible, 0);
+        }
+    }
+
+    /**
+     * Attempts to find and toggle playground UI elements with retries
+     * Handles cases where elements may not exist yet
+     */
+    private static attemptDelayedPlaygroundUIToggle(visible: boolean, attempt: number): void {
+        const retryDelays = [100, 500, 1000]; // milliseconds
+        const maxAttempts = retryDelays.length;
+
+        if (attempt >= maxAttempts) {
+            return; // Give up after max attempts
+        }
+
+        setTimeout(() => {
+            // Try to find elements again
+            const playgroundUIClasses = [
+                'command-bar',
+                'logo-area',
+                'version-number',
+                'hamburger-button',
+                'fps',
+                'links'
+            ];
+
+            const elements: HTMLElement[] = [];
+            playgroundUIClasses.forEach(className => {
+                const foundElements = document.querySelectorAll(`.${className}`);
+                foundElements.forEach(element => {
+                    if (element instanceof HTMLElement) {
+                        elements.push(element);
+                    }
+                });
+            });
+
+            if (elements.length > 0) {
+                // Found elements, now toggle them
+                if (!visible && this.playgroundUICache.size === 0) {
+                    elements.forEach(element => {
+                        if (!this.playgroundUICache.has(element)) {
+                            const computedStyle = window.getComputedStyle(element);
+                            const displayValue = computedStyle.display;
+                            this.playgroundUICache.set(element, displayValue);
+                        }
+                    });
+                }
+
+                if (visible) {
+                    this.playgroundUICache.forEach((displayValue, element) => {
+                        if (element.isConnected) {
+                            element.style.display = displayValue;
+                        }
+                    });
+                } else {
+                    elements.forEach(element => {
+                        if (!this.playgroundUICache.has(element)) {
+                            const computedStyle = window.getComputedStyle(element);
+                            const displayValue = computedStyle.display;
+                            this.playgroundUICache.set(element, displayValue);
+                        }
+                        element.style.display = 'none';
+                    });
+                }
+            } else {
+                // Still no elements, try again
+                this.attemptDelayedPlaygroundUIToggle(visible, attempt + 1);
+            }
+        }, retryDelays[attempt]);
+    }
+
+    /**
      * Global cleanup method to remove all SettingsUI elements from DOM
      */
     public static cleanup(): void {
@@ -661,5 +796,7 @@ export class SettingsUI {
         // Reset state
         this.isPanelOpen = false;
         this.sceneManager = null;
+        // Clear playground UI cache
+        this.playgroundUICache.clear();
     }
 }
