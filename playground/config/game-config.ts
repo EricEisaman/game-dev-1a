@@ -214,6 +214,17 @@ export const CONFIG: GameConfig = {
                         SettingsUI.togglePlaygroundUI(value);
                     }
                 }
+            },
+            {
+                title: "Editor",
+                uiElement: "toggle",
+                visibility: "all",
+                defaultValue: false, // Default state, will be synced with actual element state
+                onChange: (value: boolean | string) => {
+                    if (typeof value === 'boolean') {
+                        SettingsUI.toggleSplitRendering(value);
+                    }
+                }
             }
         ]
     },

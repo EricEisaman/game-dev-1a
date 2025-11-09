@@ -16,6 +16,8 @@ export class SettingsUI {
     public static isInitializing = false; // Flag to prevent onChange during initialization
     // Cache for Babylon Playground UI element display styles
     private static playgroundUICache: Map<HTMLElement, string> = new Map();
+    // Cache for pg-split element
+    private static pgSplitElement: HTMLElement | null = null;
 
     // Device detection methods
     private static isMobileDevice(): boolean {
@@ -470,6 +472,19 @@ export class SettingsUI {
 
         // Add toggle state change handlers
         this.setupToggleStateHandlers();
+        
+        // Try to initialize pg-split element cache
+        // Use requestAnimationFrame to handle delayed element availability
+        requestAnimationFrame(() => {
+            if (!this.pgSplitElement) {
+                const element = this.findPgSplitElement();
+                if (element) {
+                    this.pgSplitElement = element;
+                    // Sync the toggle state with actual element state
+                    this.syncSplitRenderingToggleState();
+                }
+            }
+        });
     }
 
     private static setupToggleStateHandlers(): void {
@@ -538,6 +553,12 @@ export class SettingsUI {
         this.settingsButton.style.transform = 'scale(1.1)';
         this.settingsButton.style.background = 'rgba(0, 0, 0, 0.9)';
         this.settingsButton.style.zIndex = CONFIG.SETTINGS.BUTTON_Z_INDEX.toString(); // Ensure button stays on top
+        
+        // Sync split rendering state when panel opens
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+            this.syncSplitRenderingToggleState();
+        });
     }
 
     private static closePanel(): void {
@@ -761,6 +782,201 @@ export class SettingsUI {
     }
 
     /**
+     * Finds and caches the pg-split element
+     * @returns The element if found, null otherwise
+     */
+    private static findPgSplitElement(): HTMLElement | null {
+        const element = document.getElementById('pg-split');
+        if (element instanceof HTMLElement) {
+            return element;
+        }
+        return null;
+    }
+
+    /**
+     * Toggles the hidden class on all children of the pg-split element
+     * @param hidden - true to add hidden class, false to remove hidden class
+     */
+    private static togglePgSplitChildrenHidden(hidden: boolean): void {
+        // Get pg-split element (use cache or find it)
+        let pgSplit: HTMLElement | null = null;
+        
+        if (this.pgSplitElement && this.pgSplitElement.isConnected) {
+            pgSplit = this.pgSplitElement;
+        } else {
+            pgSplit = this.findPgSplitElement();
+            if (pgSplit) {
+                this.pgSplitElement = pgSplit;
+            }
+        }
+
+        if (!pgSplit) {
+            return; // Element not found, cannot toggle children
+        }
+
+        // Get all children elements
+        const children = pgSplit.children;
+        
+        // Iterate through all children and toggle hidden class
+        // Skip the child with id='canvasZone'
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (child instanceof HTMLElement) {
+                // Skip canvasZone element
+                if (child.id === 'canvasZone') {
+                    continue;
+                }
+                if (hidden) {
+                    child.classList.add('hidden');
+                } else {
+                    child.classList.remove('hidden');
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets the current state of split rendering (whether disabled)
+     * @returns true if disable-split-rendering class exists, false otherwise
+     */
+    public static getSplitRenderingState(): boolean {
+        // Check if cached element exists and is still connected
+        if (this.pgSplitElement && this.pgSplitElement.isConnected) {
+            return this.pgSplitElement.classList.contains('disable-split-rendering');
+        }
+
+        // Try to find the element
+        const element = this.findPgSplitElement();
+        if (element) {
+            this.pgSplitElement = element;
+            return element.classList.contains('disable-split-rendering');
+        }
+
+        return false;
+    }
+
+    /**
+     * Toggles the split rendering by adding/removing the disable-split-rendering class
+     * Also toggles the hidden class on all children of pg-split
+     * @param disabled - true to disable (add class), false to enable (remove class)
+     */
+    public static toggleSplitRendering(disabled: boolean): void {
+        // Check if cached element exists and is still connected
+        if (this.pgSplitElement && this.pgSplitElement.isConnected) {
+            if (disabled) {
+                this.pgSplitElement.classList.add('disable-split-rendering');
+            } else {
+                this.pgSplitElement.classList.remove('disable-split-rendering');
+            }
+            // Toggle hidden class on all children
+            this.togglePgSplitChildrenHidden(disabled);
+            return;
+        }
+
+        // Try to find the element
+        const element = this.findPgSplitElement();
+        if (element) {
+            this.pgSplitElement = element;
+            if (disabled) {
+                element.classList.add('disable-split-rendering');
+            } else {
+                element.classList.remove('disable-split-rendering');
+            }
+            // Toggle hidden class on all children
+            this.togglePgSplitChildrenHidden(disabled);
+        } else {
+            // Element not found, try delayed initialization
+            this.attemptDelayedSplitRenderingToggle(disabled, 0);
+        }
+    }
+
+    /**
+     * Attempts to find and toggle the split rendering with retries
+     * Handles cases where element may not exist yet
+     * Uses requestAnimationFrame with frame counting for retries
+     */
+    private static attemptDelayedSplitRenderingToggle(disabled: boolean, attempt: number): void {
+        const retryFrameCounts = [6, 30, 60]; // frames at 60fps: ~100ms, ~500ms, ~1000ms
+        const maxAttempts = retryFrameCounts.length;
+
+        if (attempt >= maxAttempts) {
+            return; // Give up after max attempts
+        }
+
+        let frameCount = 0;
+        const maxFrames = retryFrameCounts[attempt];
+        
+        const tryFindElement = () => {
+            frameCount++;
+            if (frameCount >= maxFrames) {
+                const element = this.findPgSplitElement();
+                if (element) {
+                    this.pgSplitElement = element;
+                    if (disabled) {
+                        element.classList.add('disable-split-rendering');
+                    } else {
+                        element.classList.remove('disable-split-rendering');
+                    }
+                    // Toggle hidden class on all children
+                    this.togglePgSplitChildrenHidden(disabled);
+                } else {
+                    // Still not found, try again
+                    this.attemptDelayedSplitRenderingToggle(disabled, attempt + 1);
+                }
+            } else {
+                requestAnimationFrame(tryFindElement);
+            }
+        };
+        
+        requestAnimationFrame(tryFindElement);
+    }
+
+    /**
+     * Syncs the toggle UI state with the actual element class state
+     * Should be called when settings panel opens
+     */
+    private static syncSplitRenderingToggleState(): void {
+        if (!this.settingsPanel) return;
+
+        // Find the Editor section index
+        const sectionIndex = CONFIG.SETTINGS.SECTIONS.findIndex(
+            section => section.title === 'Editor'
+        );
+
+        if (sectionIndex === -1) return;
+
+        // Find the toggle input for this section
+        const toggleInputElement = this.settingsPanel.querySelector(
+            `input[data-section-index="${sectionIndex}"]`
+        );
+
+        if (!(toggleInputElement instanceof HTMLInputElement)) return;
+        const toggleInput = toggleInputElement;
+
+        // Get actual element state (true if disabled, false if enabled)
+        const actualState = this.getSplitRenderingState();
+
+        // Update toggle UI to match actual state
+        if (toggleInput.checked !== actualState) {
+            toggleInput.checked = actualState;
+            // Trigger visual update
+            const slider = toggleInput.nextElementSibling;
+            if (slider instanceof HTMLElement) {
+                const toggleCircle = slider.querySelector('span');
+                if (toggleCircle instanceof HTMLElement) {
+                    if (actualState) {
+                        slider.style.backgroundColor = 'rgba(0, 255, 136, 0.8)';
+                        toggleCircle.style.transform = 'translateX(26px)';
+                    } else {
+                        slider.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                        toggleCircle.style.transform = 'translateX(0)';
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Global cleanup method to remove all SettingsUI elements from DOM
      */
     public static cleanup(): void {
@@ -798,5 +1014,7 @@ export class SettingsUI {
         this.sceneManager = null;
         // Clear playground UI cache
         this.playgroundUICache.clear();
+        // Clear pg-split element cache
+        this.pgSplitElement = null;
     }
 }
