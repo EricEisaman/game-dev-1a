@@ -116,6 +116,46 @@ export class InventoryUI {
     }
 
     /**
+     * Applies panel styles to ensure they persist after content updates.
+     * This method can be called multiple times safely to re-apply styles.
+     */
+    private static applyPanelStyles(): void {
+        if (!this.inventoryPanel) return;
+
+        // Store current panel state to preserve it
+        const isOpen = this.isPanelOpen;
+        const currentRight = this.inventoryPanel.style.right;
+
+        // Re-apply panel styles to ensure they persist
+        // Note: We set right separately to preserve panel state
+        this.inventoryPanel.style.cssText = `
+            position: fixed;
+            top: 0;
+            width: ${this.getPanelWidth()}px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow-y: auto;
+        `;
+
+        // Restore panel position state
+        if (isOpen) {
+            this.inventoryPanel.style.right = '0';
+        } else if (currentRight && currentRight !== '0') {
+            // Preserve the current right value if it was set and panel is closed
+            this.inventoryPanel.style.right = currentRight;
+        } else {
+            // Default to closed position
+            this.inventoryPanel.style.right = '-100%';
+        }
+    }
+
+    /**
      * Updates the inventory content
      */
     public static updateInventoryContent(): void {
@@ -204,6 +244,9 @@ export class InventoryUI {
                 </div>
             </div>
         `;
+
+        // Re-apply panel styles to ensure they persist after innerHTML update
+        this.applyPanelStyles();
 
         // Add click event listeners to inventory items
         const itemElements = this.inventoryPanel.querySelectorAll('.inventory-item');

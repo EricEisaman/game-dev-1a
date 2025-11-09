@@ -199,6 +199,34 @@ export class SettingsUI {
             }
         }
 
+        // Apply styles to content and sections
+        this.applySectionStyles();
+
+        document.body.appendChild(this.settingsPanel);
+
+        // Setup section event listeners
+        this.setupSectionEventListeners();
+
+        // Listen for orientation changes to re-evaluate section visibility
+        window.addEventListener('orientationchange', () => {
+            requestAnimationFrame(() => {
+                this.regenerateSections();
+            });
+        });
+
+        // Also listen for resize events
+        window.addEventListener('resize', () => {
+            this.regenerateSections();
+        });
+    }
+
+    /**
+     * Applies styles to all section elements, content area, and form controls.
+     * This method can be called multiple times safely to re-apply styles after content updates.
+     */
+    private static applySectionStyles(): void {
+        if (!this.settingsPanel) return;
+
         // Style the content area
         const content = this.settingsPanel.querySelector('.settings-content');
         if (content instanceof HTMLElement) {
@@ -289,8 +317,10 @@ export class SettingsUI {
                 border-radius: 24px;
             `;
 
-                // Add pseudo-element for the toggle circle
-                slider.innerHTML = '<span style="position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;"></span>';
+                // Add pseudo-element for the toggle circle if it doesn't exist
+                if (!slider.querySelector('span')) {
+                    slider.innerHTML = '<span style="position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;"></span>';
+                }
             }
         });
 
@@ -309,23 +339,6 @@ export class SettingsUI {
             `;
             }
         });
-
-        document.body.appendChild(this.settingsPanel);
-
-        // Setup section event listeners
-        this.setupSectionEventListeners();
-
-        // Listen for orientation changes to re-evaluate section visibility
-        window.addEventListener('orientationchange', () => {
-            requestAnimationFrame(() => {
-                this.regenerateSections();
-            });
-        });
-
-        // Also listen for resize events
-        window.addEventListener('resize', () => {
-            this.regenerateSections();
-        });
     }
 
     private static regenerateSections(): void {
@@ -337,6 +350,9 @@ export class SettingsUI {
         if (content) {
             content.innerHTML = sectionsHTML;
         }
+
+        // Re-apply styles to preserve styling after innerHTML update
+        this.applySectionStyles();
 
         // Re-setup event listeners and toggle state handlers
         this.setupSectionEventListeners();
