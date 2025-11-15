@@ -236,6 +236,17 @@ export const CONFIG: GameConfig = {
                         SettingsUI.toggleGameHUD(value);
                     }
                 }
+            },
+            {
+                title: "Inspector",
+                uiElement: "toggle",
+                visibility: "all",
+                defaultValue: false, // Default state, will be synced with actual element state
+                onChange: (value: boolean | string) => {
+                    if (typeof value === 'boolean') {
+                        SettingsUI.toggleInspector(value);
+                    }
+                }
             }
         ]
     },

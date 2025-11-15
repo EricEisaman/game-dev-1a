@@ -20,6 +20,14 @@ export class SettingsUI {
     private static pgSplitElement: HTMLElement | null = null;
     // Cache for HUD container original display style
     private static hudDisplayCache: string | null = null;
+    // Cache for embed element (Inspector)
+    private static embedElement: HTMLElement | null = null;
+    // Cache for embed element original display style
+    private static embedDisplayCache: string | null = null;
+    // Cache for embed element original visibility style
+    private static embedVisibilityCache: string | null = null;
+    // Cache for Inspector button element
+    private static inspectorButton: HTMLElement | null = null;
 
     // Device detection methods
     private static isMobileDevice(): boolean {
@@ -561,6 +569,7 @@ export class SettingsUI {
         requestAnimationFrame(() => {
             this.syncSplitRenderingToggleState();
             this.syncGameHUDToggleState();
+            this.syncInspectorToggleState();
         });
     }
 
@@ -1019,6 +1028,244 @@ export class SettingsUI {
     }
 
     /**
+     * Finds the Inspector button element
+     * @returns The button element if found, null otherwise
+     */
+    private static findInspectorButton(): HTMLElement | null {
+        // Find all command buttons
+        const buttons = document.querySelectorAll('.command-button');
+        
+        // Iterate through buttons to find the one with title 'Inspector'
+        for (let i = 0; i < buttons.length; i++) {
+            const button = buttons[i];
+            if (button instanceof HTMLElement) {
+                const title = button.getAttribute('title');
+                if (title === 'Inspector') {
+                    return button;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Finds the Inspector container element (embed-host or embed)
+     * @returns The element if found, null otherwise
+     */
+    private static findInspectorElement(): HTMLElement | null {
+        // Try embed-host first (parent container)
+        let element = document.getElementById('embed-host');
+        if (element instanceof HTMLElement) {
+            return element;
+        }
+        
+        // Try embedHost (alternative naming)
+        element = document.getElementById('embedHost');
+        if (element instanceof HTMLElement) {
+            return element;
+        }
+        
+        // Fall back to embed (for backwards compatibility)
+        element = document.getElementById('embed');
+        if (element instanceof HTMLElement) {
+            return element;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Gets the current state of the Inspector by checking the button state
+     * @returns true if Inspector is active, false if inactive or not found
+     */
+    public static getInspectorState(): boolean {
+        // Check if cached button exists and is still connected
+        if (this.inspectorButton && this.inspectorButton.isConnected) {
+            // Check button state indicators
+            const ariaPressed = this.inspectorButton.getAttribute('aria-pressed');
+            const dataChecked = this.inspectorButton.getAttribute('data-checked');
+            const hasActiveClass = this.inspectorButton.classList.contains('active');
+            const hasCheckedClass = this.inspectorButton.classList.contains('checked');
+            
+            // Return true if any indicator shows button is active
+            if (ariaPressed === 'true' || dataChecked === 'true' || hasActiveClass || hasCheckedClass) {
+                return true;
+            }
+            
+            // Fallback: check if embed element is visible
+            const embedElement = this.findInspectorElement();
+            if (embedElement) {
+                const computedStyle = window.getComputedStyle(embedElement);
+                const visibility = computedStyle.visibility;
+                const display = computedStyle.display;
+                return visibility !== 'hidden' && display !== 'none';
+            }
+            
+            return false;
+        }
+
+        // Try to find the button
+        const button = this.findInspectorButton();
+        if (button) {
+            this.inspectorButton = button;
+            // Check button state indicators
+            const ariaPressed = button.getAttribute('aria-pressed');
+            const dataChecked = button.getAttribute('data-checked');
+            const hasActiveClass = button.classList.contains('active');
+            const hasCheckedClass = button.classList.contains('checked');
+            
+            // Return true if any indicator shows button is active
+            if (ariaPressed === 'true' || dataChecked === 'true' || hasActiveClass || hasCheckedClass) {
+                return true;
+            }
+            
+            // Fallback: check if embed element is visible
+            const embedElement = this.findInspectorElement();
+            if (embedElement) {
+                const computedStyle = window.getComputedStyle(embedElement);
+                const visibility = computedStyle.visibility;
+                const display = computedStyle.display;
+                return visibility !== 'hidden' && display !== 'none';
+            }
+            
+            return false;
+        }
+
+        // If button doesn't exist, check embed element as fallback
+        const embedElement = this.findInspectorElement();
+        if (embedElement) {
+            const computedStyle = window.getComputedStyle(embedElement);
+            const visibility = computedStyle.visibility;
+            const display = computedStyle.display;
+            return visibility !== 'hidden' && display !== 'none';
+        }
+
+        // If nothing found, assume inactive (default state)
+        return false;
+    }
+
+    /**
+     * Toggles the Inspector by clicking the Inspector button
+     * @param visible - true to show Inspector, false to hide Inspector
+     */
+    public static toggleInspector(visible: boolean): void {
+        // Check if cached button exists and is still connected
+        if (this.inspectorButton && this.inspectorButton.isConnected) {
+            // Check current button state
+            const currentState = this.getInspectorState();
+            
+            // Only click if state doesn't match desired state
+            if (currentState !== visible) {
+                this.inspectorButton.click();
+            }
+            return;
+        }
+
+        // Try to find the button
+        const button = this.findInspectorButton();
+        if (button) {
+            this.inspectorButton = button;
+            // Check current button state
+            const currentState = this.getInspectorState();
+            
+            // Only click if state doesn't match desired state
+            if (currentState !== visible) {
+                button.click();
+            }
+        } else {
+            // Button not found, try delayed initialization
+            this.attemptDelayedInspectorToggle(visible, 0);
+        }
+    }
+
+    /**
+     * Attempts to find and toggle the Inspector button with retries
+     * Handles cases where button may not exist yet
+     * Uses requestAnimationFrame with frame counting for retries
+     */
+    private static attemptDelayedInspectorToggle(visible: boolean, attempt: number): void {
+        const retryFrameCounts = [6, 30, 60]; // frames at 60fps: ~100ms, ~500ms, ~1000ms
+        const maxAttempts = retryFrameCounts.length;
+
+        if (attempt >= maxAttempts) {
+            return; // Give up after max attempts
+        }
+
+        let frameCount = 0;
+        const maxFrames = retryFrameCounts[attempt];
+        
+        const tryFindButton = () => {
+            frameCount++;
+            if (frameCount >= maxFrames) {
+                const button = this.findInspectorButton();
+                if (button) {
+                    this.inspectorButton = button;
+                    // Check current button state
+                    const currentState = this.getInspectorState();
+                    
+                    // Only click if state doesn't match desired state
+                    if (currentState !== visible) {
+                        button.click();
+                    }
+                } else {
+                    // Still not found, try again
+                    this.attemptDelayedInspectorToggle(visible, attempt + 1);
+                }
+            } else {
+                requestAnimationFrame(tryFindButton);
+            }
+        };
+        
+        requestAnimationFrame(tryFindButton);
+    }
+
+    /**
+     * Syncs the toggle UI state with the actual Inspector visibility state
+     * Should be called when settings panel opens
+     */
+    private static syncInspectorToggleState(): void {
+        if (!this.settingsPanel) return;
+
+        // Find the Inspector section index
+        const sectionIndex = CONFIG.SETTINGS.SECTIONS.findIndex(
+            section => section.title === 'Inspector'
+        );
+
+        if (sectionIndex === -1) return;
+
+        // Find the toggle input for this section
+        const toggleInputElement = this.settingsPanel.querySelector(
+            `input[data-section-index="${sectionIndex}"]`
+        );
+
+        if (!(toggleInputElement instanceof HTMLInputElement)) return;
+        const toggleInput = toggleInputElement;
+
+        // Get actual Inspector visibility state
+        const actualState = this.getInspectorState();
+
+        // Update toggle UI to match actual state
+        if (toggleInput.checked !== actualState) {
+            toggleInput.checked = actualState;
+            // Trigger visual update
+            const slider = toggleInput.nextElementSibling;
+            if (slider instanceof HTMLElement) {
+                const toggleCircle = slider.querySelector('span');
+                if (toggleCircle instanceof HTMLElement) {
+                    if (actualState) {
+                        slider.style.backgroundColor = 'rgba(0, 255, 136, 0.8)';
+                        toggleCircle.style.transform = 'translateX(26px)';
+                    } else {
+                        slider.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                        toggleCircle.style.transform = 'translateX(0)';
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Syncs the toggle UI state with the actual HUD visibility state
      * Should be called when settings panel opens
      */
@@ -1105,5 +1352,13 @@ export class SettingsUI {
         this.pgSplitElement = null;
         // Clear HUD display cache
         this.hudDisplayCache = null;
+        // Clear embed element cache
+        this.embedElement = null;
+        // Clear embed display cache
+        this.embedDisplayCache = null;
+        // Clear embed visibility cache
+        this.embedVisibilityCache = null;
+        // Clear Inspector button cache
+        this.inspectorButton = null;
     }
 }
