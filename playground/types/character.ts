@@ -15,6 +15,7 @@ export interface CharacterAnims {
 export interface Character {
     readonly name: string;
     readonly model: string;
+    locked?: boolean; // Locked state - runtime state managed separately via CharacterLock utility
     readonly animations: CharacterAnims;
     readonly scale: number;
     readonly mass: number; // Physics mass for different character weights

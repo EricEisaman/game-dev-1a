@@ -12,6 +12,7 @@ export const ASSETS = {
         {
             name: "Red",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/amongUs/red.glb",
+            locked: false,
             animations: {
                 idle: "idle",
                 walk: "walk",
@@ -35,6 +36,7 @@ export const ASSETS = {
         {
             name: "Tech Girl",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/techGirl/tech_girl_2.glb",
+            locked: false,
             animations: {
                 idle: "idle",
                 walk: "run",
@@ -58,6 +60,7 @@ export const ASSETS = {
         {
             name: "Zombie",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/zombie/zombie_2.glb",
+            locked: false,
             animations: {
                 idle: "Idle",
                 walk: "Run_InPlace",
@@ -81,6 +84,7 @@ export const ASSETS = {
         {
             name: "Hulk",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/hulk/hulk.glb",
+            locked: true,
             animations: {
                 idle: "idle",
                 walk: "run",

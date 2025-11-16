@@ -7,6 +7,7 @@ import { CONFIG } from '../config/game-config';
 import { ASSETS } from '../config/assets';
 import type { SettingsSection, VisibilityType } from '../types/ui';
 import type { SceneManager } from '../managers/SceneManager';
+import { CharacterLock } from '../utils/character-lock';
 
 export class SettingsUI {
     private static settingsButton: HTMLDivElement | null = null;
@@ -355,7 +356,7 @@ export class SettingsUI {
         });
     }
 
-    private static regenerateSections(): void {
+    public static regenerateSections(): void {
         if (!this.settingsPanel) return;
 
         // Regenerate sections HTML
@@ -415,9 +416,15 @@ export class SettingsUI {
                 // Special handling for Character and Environment dropdowns to show names
                 let optionsHTML = '';
                 if (section.title === "Character") {
-                    optionsHTML = ASSETS.CHARACTERS.map((character) =>
-                        `<option value="${character.name}" ${character.name === defaultValue ? 'selected' : ''}>${character.name}</option>`
-                    ).join('');
+                    optionsHTML = ASSETS.CHARACTERS.map((character) => {
+                        const isLocked = CharacterLock.isCharacterLocked(character.name);
+                        const isSelected = character.name === defaultValue;
+                        const disabledAttr = isLocked ? 'disabled' : '';
+                        const selectedAttr = isSelected ? 'selected' : '';
+                        const lockIcon = isLocked ? '🔒 ' : '';
+                        const styleAttr = isLocked ? 'style="color: rgba(255, 255, 255, 0.4);"' : '';
+                        return `<option value="${character.name}" ${selectedAttr} ${disabledAttr} ${styleAttr}>${lockIcon}${character.name}</option>`;
+                    }).join('');
                 } else if (section.title === "Environment") {
                     optionsHTML = ASSETS.ENVIRONMENTS.map((environment) =>
                         `<option value="${environment.name}" ${environment.name === defaultValue ? 'selected' : ''}>${environment.name}</option>`
@@ -466,6 +473,18 @@ export class SettingsUI {
         // Setup dropdown selects
         const selects = this.settingsPanel.querySelectorAll('select');
         selects.forEach(select => {
+            // Initialize previous value for character dropdown
+            if (select instanceof HTMLSelectElement) {
+                const sectionIndexStr = select.dataset.sectionIndex;
+                if (sectionIndexStr != null) {
+                    const sectionIndex = parseInt(sectionIndexStr);
+                    const section: SettingsSection = CONFIG.SETTINGS.SECTIONS[sectionIndex];
+                    if (section.title === "Character" && select.value) {
+                        select.setAttribute('data-previous-value', select.value);
+                    }
+                }
+            }
+            
             select.addEventListener('change', async (e) => {
                 const target = e.target;
                 if (!(target instanceof HTMLSelectElement)) return;
@@ -473,6 +492,27 @@ export class SettingsUI {
                 if (sectionIndexStr == null) return;
                 const sectionIndex = parseInt(sectionIndexStr);
                 const section: SettingsSection = CONFIG.SETTINGS.SECTIONS[sectionIndex];
+
+                // Prevent selection of locked characters
+                if (section.title === "Character") {
+                    const selectedCharacter = target.value;
+                    if (CharacterLock.isCharacterLocked(selectedCharacter)) {
+                        // Reset to previous valid selection
+                        const previousValue = target.getAttribute('data-previous-value');
+                        if (previousValue && !CharacterLock.isCharacterLocked(previousValue)) {
+                            target.value = previousValue;
+                        } else {
+                            // Find first unlocked character
+                            const unlockedCharacter = ASSETS.CHARACTERS.find((c) => !CharacterLock.isCharacterLocked(c.name));
+                            if (unlockedCharacter) {
+                                target.value = unlockedCharacter.name;
+                            }
+                        }
+                        return; // Prevent onChange for locked character
+                    }
+                    // Store current value as previous for next change
+                    target.setAttribute('data-previous-value', target.value);
+                }
 
                 if (section.onChange && !this.isInitializing) {
                     await section.onChange(target.value);
