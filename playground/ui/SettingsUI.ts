@@ -14,6 +14,7 @@ export class SettingsUI {
     private static settingsPanel: HTMLDivElement | null = null;
     private static isPanelOpen = false;
     private static sceneManager: SceneManager | null = null;
+    private static lastSelectedCharacterName: string | null = null;
     public static isInitializing = false; // Flag to prevent onChange during initialization
     // Cache for Babylon Playground UI element display styles
     private static playgroundUICache: Map<HTMLElement, string> = new Map();
@@ -663,8 +664,43 @@ export class SettingsUI {
 
     public static async changeCharacter(characterIndexOrName: number | string): Promise<void> {
         if (this.sceneManager && !this.isInitializing) {
+            // Get current character name before switching
+            const currentCharacterName = this.getCurrentCharacterName();
+            
+            // Determine the character name being switched to
+            let characterName: string | null = null;
+            if (typeof characterIndexOrName === 'string') {
+                characterName = characterIndexOrName;
+            } else if (typeof characterIndexOrName === 'number') {
+                const character = ASSETS.CHARACTERS[characterIndexOrName];
+                if (character) {
+                    characterName = character.name;
+                }
+            }
+            
+            // Only update lastSelectedCharacterName if switching to a different character
+            // Save the current character as the last selected before switching
+            // This preserves the previous selection for use when current character gets locked
+            if (characterName !== null && currentCharacterName !== null && characterName !== currentCharacterName) {
+                this.lastSelectedCharacterName = currentCharacterName;
+            } else if (characterName !== null && currentCharacterName === null) {
+                // Initial selection - no previous character to save
+                this.lastSelectedCharacterName = characterName;
+            }
+            
             this.sceneManager.changeCharacter(characterIndexOrName);
         }
+    }
+
+    public static getCurrentCharacterName(): string | null {
+        if (this.sceneManager) {
+            return this.sceneManager.getCurrentCharacterName();
+        }
+        return null;
+    }
+
+    public static getLastSelectedCharacterName(): string | null {
+        return this.lastSelectedCharacterName;
     }
 
     public static async changeEnvironment(environmentName: string): Promise<void> {

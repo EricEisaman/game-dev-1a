@@ -209,6 +209,10 @@ export class SceneManager {
         return this.scene;
     }
 
+    public getCurrentCharacterName(): string | null {
+        return this.currentCharacterName;
+    }
+
     public getCurrentEnvironment(): string {
         return this.currentEnvironment;
     }

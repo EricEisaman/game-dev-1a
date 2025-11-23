@@ -15,6 +15,8 @@ export class CharacterLock {
     /**
      * Sets the runtime lock state for a character by name
      * Triggers reactive UI refresh of Settings UI dropdown
+     * If locking the current character, automatically switches to last selected character if unlocked,
+     * otherwise switches to the first available unlocked character
      * @param name - Character name
      * @param locked - true to lock, false to unlock
      */
@@ -27,6 +29,24 @@ export class CharacterLock {
 
         // Update runtime lock state
         this.characterLockState.set(name, locked);
+
+        // If locking the current character, switch to an unlocked character
+        if (locked) {
+            const currentCharacterName = SettingsUI.getCurrentCharacterName();
+            if (currentCharacterName === name) {
+                // Try to get the last selected character if unlocked
+                const lastSelectedCharacter = this.getLastSelectedCharacterIfUnlocked();
+                if (lastSelectedCharacter !== null) {
+                    SettingsUI.changeCharacter(lastSelectedCharacter.name);
+                } else {
+                    // Fall back to first unlocked character
+                    const firstUnlockedCharacter = this.getFirstUnlockedCharacter();
+                    if (firstUnlockedCharacter !== null) {
+                        SettingsUI.changeCharacter(firstUnlockedCharacter.name);
+                    }
+                }
+            }
+        }
 
         // Trigger reactive UI refresh of Settings UI dropdown
         SettingsUI.regenerateSections();
@@ -74,6 +94,37 @@ export class CharacterLock {
         this.characterLockState.delete(name);
         // Trigger reactive UI refresh
         SettingsUI.regenerateSections();
+    }
+
+    /**
+     * Gets the first unlocked character from ASSETS.CHARACTERS
+     * @returns First unlocked character or null if all are locked
+     */
+    private static getFirstUnlockedCharacter(): Character | null {
+        for (const character of ASSETS.CHARACTERS) {
+            if (!this.isCharacterLocked(character.name)) {
+                return character;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the last selected character if it's unlocked
+     * @returns Last selected character if unlocked, otherwise null
+     */
+    private static getLastSelectedCharacterIfUnlocked(): Character | null {
+        const lastSelectedName = SettingsUI.getLastSelectedCharacterName();
+        if (lastSelectedName === null) {
+            return null;
+        }
+
+        const character = ASSETS.CHARACTERS.find((c: Character) => c.name === lastSelectedName);
+        if (character && !this.isCharacterLocked(character.name)) {
+            return character;
+        }
+
+        return null;
     }
 }
 
