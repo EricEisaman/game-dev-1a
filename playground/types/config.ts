@@ -145,4 +145,4 @@ export interface Tile {
     readonly itemEffectKind: ItemEffectKind;
 }
 
-export type ItemEffectKind = "superJump" | "invisibility";
+export type ItemEffectKind = "superJump" | "invisibility" | "gamma";

@@ -6,6 +6,7 @@
 import { CONFIG } from '../config/game-config';
 import type { SceneManager } from '../managers/SceneManager';
 import { InventoryManager } from '../managers/InventoryManager';
+import { Notification } from '../utils/notification';
 
 export class InventoryUI {
     private static inventoryButton: HTMLDivElement | null = null;
@@ -282,36 +283,25 @@ export class InventoryUI {
      * @param itemName The name of the item used
      */
     private static showItemUsedFeedback(itemName: string): void {
-        const feedback = document.createElement('div');
-        feedback.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 255, 136, 0.9);
-            color: black;
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 9999;
-            font-size: 18px;
-            font-weight: bold;
-        `;
-        feedback.textContent = `Used ${itemName}!`;
-        document.body.appendChild(feedback);
+        const scene = this.sceneManager?.getScene();
+        if (!scene) {
+            return;
+        }
 
-        // Use requestAnimationFrame for cleanup instead of setTimeout
-        let frameCount = 0;
-        const maxFrames = 120; // Approximately 2 seconds at 60fps
-        
-        const cleanup = () => {
-            frameCount++;
-            if (frameCount >= maxFrames) {
-                feedback.remove();
-            } else {
-                requestAnimationFrame(cleanup);
-            }
-        };
-        requestAnimationFrame(cleanup);
+        Notification.create({
+            message: `Used ${itemName}!`,
+            delay: 0,
+            duration: 2000,
+            scene,
+            background: 'rgba(0, 255, 136, 0.9)',
+            color: 'black',
+            padding: '20px',
+            borderRadius: '10px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            position: 'center',
+            zIndex: 9999,
+        });
     }
 
     /**

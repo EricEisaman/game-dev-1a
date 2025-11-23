@@ -58,6 +58,30 @@ export const ASSETS = {
             jumpDelay: 200
         },
         {
+            name: "Lafoofoo",
+            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/characters/Krysalia.glb",
+            locked: false,
+            animations: {
+                idle: "idle",
+                walk: "run",
+                jump: "jump",
+            },
+            scale: 1.35,
+            mass: 1.0, // Standard weight
+            height: 1.8,
+            radius: 0.6,
+            speed: {
+                inAir: 25.0,
+                onGround: 25.0,
+                boostMultiplier: 8.0
+            },
+            jumpHeight: 2.0,
+            rotationSpeed: 0.05, // radians
+            rotationSmoothing: 0.2,
+            animationBlend: 200,
+            jumpDelay: 200
+        },
+        {
             name: "Zombie",
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/characters/zombie/zombie_2.glb",
             locked: false,
@@ -230,6 +254,54 @@ export const ASSETS = {
                         }
                     ]
                 }
+            ]
+        },
+        {
+            name: "Mushroom Village",
+            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/mushroom_village.glb",
+            lightmap: "",
+            scale: 3.0,
+            lightmappedMeshes: [],
+            physicsObjects: [],
+            sky: {
+                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/happy_fluffy_sky.png",
+                ROTATION_Y: 0,
+                BLUR: 0.2,
+                TYPE: "SPHERE" satisfies SkyType
+            },
+            spawnPoint: new BABYLON.Vector3(0, 35, 0),
+            particles: [
+                {
+                    name: "Magic Sparkles",
+                    position: new BABYLON.Vector3(50, 33, -45), // Fire on top of building 
+                    updateSpeed: 0.007
+                }
+            ],
+            items: [
+            {
+                name: "Gamma Crystal",
+                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/gamma_crystal.glb",
+                collectible: true,
+                creditValue: 500,
+                minImpulseForCollection: 0.3,
+                inventory: true,
+                thumbnail: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/gamma-crystal.png",
+                itemEffectKind: "gamma",
+                instances: [
+                {
+                    position: new BABYLON.Vector3(-15, 1.2, 5),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 1
+                },
+                {
+                    position: new BABYLON.Vector3(-28, 1.2, 5),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 1
+                }
+                ]
+            }
             ]
         },
         {

@@ -1,7 +1,8 @@
 // ============================================================================
 // INVENTORY MANAGER
 // ============================================================================
-
+import { CharacterLock } from '../utils/character-lock';
+import { Notification } from '../utils/notification';
 import type { CharacterController } from '../controllers/CharacterController';
 
 export interface InventoryItem {
@@ -71,7 +72,7 @@ export class InventoryManager {
 
         // Apply item effect based on item name or effect type
         const effectApplied = this.applyItemEffect(itemName, item);
-        
+
         if (effectApplied) {
             // Remove one item from inventory
             this.removeItem(itemName, 1);
@@ -93,14 +94,17 @@ export class InventoryManager {
         const effectMap: Record<string, () => boolean> = {
             'Super Jump': () => this.applySuperJumpEffect(),
             'Invisibility': () => this.applyInvisibilityEffect(),
+            'Gamma Crystal': () => this.applyHulkUnlockEffect(),
             // Add more item effects as needed
         };
+
+
 
         const effectFunction = effectMap[itemName];
         if (effectFunction) {
             return effectFunction();
         }
-        
+
         // Default effect - just return true for basic items
         return true;
     }
@@ -128,6 +132,26 @@ export class InventoryManager {
 
         // Apply temporary invisibility
         this.characterController.applyInvisibilityEffect();
+        return true;
+    }
+
+    private static applyHulkUnlockEffect(): boolean {
+
+        CharacterLock.setCharacterLocked('Hulk', false);
+        Notification.create({
+            message: `Hulk is now unlocked!`,
+            delay: 0,
+            duration: 2000,
+            scene: this.scene,
+            background: 'rgba(0, 255, 136, 0.9)',
+            color: 'black',
+            padding: '20px',
+            borderRadius: '10px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            position: 'center',
+            zIndex: 9999,
+        });
         return true;
     }
 
