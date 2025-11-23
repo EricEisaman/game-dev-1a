@@ -901,6 +901,22 @@ export class CharacterController {
         this.characterController.setPosition(position);
     }
 
+    public setRotation(rotation: BABYLON.Vector3): void {
+        this.targetRotationY = rotation.y;
+        this.displayCapsule.rotation.y = rotation.y;
+
+        // Update player mesh rotation to match
+        if (this.playerMesh) {
+            if (this.displayCapsule.rotationQuaternion) {
+                this.playerMesh.rotationQuaternion ??= new BABYLON.Quaternion(0, 0, 0, 1);
+                this.playerMesh.rotationQuaternion.copyFrom(this.displayCapsule.rotationQuaternion);
+            } else {
+                this.playerMesh.rotationQuaternion = null;
+                this.playerMesh.rotation.copyFrom(this.displayCapsule.rotation);
+            }
+        }
+    }
+
     public setVelocity(velocity: BABYLON.Vector3): void {
         this.characterController.setVelocity(velocity);
     }

@@ -49,6 +49,9 @@ export interface Environment {
     readonly physicsObjects: readonly PhysicsObject[];
     readonly sky?: SkyConfig; // Optional sky configuration for this environment
     readonly spawnPoint: BABYLON.Vector3; // Spawn point for this environment
+    readonly spawnRotation: BABYLON.Vector3; // Spawn rotation for this environment
+    readonly transitionPosition?: BABYLON.Vector3; // Optional transition position during environment change
+    readonly transitionRotation?: BABYLON.Vector3; // Optional transition rotation during environment change
     readonly particles?: readonly EnvironmentParticle[]; // Optional environment particles
     readonly items?: readonly ItemConfig[]; // Optional items configuration for this environment
     readonly backgroundMusic?: BackgroundMusicConfig; // Optional looping non-positional BGM

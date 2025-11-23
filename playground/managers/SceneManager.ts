@@ -155,6 +155,13 @@ export class SceneManager {
 
                     // Update character physics with determined position
                     this.characterController.updateCharacterPhysics(character, characterPosition);
+                    
+                    // Set character rotation only when not preserving position
+                    if (!preservedPosition) {
+                        const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
+                        const characterRotation = currentEnvironment ? currentEnvironment.spawnRotation : new BABYLON.Vector3(0, 0, 0);
+                        this.characterController.setRotation(characterRotation);
+                    }
 
                     // Setup animations using character's animation mapping with fallbacks
                     playerAnimations.walk = result.animationGroups.find(a => a.name === character.animations.walk) ??
@@ -216,6 +223,15 @@ export class SceneManager {
         // Disable character during environment switch
         if (this.characterController) {
             this.characterController.pausePhysics();
+            
+            // Set character to transition position/rotation if provided
+            if (environment.transitionPosition !== undefined) {
+                this.characterController.setPosition(environment.transitionPosition);
+            }
+            if (environment.transitionRotation !== undefined) {
+                this.characterController.setRotation(environment.transitionRotation);
+            }
+            
             // Also hide the character mesh
             const playerMesh = this.characterController.getPlayerMesh();
             if (playerMesh) {
@@ -631,6 +647,13 @@ export class SceneManager {
 
         // Update character physics with determined position
         this.characterController.updateCharacterPhysics(character, characterPosition);
+        
+        // Set character rotation only when not preserving position
+        if (!preservedPosition) {
+            const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
+            const characterRotation = currentEnvironment ? currentEnvironment.spawnRotation : new BABYLON.Vector3(0, 0, 0);
+            this.characterController.setRotation(characterRotation);
+        }
 
         // Note: Animation groups are handled by the original loadCharacter method
         // For cached characters, we rely on the existing animation setup

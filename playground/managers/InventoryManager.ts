@@ -3,6 +3,7 @@
 // ============================================================================
 import { CharacterLock } from '../utils/character-lock';
 import { Notification } from '../utils/notification';
+import { Time } from '../utils/time';
 import type { CharacterController } from '../controllers/CharacterController';
 
 export interface InventoryItem {
@@ -140,7 +141,7 @@ export class InventoryManager {
         CharacterLock.setCharacterLocked('Hulk', false);
         Notification.create({
             message: `Hulk is now unlocked!`,
-            delay: 0,
+            delay: 4000,
             duration: 2000,
             scene: this.scene,
             background: 'rgba(0, 255, 136, 0.9)',
@@ -151,6 +152,23 @@ export class InventoryManager {
             fontWeight: 'bold',
             position: 'center',
             zIndex: 9999,
+        });
+        Time.runDelayed(this.scene, 120000, () => {
+            CharacterLock.setCharacterLocked('Hulk', true);
+            Notification.create({
+                message: `Hulk is now locked!`,
+                delay: 0,
+                duration: 2000,
+                scene: this.scene,
+                background: 'rgba(188, 70, 76, 0.9)',
+                color: 'black',
+                padding: '20px',
+                borderRadius: '10px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                position: 'center',
+                zIndex: 9999,
+            });
         });
         return true;
     }

@@ -158,6 +158,7 @@ export const ASSETS = {
                 TYPE: "SPHERE" satisfies SkyType
             },
             spawnPoint: new BABYLON.Vector3(3, 0.5, -8),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
             backgroundMusic: {
                 url: "https://raw.githubusercontent.com/EricEisaman/assets/main/audio/bgm/CosmicWhispers.mp3",
                 volume: 0.03
@@ -270,6 +271,7 @@ export const ASSETS = {
                 TYPE: "SPHERE" satisfies SkyType
             },
             spawnPoint: new BABYLON.Vector3(0, 35, 0),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
             particles: [
                 {
                     name: "Magic Sparkles",
@@ -318,6 +320,7 @@ export const ASSETS = {
                 TYPE: "SPHERE" satisfies SkyType
             },
             spawnPoint: new BABYLON.Vector3(89, 15, -161.5),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
             particles: [
                 {
                     name: "Magic Sparkles",
@@ -340,6 +343,7 @@ export const ASSETS = {
                 TYPE: "SPHERE" satisfies SkyType
             },
             spawnPoint: new BABYLON.Vector3(3, 0, 31),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
             particles: [
                 {
                     name: "Magic Sparkles",
@@ -361,7 +365,8 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
-            spawnPoint: new BABYLON.Vector3(0, 5, 0) // Higher spawn point for Firefox Reality
+            spawnPoint: new BABYLON.Vector3(0, 5, 0), // Higher spawn point for Firefox Reality
+            spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
             name: "Joy Town",
@@ -376,7 +381,8 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
-            spawnPoint: new BABYLON.Vector3(-15, 15, 0)
+            spawnPoint: new BABYLON.Vector3(-15, 15, 0),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
             name: "Mansion",
@@ -391,7 +397,8 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
-            spawnPoint: new BABYLON.Vector3(0, 15, -20)
+            spawnPoint: new BABYLON.Vector3(0, 15, -20),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
             name: "Island Town",
@@ -406,7 +413,8 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
-            spawnPoint: new BABYLON.Vector3(0, 77, -20)
+            spawnPoint: new BABYLON.Vector3(0, 77, -20),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0)
         }
     ] satisfies readonly Environment[]
 } as const;
