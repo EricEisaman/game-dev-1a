@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { Character } from '../types/character';
-import type { Environment } from '../types/environment';
+import type { Environment, LightType } from '../types/environment';
 import type { SkyType } from '../types/effects';
 import { OBJECT_ROLE } from '../types/environment';
 
@@ -45,7 +45,7 @@ export const ASSETS = {
             scale: 1.3,
             mass: 0.8, // Lighter weight for agile character
             height: 1.8,
-            radius: 0.6,
+            radius: 0.55,
             speed: {
                 inAir: 30.0, // Faster in air
                 onGround: 30.0, // Faster on ground
@@ -270,8 +270,27 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
+            transitionPosition: new BABYLON.Vector3(0, 35, 0),
+            transitionRotation: new BABYLON.Vector3(0, 0, 0),
             spawnPoint: new BABYLON.Vector3(0, 35, 0),
             spawnRotation: new BABYLON.Vector3(0, 0, 0),
+            lights: [
+                {
+                    lightType: "POINT" satisfies LightType,
+                    name: "MushroomVillagePointLight",
+                    position: new BABYLON.Vector3(3, 2.5, 16.5),
+                    diffuseColor: new BABYLON.Color3(0.83, 0.63, 0.63),
+                    intensity: 1.0,
+                    range: 100
+                },
+                {
+                    lightType: "HEMISPHERIC" satisfies LightType,
+                    name: "MushroomVillageHemisphericLight",
+                    direction: new BABYLON.Vector3(0, 1, 0),
+                    diffuseColor: new BABYLON.Color3(0.95, 0.95, 0.98),
+                    intensity: 0.1
+                }
+            ],
             particles: [
                 {
                     name: "Magic Sparkles",

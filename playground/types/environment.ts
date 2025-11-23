@@ -40,6 +40,56 @@ export interface AmbientSoundConfig {
     readonly maxDistance?: number; // Defaults to 40
 }
 
+// ============================================================================
+// LIGHT TYPE DEFINITIONS
+// ============================================================================
+
+export type LightType = "POINT" | "DIRECTIONAL" | "SPOT" | "HEMISPHERIC" | "RECTANGULAR_AREA";
+
+export interface BaseLightConfig {
+    readonly lightType: LightType;
+    readonly name?: string;
+    readonly diffuseColor?: BABYLON.Color3;
+    readonly intensity?: number;
+    readonly specularColor?: BABYLON.Color3;
+}
+
+export interface PointLightConfig extends BaseLightConfig {
+    readonly lightType: "POINT";
+    readonly position: BABYLON.Vector3;
+    readonly range?: number;
+    readonly radius?: number;
+}
+
+export interface DirectionalLightConfig extends BaseLightConfig {
+    readonly lightType: "DIRECTIONAL";
+    readonly direction: BABYLON.Vector3;
+}
+
+export interface SpotLightConfig extends BaseLightConfig {
+    readonly lightType: "SPOT";
+    readonly position: BABYLON.Vector3;
+    readonly direction: BABYLON.Vector3;
+    readonly angle?: number;
+    readonly exponent?: number;
+    readonly range?: number;
+}
+
+export interface HemisphericLightConfig extends BaseLightConfig {
+    readonly lightType: "HEMISPHERIC";
+    readonly direction: BABYLON.Vector3;
+}
+
+export interface RectangularAreaLightConfig extends BaseLightConfig {
+    readonly lightType: "RECTANGULAR_AREA";
+    readonly position: BABYLON.Vector3;
+    readonly direction: BABYLON.Vector3;
+    readonly width?: number;
+    readonly height?: number;
+}
+
+export type LightConfig = PointLightConfig | DirectionalLightConfig | SpotLightConfig | HemisphericLightConfig | RectangularAreaLightConfig;
+
 export interface Environment {
     readonly name: string;
     readonly model: string;
@@ -56,6 +106,7 @@ export interface Environment {
     readonly items?: readonly ItemConfig[]; // Optional items configuration for this environment
     readonly backgroundMusic?: BackgroundMusicConfig; // Optional looping non-positional BGM
     readonly ambientSounds?: readonly AmbientSoundConfig[]; // Optional positional ambient sounds
+    readonly lights?: readonly LightConfig[]; // Optional environment-specific lights
 }
 
 // Forward declarations for circular dependencies

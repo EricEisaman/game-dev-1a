@@ -14,7 +14,7 @@ import { CollectiblesManager } from './CollectiblesManager';
 import { InventoryManager } from './InventoryManager';
 import { NodeMaterialManager } from './NodeMaterialManager';
 import type { Character } from '../types/character';
-import type { Environment } from '../types/environment';
+import type { Environment, LightConfig, PointLightConfig, DirectionalLightConfig, SpotLightConfig, HemisphericLightConfig, RectangularAreaLightConfig } from '../types/environment';
 import { SkyManager } from './SkyManager';
 import { OBJECT_ROLE } from '../types/environment';
 
@@ -32,6 +32,12 @@ export class SceneManager {
     private characterCache: Map<string, BABYLON.AbstractMesh[]> = new Map();
     private currentCharacterName: string | null = null;
     private readonly zeroVector = new BABYLON.Vector3(0, 0, 0);
+    
+    // Environment lights tracking
+    private environmentLights: BABYLON.Light[] = [];
+    
+    // Default light tracking
+    private defaultLight: BABYLON.HemisphericLight | null = null;
 
     constructor(engine: BABYLON.Engine, _canvas: HTMLCanvasElement) {
         this.scene = new BABYLON.Scene(engine);
@@ -57,7 +63,7 @@ export class SceneManager {
     }
 
     private setupLighting(): void {
-        new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), this.scene);
+        this.defaultLight = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), this.scene);
     }
 
     private setupPhysics(): void {
@@ -248,6 +254,8 @@ export class SceneManager {
         EffectsManager.removeEnvironmentParticles();
         // Also clear ambient sounds before switching
         EffectsManager.removeAmbientSounds();
+        // Dispose existing environment lights
+        this.disposeEnvironmentLights();
 
         try {
             const result = await BABYLON.ImportMeshAsync(environment.model, this.scene);
@@ -290,6 +298,9 @@ export class SceneManager {
             }
 
             this.setupEnvironmentPhysics(environment);
+
+            // Set up environment-specific lights if configured
+            this.setupEnvironmentLights(environment);
 
             // Set up environment-specific particles if configured
             if (environment.particles) {
@@ -664,6 +675,143 @@ export class SceneManager {
 
         // Set character in animation controller
         this.characterController.animationController.setCharacter(character);
+    }
+
+    /**
+     * Disposes all environment-specific lights
+     */
+    private disposeEnvironmentLights(): void {
+        // Enable default light before disposing environment lights
+        // This ensures default light is available when switching to environment without lights
+        if (this.defaultLight !== null) {
+            this.defaultLight.setEnabled(true);
+        }
+        
+        for (const light of this.environmentLights) {
+            light.dispose();
+        }
+        this.environmentLights = [];
+    }
+
+    /**
+     * Creates a light from a LightConfig using discriminated union
+     * @param config The light configuration
+     * @returns The created light or null if creation failed
+     */
+    private createLightFromConfig(config: LightConfig): BABYLON.Light | null {
+        try {
+            let light: BABYLON.Light;
+
+            switch (config.lightType) {
+                case "POINT": {
+                    light = new BABYLON.PointLight(
+                        config.name ?? "PointLight",
+                        config.position,
+                        this.scene
+                    );
+                    if (config.range !== undefined) {
+                        const pointLight = light;
+                        if (pointLight instanceof BABYLON.PointLight) {
+                            pointLight.range = config.range;
+                        }
+                    }
+                    if (config.radius !== undefined) {
+                        const pointLight = light;
+                        if (pointLight instanceof BABYLON.PointLight) {
+                            pointLight.radius = config.radius;
+                        }
+                    }
+                    break;
+                }
+                case "DIRECTIONAL": {
+                    light = new BABYLON.DirectionalLight(
+                        config.name ?? "DirectionalLight",
+                        config.direction,
+                        this.scene
+                    );
+                    break;
+                }
+                case "SPOT": {
+                    light = new BABYLON.SpotLight(
+                        config.name ?? "SpotLight",
+                        config.position,
+                        config.direction,
+                        config.angle ?? Math.PI / 3,
+                        config.exponent ?? 2,
+                        this.scene
+                    );
+                    if (config.range !== undefined) {
+                        const spotLight = light;
+                        if (spotLight instanceof BABYLON.SpotLight) {
+                            spotLight.range = config.range;
+                        }
+                    }
+                    break;
+                }
+                case "HEMISPHERIC": {
+                    light = new BABYLON.HemisphericLight(
+                        config.name ?? "HemisphericLight",
+                        config.direction,
+                        this.scene
+                    );
+                    break;
+                }
+                case "RECTANGULAR_AREA": {
+                    light = new BABYLON.RectAreaLight(
+                        config.name ?? "RectangularAreaLight",
+                        config.position,
+                        config.width ?? 1,
+                        config.height ?? 1,
+                        this.scene
+                    );
+                    break;
+                }
+                default: {
+                    return null;
+                }
+            }
+
+            // Apply common properties
+            if (config.diffuseColor !== undefined) {
+                light.diffuse = config.diffuseColor;
+            }
+            if (config.intensity !== undefined) {
+                light.intensity = config.intensity;
+            }
+            if (config.specularColor !== undefined) {
+                light.specular = config.specularColor;
+            }
+
+            return light;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Sets up environment-specific lights from configuration
+     * @param environment The environment configuration
+     */
+    private setupEnvironmentLights(environment: Environment): void {
+        if (environment.lights && environment.lights.length > 0) {
+            // Environment has lights configured - disable default light
+            if (this.defaultLight !== null) {
+                this.defaultLight.setEnabled(false);
+            }
+            
+            // Create environment lights
+            for (const lightConfig of environment.lights) {
+                const light = this.createLightFromConfig(lightConfig);
+                if (light !== null) {
+                    this.environmentLights.push(light);
+                }
+            }
+        } else {
+            // Environment has no lights configured - enable default light
+            if (this.defaultLight !== null) {
+                this.defaultLight.setEnabled(true);
+            }
+        }
     }
 
     public dispose(): void {
