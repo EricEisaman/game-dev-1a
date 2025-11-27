@@ -445,12 +445,15 @@ Modify the UI appearance in the `createInventoryButton()` and `createInventoryPa
 
 All TypeScript type definitions are located in the `types/` directory:
 
-- `types/babylon.d.ts`: Babylon.js type declarations for Playground v2
+- `types/babylon.d.ts`: Babylon.js type declarations for local development TypeScript checking only
 - `types/character.ts`: Character type definitions
 - `types/environment.ts`: Environment and item type definitions
 - `types/config.ts`: Configuration type definitions
 - `types/effects.ts`: Effects and particle type definitions
 - `types/ui.ts`: UI type definitions
+
+**Important Note about `babylon.d.ts`:**
+The `types/babylon.d.ts` file is **only used for local development TypeScript checking**. It is **not used in the actual Babylon playground environment**. The playground has its own global BABYLON types that are automatically available. Some files (like `utils/engine.ts`) include local type declarations at the top of the file for local dev compatibility, but these don't affect the playground runtime.
 
 **Type Safety:**
 The codebase maintains strict type safety with no `any` types. All customizations should maintain type safety by using the provided type definitions.
