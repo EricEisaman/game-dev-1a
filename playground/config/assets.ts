@@ -340,7 +340,7 @@ export const ASSETS = {
                 inventory: false,
                 instances: [
                 {
-                    position: new BABYLON.Vector3(-5, 1.2, 5),
+                    position: new BABYLON.Vector3(51, 29, -28),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
                     mass: 1500,
@@ -348,7 +348,7 @@ export const ASSETS = {
                     friction: 0.9
                 },
                 {
-                    position: new BABYLON.Vector3(5, 1.2, 5),
+                    position: new BABYLON.Vector3(55, 31, -20),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
                     mass: 1500,
