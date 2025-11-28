@@ -340,6 +340,25 @@ export class CollectiblesManager {
         // Mark as collected
         this.collectedItems.add(id);
 
+        // Remove physics body from simulation (must be done before disposing)
+        const physicsAggregate = this.collectibleBodies.get(id);
+        if (physicsAggregate && this.scene) {
+            const physicsEngine = this.scene.getPhysicsEngine();
+            if (physicsEngine) {
+                const havokPlugin = physicsEngine as unknown as BABYLON.HavokPlugin;
+                // Remove body from physics engine first
+                havokPlugin.removeBody(physicsAggregate.body);
+            }
+            // Dispose the physics aggregate to free resources
+            physicsAggregate.dispose();
+            // Clear physics body reference from mesh if it exists
+            if ('physicsBody' in collectible && collectible.physicsBody) {
+                (collectible as { physicsBody: BABYLON.PhysicsBody | null }).physicsBody = null;
+            }
+            // Remove from map since it's disposed
+            this.collectibleBodies.delete(id);
+        }
+
         // Hide the collectible
         collectible.setEnabled(false);
 
@@ -464,11 +483,13 @@ export class CollectiblesManager {
      */
     private static removeCollectible(collectibleId: string): void {
         const mesh = this.collectibles.get(collectibleId);
+        const physicsAggregate = this.collectibleBodies.get(collectibleId);
 
         if (mesh) {
             // Dispose physics body if it exists
-            if (mesh.physicsImpostor) {
-                mesh.physicsImpostor.dispose();
+            if (physicsAggregate) {
+                physicsAggregate.dispose();
+                this.collectibleBodies.delete(collectibleId);
             }
             mesh.dispose();
             this.collectibles.delete(collectibleId);

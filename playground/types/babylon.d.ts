@@ -37,6 +37,14 @@ declare global {
         function Lerp(start: number, end: number, amount: number): number;
         function ParseFromSnippetAsync(snippetId: string, scene: Scene, rootUrl?: string): Promise<IParticleSystem>;
 
+        interface IPhysicsEngine {
+            removeBody?(body: PhysicsBody): void;
+            addBody?(body: PhysicsBody): void;
+        }
+
+        interface PhysicsPlugin extends IPhysicsEngine {
+        }
+
         interface Scene {
             engine: Engine;
             meshes: AbstractMesh[];
@@ -47,6 +55,7 @@ declare global {
             onAfterPhysicsObservable: Observable<Scene>;
             onKeyboardObservable: Observable<KeyboardInfo>;
             enablePhysics(gravity: Vector3, plugin: PhysicsPlugin): void;
+            getPhysicsEngine(): IPhysicsEngine | null;
             getAnimationGroupByName(name: string): AnimationGroup | null;
         getMeshByName(name: string): AbstractMesh | null;
         getEngine(): Engine;
@@ -56,10 +65,6 @@ declare global {
 
         interface Engine {
             getRenderingCanvas(): HTMLCanvasElement | null;
-        }
-
-        interface PhysicsPlugin {
-            // Physics plugin interface
         }
 
         interface TargetCamera {
@@ -266,8 +271,10 @@ declare global {
             constructor(name: string, direction: Vector3, scene: Scene);
         }
 
-        class HavokPlugin {
+        class HavokPlugin implements PhysicsPlugin {
             constructor(useSharedArrayBuffer?: boolean);
+            removeBody(body: PhysicsBody): void;
+            addBody(body: PhysicsBody): void;
         }
 
         class Sound {
