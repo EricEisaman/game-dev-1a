@@ -116,8 +116,8 @@ export const ASSETS = {
             },
             scale: 2.0,
             mass: 10.0, // High mass for Hulk character
-            height: 3.0,
-            radius: 1.2,
+            height: 2.55,
+            radius: 0.95,
             speed: {
                 inAir: 30.0,
                 onGround: 25.0, 
