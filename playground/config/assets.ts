@@ -115,19 +115,20 @@ export const ASSETS = {
                 jump: "jump"
             },
             scale: 2.0,
-            mass: 2.2,
+            mass: 10.0, // High mass for Hulk character
             height: 3.0,
             radius: 1.2,
             speed: {
                 inAir: 30.0,
-                onGround: 20.0, // Slower on ground
-                boostMultiplier: 15.0
+                onGround: 25.0, 
+                boostMultiplier: 8.0
             },
             jumpHeight: 11, // Lower jumps
             rotationSpeed: 0.04, // Slower rotation
             rotationSmoothing: 0.25, // More smoothing for sluggish feel
             animationBlend: 200,
-            jumpDelay: 200
+            jumpDelay: 200,
+            friction: 0.55
         }
     ] satisfies readonly Character[],
     ENVIRONMENTS: [
@@ -316,14 +317,14 @@ export const ASSETS = {
                 itemEffectKind: "gamma",
                 instances: [
                 {
-                    position: new BABYLON.Vector3(-15, 1.2, 5),
+                    position: new BABYLON.Vector3(-15, 0.9, 5),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
                     mass: 500,
                     friction: 0.9
                 },
                 {
-                    position: new BABYLON.Vector3(-28, 1.2, 5),
+                    position: new BABYLON.Vector3(-28, 0.9, 5),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
                     mass: 500,
@@ -340,18 +341,18 @@ export const ASSETS = {
                 inventory: false,
                 instances: [
                 {
-                    position: new BABYLON.Vector3(51, 29, -28),
+                    position: new BABYLON.Vector3(47, 29, -28),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 1500,
+                    mass: 500,
                     colliderType: "CONVEX_HULL",
                     friction: 0.9
                 },
                 {
-                    position: new BABYLON.Vector3(55, 31, -20),
+                    position: new BABYLON.Vector3(48, 31, -20),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 1500,
+                    mass: 500,
                     colliderType: "CONVEX_HULL",
                     friction: 0.9
                 }

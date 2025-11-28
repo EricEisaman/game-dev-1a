@@ -587,11 +587,11 @@ export class CharacterController {
             // Only apply gravity and minimal air resistance to preserve realistic physics
         }
 
-        // Character-specific air resistance based on mass
-        // Heavier characters (like Zombie: 1.5) have more air resistance, lighter characters (like Tech Girl: 0.8) are more aerodynamic
-        const baseAirResistance = 0.98;
-        const massAdjustedAirResistance = baseAirResistance - (characterMass - 1.0) * 0.01; // Heavier = more resistance
-        outputVelocity.scaleInPlace(massAdjustedAirResistance);
+        // Minimal air resistance - consistent for all characters regardless of mass
+        // Air resistance should be minimal to allow all characters to move normally in air
+        // Mass doesn't significantly affect air resistance in this physics model
+        const airResistance = 0.98; // Minimal air resistance (loses 2% of velocity per frame)
+        outputVelocity.scaleInPlace(airResistance);
 
         // Preserve vertical velocity component from jump
         outputVelocity.addInPlace(upWorld.scale(-outputVelocity.dot(upWorld)));
@@ -631,26 +631,39 @@ export class CharacterController {
 
         outputVelocity.subtractInPlace(supportInfo.averageSurfaceVelocity);
 
-        // Character-specific friction based on mass
-        // Heavier characters have more friction (more stable), lighter characters have less friction (more slippery)
-        const baseFriction = 0.95;
-        const massAdjustedFriction = baseFriction + (characterMass - 1.0) * 0.02; // Heavier = more friction
-        const maxSpeed = massAdjustedSpeed * 2.0;
+        // Character-specific friction (INVERTED LOGIC: friction = velocity loss per frame)
+        // Use explicit friction if provided, otherwise use improved mass-adjusted formula
+        let friction: number;
+        if (character.friction !== undefined) {
+            friction = character.friction;
+        } else {
+            // Improved mass-adjusted formula that caps friction at 0.99 and scales better
+            const baseFriction = 0.95;
+            friction = Math.min(baseFriction + (characterMass - 1.0) * 0.01, 0.99);
+        }
 
-        // Apply character-specific friction
-        outputVelocity.scaleInPlace(massAdjustedFriction);
+        // Apply mass-based friction multiplier
+        const effectiveFriction = Math.min(friction * (1.0 + (characterMass - 1.0) * 0.1), 0.99);
+
+        // Apply friction based on input state
+        const hasInput = this.inputDirection.length() >= 0.1;
+        if (hasInput) {
+            // With input: apply reduced friction (10% of friction value) to allow movement
+            const movementFriction = effectiveFriction * 0.1;
+            const velocityRetention = 1.0 - movementFriction;
+            outputVelocity.scaleInPlace(velocityRetention);
+        } else {
+            // No input: apply full friction for strong stopping
+            const velocityRetention = 1.0 - effectiveFriction;
+            outputVelocity.scaleInPlace(velocityRetention);
+        }
+
+        const maxSpeed = massAdjustedSpeed * 2.0;
 
         // Clamp velocity to prevent excessive sliding
         const currentSpeed = outputVelocity.length();
         if (currentSpeed > maxSpeed) {
             outputVelocity.normalize().scaleInPlace(maxSpeed);
-        }
-
-        // Character-specific damping when no input is detected
-        // Heavier characters stop more quickly, lighter characters slide more
-        if (this.inputDirection.length() < 0.1) {
-            const dampingFactor = 0.9 + (characterMass - 1.0) * 0.05; // Heavier = more damping
-            outputVelocity.scaleInPlace(dampingFactor);
         }
 
         const inv1k = 1e-3;

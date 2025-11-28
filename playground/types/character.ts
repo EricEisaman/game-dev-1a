@@ -31,6 +31,7 @@ export interface Character {
     readonly rotationSmoothing: number; // Rotation smoothing factor
     readonly animationBlend?: number; // Animation blend time in milliseconds, defaults to 400
     readonly jumpDelay?: number; // Jump animation delay in milliseconds, defaults to 100
+    readonly friction?: number; // Character-specific friction coefficient (0.0-1.0), defaults to mass-adjusted calculation
 }
 
 // Forward declaration for CharacterController
