@@ -319,13 +319,15 @@ export const ASSETS = {
                     position: new BABYLON.Vector3(-15, 1.2, 5),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 1
+                    mass: 500,
+                    friction: 0.9
                 },
                 {
                     position: new BABYLON.Vector3(-28, 1.2, 5),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 1
+                    mass: 500,
+                    friction: 0.9
                 }
                 ]
             },
@@ -341,7 +343,7 @@ export const ASSETS = {
                     position: new BABYLON.Vector3(-5, 1.2, 5),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
+                    mass: 1500,
                     colliderType: "CONVEX_HULL",
                     friction: 0.9
                 },
@@ -349,7 +351,7 @@ export const ASSETS = {
                     position: new BABYLON.Vector3(5, 1.2, 5),
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
+                    mass: 1500,
                     colliderType: "CONVEX_HULL",
                     friction: 0.9
                 }
