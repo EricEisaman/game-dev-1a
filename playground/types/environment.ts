@@ -4,6 +4,7 @@
 
 export const OBJECT_ROLE = {
     DYNAMIC_BOX: "DYNAMIC_BOX",
+    DYNAMIC: "DYNAMIC",
     PIVOT_BEAM: "PIVOT_BEAM"
 } as const;
 
@@ -14,11 +15,14 @@ export interface LightmappedMesh {
     readonly level: number;
 }
 
+export type ColliderType = "BOX" | "SPHERE" | "CAPSULE" | "CYLINDER" | "CONVEX_HULL" | "MESH";
+
 export interface PhysicsObject {
     readonly name: string;
     readonly mass: number;
     readonly scale: number;
     readonly role: ObjectRole;
+    readonly colliderType?: ColliderType;
 }
 
 export interface EnvironmentParticle {
@@ -123,7 +127,7 @@ export interface ItemConfig {
     readonly name: string;
     readonly url: string;
     readonly collectible: boolean;
-    readonly creditValue: number;
+    readonly creditValue?: number;
     readonly minImpulseForCollection: number;
     readonly instances: readonly ItemInstance[];
     readonly inventory?: boolean;
@@ -136,6 +140,7 @@ export interface ItemInstance {
     readonly scale: number;
     readonly rotation: BABYLON.Vector3;
     readonly mass: number;
+    readonly colliderType?: ColliderType;
 }
 
 // Import ItemEffectKind from config to avoid circular dependency

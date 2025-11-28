@@ -150,6 +150,12 @@ export const ASSETS = {
                 { name: "Cube.005", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.006", mass: 0.01, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
                 { name: "Cube.007", mass: 0, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX }
+                // Example boulder configurations with rounded colliders:
+                // Note: Use OBJECT_ROLE.DYNAMIC for objects with any collider type (SPHERE, CONVEX_HULL, etc.)
+                // OBJECT_ROLE.DYNAMIC_BOX is kept for backward compatibility but DYNAMIC is preferred for rounded colliders
+                // { name: "Boulder", mass: 2.0, scale: 1, role: OBJECT_ROLE.DYNAMIC, colliderType: "SPHERE" }, // Use SPHERE for spherical boulders
+                // { name: "Boulder.001", mass: 2.0, scale: 1, role: OBJECT_ROLE.DYNAMIC, colliderType: "CONVEX_HULL" }, // Use CONVEX_HULL for irregular rounded shapes
+                // { name: "Boulder.002", mass: 1.5, scale: 1, role: OBJECT_ROLE.DYNAMIC, colliderType: "CAPSULE" }, // Use CAPSULE for elongated rounded objects
             ],
             sky: {
                 TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/cartoon-river-with-orange-sky.jpg",

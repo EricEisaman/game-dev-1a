@@ -14,7 +14,7 @@ import { CollectiblesManager } from './CollectiblesManager';
 import { InventoryManager } from './InventoryManager';
 import { NodeMaterialManager } from './NodeMaterialManager';
 import type { Character } from '../types/character';
-import type { Environment, LightConfig, PointLightConfig, DirectionalLightConfig, SpotLightConfig, HemisphericLightConfig, RectangularAreaLightConfig } from '../types/environment';
+import type { Environment, LightConfig, PointLightConfig, DirectionalLightConfig, SpotLightConfig, HemisphericLightConfig, RectangularAreaLightConfig, ColliderType } from '../types/environment';
 import { SkyManager } from './SkyManager';
 import { OBJECT_ROLE } from '../types/environment';
 
@@ -420,9 +420,31 @@ export class SceneManager {
                     mesh.scaling.setAll(physicsObject.scale);
                 }
 
-                new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: physicsObject.mass });
+                const shapeType = this.getPhysicsShapeType(physicsObject.colliderType);
+                new BABYLON.PhysicsAggregate(mesh, shapeType, { mass: physicsObject.mass });
             }
         });
+    }
+
+    private getPhysicsShapeType(colliderType: ColliderType | undefined): BABYLON.PhysicsShapeType {
+        if (!colliderType) {
+            return BABYLON.PhysicsShapeType.BOX;
+        }
+
+        switch (colliderType) {
+            case "SPHERE":
+                return BABYLON.PhysicsShapeType.SPHERE;
+            case "CAPSULE":
+                return BABYLON.PhysicsShapeType.CAPSULE;
+            case "CYLINDER":
+                return BABYLON.PhysicsShapeType.CYLINDER;
+            case "CONVEX_HULL":
+                return BABYLON.PhysicsShapeType.CONVEX_HULL;
+            case "MESH":
+                return BABYLON.PhysicsShapeType.MESH;
+            case "BOX":
+                return BABYLON.PhysicsShapeType.BOX;
+        }
     }
 
     private setupJoints(environment: Environment): void {
@@ -436,7 +458,10 @@ export class SceneManager {
             beamMesh.scaling.set(3, 0.05, 1);
 
             // Find a fixed mass object to attach the hinge to
-            const fixedMassObject = environment.physicsObjects.find(obj => obj.role === OBJECT_ROLE.DYNAMIC_BOX && obj.mass === 0);
+            // Accept both DYNAMIC_BOX (backward compatibility) and DYNAMIC (generic role)
+            const fixedMassObject = environment.physicsObjects.find(obj => 
+                (obj.role === OBJECT_ROLE.DYNAMIC_BOX || obj.role === OBJECT_ROLE.DYNAMIC) && obj.mass === 0
+            );
             if (!fixedMassObject) return;
 
             const fixedMesh = this.scene.getMeshByName(fixedMassObject.name);

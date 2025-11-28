@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { CharacterController } from '../controllers/CharacterController';
-import type { Environment, ItemConfig, ItemInstance } from '../types/environment';
+import type { Environment, ItemConfig, ItemInstance, ColliderType } from '../types/environment';
 import { InventoryManager } from './InventoryManager';
 import { InventoryUI } from '../ui/InventoryUI';
 
@@ -19,10 +19,15 @@ export class CollectiblesManager {
     private static instanceBasis: BABYLON.Mesh | null = null;
     private static itemConfigs: Map<string, ItemConfig> = new Map();
     
+    // Tracking for non-collectible physics items
+    private static physicsItems: Map<string, BABYLON.AbstractMesh> = new Map();
+    private static physicsItemBodies: Map<string, BABYLON.PhysicsAggregate> = new Map();
+    
     // Cached particle systems for efficiency
     private static cachedParticleSystem: BABYLON.ParticleSystem | null = null;
     private static particleSystemPool: BABYLON.ParticleSystem[] = [];
     private static readonly MAX_POOL_SIZE = 5;
+    private static particleSystemReturnObservers: Map<BABYLON.ParticleSystem, BABYLON.Observer<BABYLON.Scene>> = new Map();
 
     /**
      * Initializes the CollectiblesManager with a scene and character controller
@@ -71,20 +76,24 @@ export class CollectiblesManager {
 
         // Iterate through all items in environment
         for (const itemConfig of environment.items) {
-            // Only process collectible items
-            if (itemConfig.collectible) {
-                await this.loadItemModel(itemConfig);
+            await this.loadItemModel(itemConfig);
 
-                // Create instances for this item
-                for (let i = 0; i < itemConfig.instances.length; i++) {
-                    const instance = itemConfig.instances[i];
-                    const instanceId = `${itemConfig.name.toLowerCase()}_instance_${i + 1}`;
+            // Create instances for this item
+            for (let i = 0; i < itemConfig.instances.length; i++) {
+                const instance = itemConfig.instances[i];
+                const instanceId = `${itemConfig.name.toLowerCase()}_instance_${i + 1}`;
+                
+                if (itemConfig.collectible) {
+                    // Process as collectible item
                     await this.createCollectibleInstance(instanceId, instance, itemConfig);
+                } else {
+                    // Process as non-collectible physics item
+                    await this.createPhysicsInstance(instanceId, instance, itemConfig);
                 }
             }
         }
 
-        // Set up collision detection
+        // Set up collision detection only for collectible items
         this.setupCollisionDetection();
     }
 
@@ -94,12 +103,9 @@ export class CollectiblesManager {
     private static async waitForPhysicsInitialization(): Promise<void> {
         if (!this.scene) return;
 
-        // Simple delay to allow physics to initialize
-        return new Promise<void>((resolve) => {
-            setTimeout(() => {
-                resolve();
-            }, 100);
-        });
+        // Physics is initialized synchronously in SceneManager.setupPhysics()
+        // before setupEnvironmentItems() is called, so no wait is needed
+        return Promise.resolve();
     }
 
     /**
@@ -191,10 +197,11 @@ export class CollectiblesManager {
             // const boundingBox = meshInstance.getBoundingInfo();
             // const scaledSize = boundingBox.boundingBox.extendSize.scale(2); // Multiply by 2 to get full size
 
-            // Create physics body with dynamic box shape based on scaled dimensions
+            // Create physics body with appropriate shape type
+            const shapeType = this.getPhysicsShapeType(instance.colliderType);
             const physicsAggregate = new BABYLON.PhysicsAggregate(
                 meshInstance,
-                BABYLON.PhysicsShapeType.BOX,
+                shapeType,
                 { mass: instance.mass }
             );
 
@@ -209,6 +216,51 @@ export class CollectiblesManager {
             this.addRotationAnimation(meshInstance);
         } catch (_error) {
             // Ignore collectible creation errors for playground compatibility
+        }
+    }
+
+    /**
+     * Creates a non-collectible physics instance from the loaded model
+     */
+    private static async createPhysicsInstance(id: string, instance: ItemInstance, itemConfig: ItemConfig): Promise<void> {
+        if (!this.scene || !this.instanceBasis) {
+            return;
+        }
+
+        try {
+            // Create an instance from the loaded model
+            const meshInstance = this.instanceBasis.createInstance(id);
+
+            // Set the mesh name to the instance ID for proper identification
+            meshInstance.name = id;
+
+            // Remove the instance from its parent to make it independent
+            if (meshInstance.parent) {
+                meshInstance.setParent(null);
+            }
+
+            // Apply instance properties
+            meshInstance.position = instance.position;
+            meshInstance.scaling.setAll(instance.scale);
+            meshInstance.rotation = instance.rotation;
+
+            // Make it visible and enabled
+            meshInstance.isVisible = true;
+            meshInstance.setEnabled(true);
+
+            // Create physics body with appropriate shape type
+            const shapeType = this.getPhysicsShapeType(instance.colliderType);
+            const physicsAggregate = new BABYLON.PhysicsAggregate(
+                meshInstance,
+                shapeType,
+                { mass: instance.mass }
+            );
+
+            // Store references for cleanup
+            this.physicsItems.set(id, meshInstance);
+            this.physicsItemBodies.set(id, physicsAggregate);
+        } catch (_error) {
+            // Ignore physics item creation errors for playground compatibility
         }
     }
 
@@ -301,8 +353,9 @@ export class CollectiblesManager {
         // ALWAYS update inventory button opacity after ANY collection
         InventoryUI.updateInventoryButton();
 
-        // Add credits
-        this.totalCredits += itemConfig.creditValue;
+        // Add credits (default to 0 if not specified or if not collectible)
+        const creditValue = itemConfig.collectible ? (itemConfig.creditValue ?? 0) : 0;
+        this.totalCredits += creditValue;
     }
 
     /**
@@ -381,12 +434,21 @@ export class CollectiblesManager {
 
         // Set position and start
         particleSystem.emitter = position;
+        particleSystem.targetStopDuration = 1.0;
         particleSystem.start();
 
-        // Return to pool after effect duration
-        setTimeout(() => {
-            this.returnParticleSystemToPool(particleSystem);
-        }, 1000);
+        // Set up observer to return to pool when particle system stops
+        // Check approximately every 60 frames (1 second at 60fps)
+        let frameCount = 0;
+        const observer = this.scene.onBeforeRenderObservable.add(() => {
+            frameCount++;
+            if (frameCount >= 60) {
+                this.scene?.onBeforeRenderObservable.remove(observer);
+                this.particleSystemReturnObservers.delete(particleSystem);
+                this.returnParticleSystemToPool(particleSystem);
+            }
+        });
+        this.particleSystemReturnObservers.set(particleSystem, observer);
     }
 
     /**
@@ -406,7 +468,7 @@ export class CollectiblesManager {
     }
 
     /**
-     * Clears all collectibles
+     * Clears all collectibles and non-collectible physics items
      */
     public static clearCollectibles(): void {
         // Collect all tracked collectible IDs before clearing the map
@@ -419,6 +481,17 @@ export class CollectiblesManager {
         for (const [id, mesh] of this.collectibles.entries()) {
             this.removeCollectible(id);
         }
+
+        // Remove all non-collectible physics items
+        for (const [id, mesh] of this.physicsItems.entries()) {
+            const physicsBody = this.physicsItemBodies.get(id);
+            if (physicsBody) {
+                physicsBody.dispose();
+            }
+            mesh.dispose();
+        }
+        this.physicsItems.clear();
+        this.physicsItemBodies.clear();
 
         // Also manually dispose any collectible meshes that might not be in the map
         // (in case the manager was reinitialized and lost references)
@@ -478,6 +551,30 @@ export class CollectiblesManager {
     }
 
     /**
+     * Gets the physics shape type based on collider type
+     */
+    private static getPhysicsShapeType(colliderType: ColliderType | undefined): BABYLON.PhysicsShapeType {
+        if (!colliderType) {
+            return BABYLON.PhysicsShapeType.BOX;
+        }
+
+        switch (colliderType) {
+            case "SPHERE":
+                return BABYLON.PhysicsShapeType.SPHERE;
+            case "CAPSULE":
+                return BABYLON.PhysicsShapeType.CAPSULE;
+            case "CYLINDER":
+                return BABYLON.PhysicsShapeType.CYLINDER;
+            case "CONVEX_HULL":
+                return BABYLON.PhysicsShapeType.CONVEX_HULL;
+            case "MESH":
+                return BABYLON.PhysicsShapeType.MESH;
+            case "BOX":
+                return BABYLON.PhysicsShapeType.BOX;
+        }
+    }
+
+    /**
      * Disposes of the CollectiblesManager
      */
     public static dispose(): void {
@@ -498,6 +595,12 @@ export class CollectiblesManager {
             this.cachedParticleSystem.dispose();
             this.cachedParticleSystem = null;
         }
+
+        // Remove all particle system return observers
+        this.particleSystemReturnObservers.forEach((observer) => {
+            this.scene?.onBeforeRenderObservable.remove(observer);
+        });
+        this.particleSystemReturnObservers.clear();
 
         // Dispose particle system pool
         this.particleSystemPool.forEach(ps => ps.dispose());
