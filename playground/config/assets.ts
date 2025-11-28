@@ -328,6 +328,32 @@ export const ASSETS = {
                     mass: 1
                 }
                 ]
+            },
+            {
+                name: "Boulder",
+                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/boulder.glb",
+                collectible: false,
+                creditValue: 500,
+                minImpulseForCollection: 0.3,
+                inventory: false,
+                instances: [
+                {
+                    position: new BABYLON.Vector3(-5, 1.2, 5),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 500,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(5, 1.2, 5),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 500,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                }
+                ]
             }
             ]
         },

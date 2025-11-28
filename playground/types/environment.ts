@@ -23,6 +23,7 @@ export interface PhysicsObject {
     readonly scale: number;
     readonly role: ObjectRole;
     readonly colliderType?: ColliderType;
+    readonly friction?: number;
 }
 
 export interface EnvironmentParticle {
@@ -141,6 +142,7 @@ export interface ItemInstance {
     readonly rotation: BABYLON.Vector3;
     readonly mass: number;
     readonly colliderType?: ColliderType;
+    readonly friction?: number;
 }
 
 // Import ItemEffectKind from config to avoid circular dependency

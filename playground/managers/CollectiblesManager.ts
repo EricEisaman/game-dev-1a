@@ -199,10 +199,14 @@ export class CollectiblesManager {
 
             // Create physics body with appropriate shape type
             const shapeType = this.getPhysicsShapeType(instance.colliderType);
+            const options: { mass: number; friction?: number } = { mass: instance.mass };
+            if (instance.friction !== undefined) {
+                options.friction = instance.friction;
+            }
             const physicsAggregate = new BABYLON.PhysicsAggregate(
                 meshInstance,
                 shapeType,
-                { mass: instance.mass }
+                options
             );
 
             // Store references
@@ -250,10 +254,14 @@ export class CollectiblesManager {
 
             // Create physics body with appropriate shape type
             const shapeType = this.getPhysicsShapeType(instance.colliderType);
+            const options: { mass: number; friction?: number } = { mass: instance.mass };
+            if (instance.friction !== undefined) {
+                options.friction = instance.friction;
+            }
             const physicsAggregate = new BABYLON.PhysicsAggregate(
                 meshInstance,
                 shapeType,
-                { mass: instance.mass }
+                options
             );
 
             // Store references for cleanup

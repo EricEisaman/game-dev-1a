@@ -424,7 +424,7 @@ declare global {
     }
 
     class PhysicsAggregate {
-        constructor(mesh: AbstractMesh, shapeType: PhysicsShapeType, options?: { mass?: number });
+        constructor(mesh: AbstractMesh, shapeType: PhysicsShapeType, options?: { mass?: number; friction?: number; restitution?: number });
         body: PhysicsBody;
     }
 

@@ -385,7 +385,8 @@ export class SceneManager {
             const mesh = this.scene.getMeshByName(lightmappedMesh.name);
             if (!mesh) return;
 
-            new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH);
+            // Add friction to ground meshes - CRITICAL: both objects need friction for it to work
+            new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, { mass: 0, friction: 0.9 });
             mesh.isPickable = false;
 
             if (mesh.material != null) {
@@ -421,7 +422,11 @@ export class SceneManager {
                 }
 
                 const shapeType = this.getPhysicsShapeType(physicsObject.colliderType);
-                new BABYLON.PhysicsAggregate(mesh, shapeType, { mass: physicsObject.mass });
+                const options: { mass: number; friction?: number } = { mass: physicsObject.mass };
+                if (physicsObject.friction !== undefined) {
+                    options.friction = physicsObject.friction;
+                }
+                new BABYLON.PhysicsAggregate(mesh, shapeType, options);
             }
         });
     }
@@ -468,7 +473,8 @@ export class SceneManager {
             if (!fixedMesh) return;
 
             // Create physics aggregates if they don't exist
-            const fixedMass = new BABYLON.PhysicsAggregate(fixedMesh, BABYLON.PhysicsShapeType.BOX, { mass: 0 });
+            // Add friction to static ground mesh - CRITICAL: both objects need friction for it to work
+            const fixedMass = new BABYLON.PhysicsAggregate(fixedMesh, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.9 });
             const beam = new BABYLON.PhysicsAggregate(beamMesh, BABYLON.PhysicsShapeType.BOX, { mass: pivotBeam.mass });
 
             // Create hinge constraint
@@ -501,8 +507,9 @@ export class SceneManager {
         allEnvironmentMeshes.forEach(mesh => {
             if (mesh instanceof BABYLON.Mesh && mesh.geometry != null && mesh.geometry.getTotalVertices() > 0) {
                 // Create a static physics body (mass = 0) for environment geometry
+                // Add friction to ground meshes - CRITICAL: both objects need friction for it to work
                 // The physics shape will automatically account for the mesh's current scaling
-                new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, { mass: 0 });
+                new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, { mass: 0, friction: 0.9 });
                 mesh.isPickable = false;
             }
         });
