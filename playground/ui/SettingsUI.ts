@@ -193,6 +193,9 @@ export class SettingsUI {
         const header = this.settingsPanel.querySelector('.settings-header');
         if (header instanceof HTMLElement) {
             header.style.cssText = `
+            position: sticky;
+            top: 0;
+            z-index: 1;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -242,6 +245,14 @@ export class SettingsUI {
      */
     private static applySectionStyles(): void {
         if (!this.settingsPanel) return;
+
+        // Ensure header sticky positioning is maintained
+        const header = this.settingsPanel.querySelector('.settings-header');
+        if (header instanceof HTMLElement) {
+            header.style.position = 'sticky';
+            header.style.top = '0';
+            header.style.zIndex = '1';
+        }
 
         // Style the content area
         const content = this.settingsPanel.querySelector('.settings-content');

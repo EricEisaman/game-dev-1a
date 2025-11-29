@@ -154,6 +154,14 @@ export class InventoryUI {
             // Default to closed position
             this.inventoryPanel.style.right = '-100%';
         }
+
+        // Ensure header sticky positioning is maintained
+        const header = this.inventoryPanel.querySelector('.inventory-header');
+        if (header instanceof HTMLElement) {
+            header.style.position = 'sticky';
+            header.style.top = '0';
+            header.style.zIndex = '1';
+        }
     }
 
     /**
@@ -213,6 +221,9 @@ export class InventoryUI {
 
         this.inventoryPanel.innerHTML = `
             <div class="inventory-header" style="
+                position: sticky;
+                top: 0;
+                z-index: 1;
                 display: flex;
                 justify-content: center;
                 align-items: center;
