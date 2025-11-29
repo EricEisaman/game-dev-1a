@@ -2,6 +2,8 @@
 // ENVIRONMENT TYPE DEFINITIONS
 // ============================================================================
 
+import type { EffectType } from './effects';
+
 export const OBJECT_ROLE = {
     DYNAMIC_BOX: "DYNAMIC_BOX",
     DYNAMIC: "DYNAMIC",
@@ -24,6 +26,7 @@ export interface PhysicsObject {
     readonly role: ObjectRole;
     readonly colliderType?: ColliderType;
     readonly friction?: number;
+    readonly effect?: EffectType;
 }
 
 export interface EnvironmentParticle {
@@ -143,6 +146,8 @@ export interface ItemInstance {
     readonly mass: number;
     readonly colliderType?: ColliderType;
     readonly friction?: number;
+    readonly instanceName?: string;
+    readonly effect?: EffectType;
 }
 
 // Import ItemEffectKind from config to avoid circular dependency

@@ -6,6 +6,8 @@ import type { CharacterController } from '../controllers/CharacterController';
 import type { Environment, ItemConfig, ItemInstance, ColliderType } from '../types/environment';
 import { InventoryManager } from './InventoryManager';
 import { InventoryUI } from '../ui/InventoryUI';
+import { EffectsManager } from './EffectsManager';
+import type { EffectType } from '../types/effects';
 
 export class CollectiblesManager {
     private static scene: BABYLON.Scene | null = null;
@@ -173,8 +175,8 @@ export class CollectiblesManager {
             // Create an instance from the loaded model
             const meshInstance = this.instanceBasis.createInstance(id);
 
-            // Set the mesh name to the instance ID for proper identification
-            meshInstance.name = id;
+            // Set the mesh name to instanceName if provided, otherwise use the generated ID
+            meshInstance.name = instance.instanceName ?? id;
 
             // Set metadata to mark this as a collectible
             meshInstance.metadata = { isCollectible: true };
@@ -218,6 +220,11 @@ export class CollectiblesManager {
 
             // Add rotation animation
             this.addRotationAnimation(meshInstance);
+
+            // Apply glow effect if specified
+            if (instance.effect === "GLOW" satisfies EffectType && meshInstance instanceof BABYLON.Mesh) {
+                EffectsManager.applyGlow(meshInstance);
+            }
         } catch (_error) {
             // Ignore collectible creation errors for playground compatibility
         }
@@ -235,8 +242,8 @@ export class CollectiblesManager {
             // Create an instance from the loaded model
             const meshInstance = this.instanceBasis.createInstance(id);
 
-            // Set the mesh name to the instance ID for proper identification
-            meshInstance.name = id;
+            // Set the mesh name to instanceName if provided, otherwise use the generated ID
+            meshInstance.name = instance.instanceName ?? id;
 
             // Remove the instance from its parent to make it independent
             if (meshInstance.parent) {
@@ -267,6 +274,11 @@ export class CollectiblesManager {
             // Store references for cleanup
             this.physicsItems.set(id, meshInstance);
             this.physicsItemBodies.set(id, physicsAggregate);
+
+            // Apply glow effect if specified
+            if (instance.effect === "GLOW" satisfies EffectType && meshInstance instanceof BABYLON.Mesh) {
+                EffectsManager.applyGlow(meshInstance);
+            }
         } catch (_error) {
             // Ignore physics item creation errors for playground compatibility
         }

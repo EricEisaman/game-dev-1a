@@ -2,6 +2,8 @@
 // EFFECTS TYPE DEFINITIONS
 // ============================================================================
 
+export type EffectType = "GLOW";
+
 export type SkyType = "BOX" | "SPHERE";
 
 export interface SkyConfig {

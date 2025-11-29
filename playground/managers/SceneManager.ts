@@ -17,6 +17,7 @@ import type { Character } from '../types/character';
 import type { Environment, LightConfig, PointLightConfig, DirectionalLightConfig, SpotLightConfig, HemisphericLightConfig, RectangularAreaLightConfig, ColliderType } from '../types/environment';
 import { SkyManager } from './SkyManager';
 import { OBJECT_ROLE } from '../types/environment';
+import type { EffectType } from '../types/effects';
 
 // Animation Groups - Global object for managing player animations
 const playerAnimations: Record<string, BABYLON.AnimationGroup | undefined> = {};
@@ -427,6 +428,11 @@ export class SceneManager {
                     options.friction = physicsObject.friction;
                 }
                 new BABYLON.PhysicsAggregate(mesh, shapeType, options);
+
+                // Apply glow effect if specified
+                if (physicsObject.effect === "GLOW" satisfies EffectType && mesh instanceof BABYLON.Mesh) {
+                    EffectsManager.applyGlow(mesh);
+                }
             }
         });
     }

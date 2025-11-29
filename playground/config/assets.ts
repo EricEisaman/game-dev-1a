@@ -4,7 +4,7 @@
 
 import type { Character } from '../types/character';
 import type { Environment, LightType } from '../types/environment';
-import type { SkyType } from '../types/effects';
+import type { SkyType, EffectType } from '../types/effects';
 import { OBJECT_ROLE } from '../types/environment';
 
 export const ASSETS = {
@@ -143,7 +143,7 @@ export const ASSETS = {
                 { name: "level_primitive2", level: 1.6 }
             ],
             physicsObjects: [
-                { name: "Cube", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
+                { name: "Cube", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX, effect: "GLOW" satisfies EffectType },
                 { name: "Cube.001", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.002", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.003", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
