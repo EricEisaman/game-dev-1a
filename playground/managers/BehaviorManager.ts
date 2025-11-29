@@ -181,7 +181,13 @@ export class BehaviorManager {
         const instancePosition = instance.mesh.position;
 
         const distance = BABYLON.Vector3.Distance(characterPosition, instancePosition);
-        return distance <= config.radius;
+        const isWithinRadius = distance <= config.radius;
+        
+        if (config.triggerOutOfRange === true) {
+            return !isWithinRadius;
+        }
+        
+        return isWithinRadius;
     }
 
     /**

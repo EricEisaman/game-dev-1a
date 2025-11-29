@@ -27,6 +27,7 @@ export interface ProximityTriggerConfig {
     readonly triggerKind: "proximity";
     readonly radius: number;
     readonly checkPeriod?: CheckPeriod; // Defaults to "everyFrame" if not specified
+    readonly triggerOutOfRange?: boolean; // When true, applies behavior when character is OUTSIDE radius
     readonly edgeColor?: BABYLON.Color4;
     readonly edgeWidth?: number;
 }
