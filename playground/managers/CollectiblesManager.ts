@@ -609,6 +609,26 @@ export class CollectiblesManager {
     }
 
     /**
+     * Adjusts credits by a specified amount
+     * @param amount - The amount to adjust credits by. Positive values add credits, negative values subtract credits.
+     * @returns The new total credits after adjustment
+     */
+    public static adjustCredits(amount: number): number {
+        // Validate amount - treat invalid numbers as 0
+        const validAmount = Number.isFinite(amount) ? amount : 0;
+        
+        // Adjust credits
+        this.totalCredits += validAmount;
+        
+        // Clamp to minimum 0
+        if (this.totalCredits < 0) {
+            this.totalCredits = 0;
+        }
+        
+        return this.totalCredits;
+    }
+
+    /**
      * Gets the physics shape type based on collider type
      */
     private static getPhysicsShapeType(colliderType: ColliderType | undefined): BABYLON.PhysicsShapeType {
