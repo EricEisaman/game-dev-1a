@@ -7,6 +7,7 @@ import type { Environment, ItemConfig, ItemInstance, ColliderType } from '../typ
 import { InventoryManager } from './InventoryManager';
 import { InventoryUI } from '../ui/InventoryUI';
 import { EffectsManager } from './EffectsManager';
+import { BehaviorManager } from './BehaviorManager';
 import type { EffectType } from '../types/effects';
 
 export class CollectiblesManager {
@@ -225,6 +226,11 @@ export class CollectiblesManager {
             if (instance.effect === "GLOW" satisfies EffectType && meshInstance instanceof BABYLON.Mesh) {
                 EffectsManager.applyGlow(meshInstance);
             }
+
+            // Register behavior if specified
+            if (instance.behavior) {
+                BehaviorManager.registerInstance(id, meshInstance, instance.behavior);
+            }
         } catch (_error) {
             // Ignore collectible creation errors for playground compatibility
         }
@@ -278,6 +284,11 @@ export class CollectiblesManager {
             // Apply glow effect if specified
             if (instance.effect === "GLOW" satisfies EffectType && meshInstance instanceof BABYLON.Mesh) {
                 EffectsManager.applyGlow(meshInstance);
+            }
+
+            // Register behavior if specified
+            if (instance.behavior) {
+                BehaviorManager.registerInstance(id, meshInstance, instance.behavior);
             }
         } catch (_error) {
             // Ignore physics item creation errors for playground compatibility
@@ -498,6 +509,9 @@ export class CollectiblesManager {
         const physicsAggregate = this.collectibleBodies.get(collectibleId);
 
         if (mesh) {
+            // Unregister behavior if registered
+            BehaviorManager.unregisterInstance(collectibleId);
+            
             // Dispose physics body if it exists
             if (physicsAggregate) {
                 physicsAggregate.dispose();
@@ -525,6 +539,9 @@ export class CollectiblesManager {
 
         // Remove all non-collectible physics items
         for (const [id, mesh] of this.physicsItems.entries()) {
+            // Unregister behavior if registered
+            BehaviorManager.unregisterInstance(id);
+            
             const physicsBody = this.physicsItemBodies.get(id);
             if (physicsBody) {
                 physicsBody.dispose();

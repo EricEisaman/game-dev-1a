@@ -13,6 +13,7 @@ import { HUDManager } from './HUDManager';
 import { CollectiblesManager } from './CollectiblesManager';
 import { InventoryManager } from './InventoryManager';
 import { NodeMaterialManager } from './NodeMaterialManager';
+import { BehaviorManager } from './BehaviorManager';
 import type { Character } from '../types/character';
 import type { Environment, LightConfig, PointLightConfig, DirectionalLightConfig, SpotLightConfig, HemisphericLightConfig, RectangularAreaLightConfig, ColliderType } from '../types/environment';
 import { SkyManager } from './SkyManager';
@@ -93,6 +94,11 @@ export class SceneManager {
 
         // Initialize Collectibles after character is set up
         CollectiblesManager.initialize(this.scene, this.characterController);
+        
+        // Initialize BehaviorManager after character is set up
+        if (this.characterController) {
+            BehaviorManager.initialize(this.scene, this.characterController);
+        }
         
         // Force activate smooth follow camera
         this.smoothFollowController.forceActivateSmoothFollow();
@@ -432,6 +438,11 @@ export class SceneManager {
                 // Apply glow effect if specified
                 if (physicsObject.effect === "GLOW" satisfies EffectType && mesh instanceof BABYLON.Mesh) {
                     EffectsManager.applyGlow(mesh);
+                }
+
+                // Register behavior if specified
+                if (physicsObject.behavior) {
+                    BehaviorManager.registerInstance(physicsObject.name, mesh, physicsObject.behavior);
                 }
             }
         });

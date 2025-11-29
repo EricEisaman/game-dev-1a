@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type { EffectType } from './effects';
+import type { BehaviorConfig } from './behaviors';
 
 export const OBJECT_ROLE = {
     DYNAMIC_BOX: "DYNAMIC_BOX",
@@ -27,6 +28,7 @@ export interface PhysicsObject {
     readonly colliderType?: ColliderType;
     readonly friction?: number;
     readonly effect?: EffectType;
+    readonly behavior?: BehaviorConfig;
 }
 
 export interface EnvironmentParticle {
@@ -148,6 +150,7 @@ export interface ItemInstance {
     readonly friction?: number;
     readonly instanceName?: string;
     readonly effect?: EffectType;
+    readonly behavior?: BehaviorConfig;
 }
 
 // Import ItemEffectKind from config to avoid circular dependency

@@ -5,6 +5,7 @@
 import type { Character } from '../types/character';
 import type { Environment, LightType } from '../types/environment';
 import type { SkyType, EffectType } from '../types/effects';
+import type { BehaviorConfig } from '../types/behaviors';
 import { OBJECT_ROLE } from '../types/environment';
 
 export const ASSETS = {
@@ -198,7 +199,14 @@ export const ASSETS = {
                             position: new BABYLON.Vector3(1, 0.5, -8),
                             scale: 0.5,
                             rotation: new BABYLON.Vector3(0, 0, 0),
-                            mass: 0.5
+                            mass: 0.5,
+                            instanceName: "test-crate",
+                            behavior: {
+                                triggerKind: "proximity",
+                                radius: 4,
+                                edgeColor: new BABYLON.Color4(0, 1, 0, 1),
+                                edgeWidth: 10
+                            } satisfies BehaviorConfig
                         },
                         {
                             position: new BABYLON.Vector3(5, 0.5, -8),
