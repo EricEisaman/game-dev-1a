@@ -534,10 +534,15 @@
         /**
          * Applies a glow effect to a mesh or instance by name using edge rendering
          * @param identifier Mesh or instance name
-         * @param intensity Glow intensity (not used with edge rendering, kept for API compatibility)
+         * @param edgeColor Edge color for the glow effect
+         * @param edgeWidth Edge width for the glow effect
          * @returns Success result, or error result with details
          */
-        public static applyGlow(identifier: BABYLON.Mesh | string, intensity: number = 2.0): GlowResult {
+        public static applyGlow(
+            identifier: BABYLON.Mesh | string,
+            edgeColor: BABYLON.Color4 = new BABYLON.Color4(1, 0, 0, 1),
+            edgeWidth: number = 5
+        ): GlowResult {
             if (!this.scene) {
                 return { success: false, error: "Scene not initialized", details: "EffectsManager.initialize() must be called first" };
             }
@@ -578,14 +583,14 @@
             // Enable edge rendering on the mesh/instance directly
             mesh.enableEdgesRendering();
                 
-                // Set edge width to 5
+                // Set edge width
                 if ("edgesWidth" in mesh) {
-                    mesh["edgesWidth"] = 5.0;
+                    mesh["edgesWidth"] = edgeWidth;
                 }
                 
-                // Set edge color to red (Color4 with alpha = 1.0)
+                // Set edge color
                 if ("edgesColor" in mesh) {
-                    mesh["edgesColor"] = new BABYLON.Color4(1, 0, 0, 1.0); // Red
+                    mesh["edgesColor"] = edgeColor;
                 }
                 
                 return { success: true, material: null };
