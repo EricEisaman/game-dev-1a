@@ -93,10 +93,15 @@ export class InventoryManager {
 
         // Map item names to effects (this could be made more sophisticated)
         const effectMap: Record<string, () => boolean> = {
+
             'Super Jump': () => this.applySuperJumpEffect(),
+
             'Invisibility': () => this.applyInvisibilityEffect(),
+
             'Gamma Crystal': () => this.applyHulkUnlockEffect(),
+
             // Add more item effects as needed
+
         };
 
 
@@ -136,42 +141,82 @@ export class InventoryManager {
         return true;
     }
 
+    /**
+
+ * Applies Hulk unlock effect
+
+ */
+
     private static applyHulkUnlockEffect(): boolean {
 
         CharacterLock.setCharacterLocked('Hulk', false);
+
         Notification.create({
+
             message: `Hulk is now unlocked!`,
+
             delay: 4000,
+
             duration: 2000,
+
             scene: this.scene,
+
             background: 'rgba(0, 255, 136, 0.9)',
+
             color: 'black',
+
             padding: '20px',
+
             borderRadius: '10px',
+
             fontSize: '18px',
+
             fontWeight: 'bold',
+
             position: 'center',
+
             zIndex: 9999,
+
         });
+
         Time.runDelayed(this.scene, 120000, () => {
+
             CharacterLock.setCharacterLocked('Hulk', true);
+
             Notification.create({
+
                 message: `Hulk is now locked!`,
+
                 delay: 0,
+
                 duration: 2000,
+
                 scene: this.scene,
+
                 background: 'rgba(188, 70, 76, 0.9)',
+
                 color: 'black',
+
                 padding: '20px',
+
                 borderRadius: '10px',
+
                 fontSize: '18px',
+
                 fontWeight: 'bold',
+
                 position: 'center',
+
                 zIndex: 9999,
+
             });
+
         });
+
         return true;
+
     }
+
 
     /**
      * Gets all inventory items
