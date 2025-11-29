@@ -198,6 +198,15 @@ export class HUDManager {
             .hud-element:hover {
                 animation: pulse 0.5s ease-in-out;
             }
+            .hud-boost-active {
+                animation: pulse 0.5s ease-in-out infinite alternate;
+            }
+            .hud-element.faded-in {
+                animation: none;
+            }
+            .hud-element.faded-in.hud-boost-active {
+                animation: pulse 0.5s ease-in-out infinite alternate;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -358,11 +367,11 @@ export class HUDManager {
             if (isBoosting) {
                 boostValue.textContent = 'ACTIVE';
                 boostValue.style.color = '#44ff44';
-                element.style.animation = 'pulse 0.5s ease-in-out infinite alternate';
+                element.classList.add('hud-boost-active');
             } else {
                 boostValue.textContent = 'Inactive';
                 boostValue.style.color = '#ff4444';
-                element.style.animation = 'none';
+                element.classList.remove('hud-boost-active');
             }
         }
     }
@@ -388,8 +397,43 @@ export class HUDManager {
     private static setElementVisibility(elementId: string, visible: boolean): void {
         const element = this.hudElements.get(elementId);
         if (element) {
-            element.style.display = visible ? 'block' : 'none';
+            if (visible && element.style.display === 'none') {
+                element.style.display = 'block';
+                // Mark element as faded in after animation completes so it doesn't re-trigger
+                if (!element.classList.contains('faded-in')) {
+                    const handleAnimationEnd = () => {
+                        if (element) {
+                            element.classList.add('faded-in');
+                        }
+                        element.removeEventListener('animationend', handleAnimationEnd);
+                    };
+                    element.addEventListener('animationend', handleAnimationEnd, { once: true });
+                }
+            } else {
+                element.style.display = visible ? 'block' : 'none';
+            }
         }
+    }
+
+    /**
+     * Triggers fade-in animation for all visible HUD elements
+     * Called when the HUD container is toggled back on
+     */
+    public static triggerFadeIn(): void {
+        this.hudElements.forEach((element) => {
+            if (element.style.display !== 'none') {
+                // Remove faded-in class to allow fadeIn animation to run again
+                element.classList.remove('faded-in');
+                // The CSS class will automatically trigger the fadeIn animation
+                const handleAnimationEnd = () => {
+                    if (element) {
+                        element.classList.add('faded-in');
+                    }
+                    element.removeEventListener('animationend', handleAnimationEnd);
+                };
+                element.addEventListener('animationend', handleAnimationEnd, { once: true });
+            }
+        });
     }
 
     /**

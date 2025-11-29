@@ -8,6 +8,7 @@ import { ASSETS } from '../config/assets';
 import type { SettingsSection, VisibilityType } from '../types/ui';
 import type { SceneManager } from '../managers/SceneManager';
 import { CharacterLock } from '../utils/character-lock';
+import { HUDManager } from '../managers/HUDManager';
 
 export class SettingsUI {
     private static settingsButton: HTMLDivElement | null = null;
@@ -1101,6 +1102,8 @@ export class SettingsUI {
                 // Restore cached display style, or default to 'flex' if cache is null
                 const displayValue = this.hudDisplayCache ?? 'flex';
                 hudElement.style.display = displayValue;
+                // Trigger fade-in animation for all HUD elements when HUD is toggled back on
+                HUDManager.triggerFadeIn();
             } else {
                 // Cache the current display style if not already cached
                 if (this.hudDisplayCache === null) {
