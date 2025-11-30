@@ -174,6 +174,7 @@ export class SceneManager {
                     this.characterController.updateCharacterPhysics(character, characterPosition);
                     
                     // Set character rotation only when not preserving position
+                    // When preserving position (character switch), also preserve rotation
                     if (!preservedPosition) {
                         const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
                         const characterRotation = currentEnvironment ? currentEnvironment.spawnRotation : new BABYLON.Vector3(0, 0, 0);
@@ -242,6 +243,7 @@ export class SceneManager {
         }
 
         // Disable character during environment switch
+        let transitionRotationApplied = false;
         if (this.characterController) {
             this.characterController.pausePhysics();
             
@@ -251,6 +253,7 @@ export class SceneManager {
             }
             if (environment.transitionRotation !== undefined) {
                 this.characterController.setRotation(environment.transitionRotation);
+                transitionRotationApplied = true;
             }
             
             // Also hide the character mesh
@@ -364,6 +367,11 @@ export class SceneManager {
             // Apply environment-specific camera offset if configured
             if (environment.cameraOffset !== undefined) {
                 CameraManager.setOffset(environment.cameraOffset);
+            }
+
+            // Apply environment spawn rotation if transition rotation was not provided
+            if (!transitionRotationApplied && this.characterController) {
+                this.characterController.setRotation(environment.spawnRotation);
             }
         } catch (_error) {
             // Ignore environment loading errors for playground compatibility
@@ -722,6 +730,7 @@ export class SceneManager {
         this.characterController.updateCharacterPhysics(character, characterPosition);
         
         // Set character rotation only when not preserving position
+        // When preserving position (character switch), also preserve rotation
         if (!preservedPosition) {
             const currentEnvironment = ASSETS.ENVIRONMENTS.find(env => env.name === this.currentEnvironment);
             const characterRotation = currentEnvironment ? currentEnvironment.spawnRotation : new BABYLON.Vector3(0, 0, 0);

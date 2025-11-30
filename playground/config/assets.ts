@@ -446,7 +446,7 @@ export const ASSETS = {
                 TYPE: "SPHERE" satisfies SkyType
             },
             spawnPoint: new BABYLON.Vector3(1.5, 2, 0),
-            spawnRotation: new BABYLON.Vector3(0, 0, 0),
+            spawnRotation: new BABYLON.Vector3(0, Math.PI, 0),
             cameraOffset: new BABYLON.Vector3(0, 1.1, -2.2)
         },
         {
