@@ -203,6 +203,7 @@ export const ASSETS = {
                             instanceName: "test-crate",
                             behavior: {
                                 triggerKind: "proximity",
+                                triggerOutOfRange: true,
                                 radius: 4,
                                 edgeColor: new BABYLON.Color4(0, 1, 0, 1),
                                 edgeWidth: 10
@@ -329,7 +330,8 @@ export const ASSETS = {
                     scale: 1.0,
                     rotation: new BABYLON.Vector3(0, 0, 0),
                     mass: 500,
-                    friction: 0.9
+                    friction: 0.9,
+                    instanceName: "crystal-1"
                 },
                 {
                     position: new BABYLON.Vector3(-28, 0.9, 5),
@@ -431,10 +433,10 @@ export const ASSETS = {
             spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
-            name: "Joy Town",
-            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/joyTown/joy_town.glb",
+            name: "Monochrome",
+            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/monochrome.glb",
             lightmap: "",
-            scale: 10,
+            scale: 1,
             lightmappedMeshes: [],
             physicsObjects: [],
             sky: {
@@ -443,7 +445,7 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
-            spawnPoint: new BABYLON.Vector3(-15, 15, 0),
+            spawnPoint: new BABYLON.Vector3(0, 15, 0),
             spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
@@ -464,6 +466,7 @@ export const ASSETS = {
         },
         {
             name: "Island Town",
+            locked: true,
             model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/islandTown/island_town.glb",
             lightmap: "",
             scale: 5,

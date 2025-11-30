@@ -107,6 +107,7 @@ export interface Environment {
     readonly scale: number;
     readonly lightmappedMeshes: readonly LightmappedMesh[];
     readonly physicsObjects: readonly PhysicsObject[];
+    locked?: boolean; // Locked state - runtime state managed separately via EnvironmentLock utility
     readonly sky?: SkyConfig; // Optional sky configuration for this environment
     readonly spawnPoint: BABYLON.Vector3; // Spawn point for this environment
     readonly spawnRotation: BABYLON.Vector3; // Spawn rotation for this environment

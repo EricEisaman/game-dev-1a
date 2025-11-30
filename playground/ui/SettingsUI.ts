@@ -8,6 +8,7 @@ import { ASSETS } from '../config/assets';
 import type { SettingsSection, VisibilityType } from '../types/ui';
 import type { SceneManager } from '../managers/SceneManager';
 import { CharacterLock } from '../utils/character-lock';
+import { EnvironmentLock } from '../utils/environment-lock';
 import { HUDManager } from '../managers/HUDManager';
 
 export class SettingsUI {
@@ -16,6 +17,7 @@ export class SettingsUI {
     private static isPanelOpen = false;
     private static sceneManager: SceneManager | null = null;
     private static lastSelectedCharacterName: string | null = null;
+    private static lastSelectedEnvironmentName: string | null = null;
     public static isInitializing = false; // Flag to prevent onChange during initialization
     // Cache for Babylon Playground UI element display styles
     private static playgroundUICache: Map<HTMLElement, string> = new Map();
@@ -439,9 +441,15 @@ export class SettingsUI {
                         return `<option value="${character.name}" ${selectedAttr} ${disabledAttr} ${styleAttr}>${lockIcon}${character.name}</option>`;
                     }).join('');
                 } else if (section.title === "Environment") {
-                    optionsHTML = ASSETS.ENVIRONMENTS.map((environment) =>
-                        `<option value="${environment.name}" ${environment.name === defaultValue ? 'selected' : ''}>${environment.name}</option>`
-                    ).join('');
+                    optionsHTML = ASSETS.ENVIRONMENTS.map((environment) => {
+                        const isLocked = EnvironmentLock.isEnvironmentLocked(environment.name);
+                        const isSelected = environment.name === defaultValue;
+                        const disabledAttr = isLocked ? 'disabled' : '';
+                        const selectedAttr = isSelected ? 'selected' : '';
+                        const lockIcon = isLocked ? '🔒 ' : '';
+                        const styleAttr = isLocked ? 'style="color: rgba(255, 255, 255, 0.4);"' : '';
+                        return `<option value="${environment.name}" ${selectedAttr} ${disabledAttr} ${styleAttr}>${lockIcon}${environment.name}</option>`;
+                    }).join('');
                 } else {
                     optionsHTML = section.options?.map(option =>
                         `<option value="${option}" ${option === defaultValue ? 'selected' : ''}>${option}</option>`
@@ -486,13 +494,13 @@ export class SettingsUI {
         // Setup dropdown selects
         const selects = this.settingsPanel.querySelectorAll('select');
         selects.forEach(select => {
-            // Initialize previous value for character dropdown
+            // Initialize previous value for character and environment dropdowns
             if (select instanceof HTMLSelectElement) {
                 const sectionIndexStr = select.dataset.sectionIndex;
                 if (sectionIndexStr != null) {
                     const sectionIndex = parseInt(sectionIndexStr);
                     const section: SettingsSection = CONFIG.SETTINGS.SECTIONS[sectionIndex];
-                    if (section.title === "Character" && select.value) {
+                    if ((section.title === "Character" || section.title === "Environment") && select.value) {
                         select.setAttribute('data-previous-value', select.value);
                     }
                 }
@@ -522,6 +530,27 @@ export class SettingsUI {
                             }
                         }
                         return; // Prevent onChange for locked character
+                    }
+                    // Store current value as previous for next change
+                    target.setAttribute('data-previous-value', target.value);
+                }
+
+                // Prevent selection of locked environments
+                if (section.title === "Environment") {
+                    const selectedEnvironment = target.value;
+                    if (EnvironmentLock.isEnvironmentLocked(selectedEnvironment)) {
+                        // Reset to previous valid selection
+                        const previousValue = target.getAttribute('data-previous-value');
+                        if (previousValue && !EnvironmentLock.isEnvironmentLocked(previousValue)) {
+                            target.value = previousValue;
+                        } else {
+                            // Find first unlocked environment
+                            const unlockedEnvironment = ASSETS.ENVIRONMENTS.find((e) => !EnvironmentLock.isEnvironmentLocked(e.name));
+                            if (unlockedEnvironment) {
+                                target.value = unlockedEnvironment.name;
+                            }
+                        }
+                        return; // Prevent onChange for locked environment
                     }
                     // Store current value as previous for next change
                     target.setAttribute('data-previous-value', target.value);
@@ -715,12 +744,34 @@ export class SettingsUI {
         return this.lastSelectedCharacterName;
     }
 
+    public static getCurrentEnvironmentName(): string | null {
+        if (this.sceneManager) {
+            return this.sceneManager.getCurrentEnvironment();
+        }
+        return null;
+    }
+
+    /**
+     * Gets the last selected environment name
+     * @returns Last selected environment name or null if none
+     */
+    public static getLastSelectedEnvironmentName(): string | null {
+        return this.lastSelectedEnvironmentName;
+    }
+
     public static async changeEnvironment(environmentName: string): Promise<void> {
         if (this.sceneManager) {
             // Check if the environment is actually different from current
             const currentEnvironment = this.sceneManager.getCurrentEnvironment();
             if (currentEnvironment === environmentName) {
                 return; // No change needed
+            }
+
+            // Only update lastSelectedEnvironmentName if switching to a different environment
+            // Save the current environment as the last selected before switching
+            // This preserves the previous selection for use when current environment gets locked
+            if (environmentName !== currentEnvironment) {
+                this.lastSelectedEnvironmentName = currentEnvironment;
             }
 
             // Pause physics to prevent character from falling during environment change
