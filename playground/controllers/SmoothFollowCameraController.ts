@@ -9,7 +9,7 @@ export class SmoothFollowCameraController {
     private readonly scene: BABYLON.Scene;
     private readonly camera: BABYLON.TargetCamera;
     private readonly target: BABYLON.AbstractMesh;
-    private readonly offset: BABYLON.Vector3;
+    private offset: BABYLON.Vector3;
     private readonly dragSensitivity: number;
 
     public isDragging = false;
@@ -190,7 +190,7 @@ export class SmoothFollowCameraController {
             return;
         }
 
-        const yRot = BABYLON.FromEulerAngles(0, this.target.rotation.y, 0);
+        const yRot = BABYLON.Quaternion.FromEulerAngles(0, this.target.rotation.y, 0);
         const rotatedOffset = this.offset.rotateByQuaternionToRef(yRot, BABYLON.Vector3.Zero());
         const desiredPos = this.target.position.add(rotatedOffset);
 
@@ -198,7 +198,7 @@ export class SmoothFollowCameraController {
         // Closer camera (smaller offset.z) = more responsive (higher smoothing value)
         // Farther camera (larger offset.z) = more relaxed (lower smoothing value)
         const normalizedOffset = (this.offset.z - CONFIG.CAMERA.ZOOM_MIN) / (CONFIG.CAMERA.ZOOM_MAX - CONFIG.CAMERA.ZOOM_MIN);
-        const dynamicSmoothing = BABYLON.Lerp(0.05, 0.25, normalizedOffset);
+        const dynamicSmoothing = BABYLON.Scalar.Lerp(0.05, 0.25, normalizedOffset);
 
         BABYLON.Vector3.LerpToRef(
             this.camera.position,
@@ -247,7 +247,7 @@ export class SmoothFollowCameraController {
         const easedProgress = this.easeInOutCubic(progress);
 
         // Lerp the rotation
-        const currentRotation = BABYLON.Lerp(
+        const currentRotation = BABYLON.Scalar.Lerp(
             this.characterRotationStartY,
             this.characterRotationTargetY,
             easedProgress
@@ -291,6 +291,14 @@ export class SmoothFollowCameraController {
         this.isDragging = false;
         this.dragDeltaX = 0;
         this.dragDeltaZ = 0;
+    }
+
+    /**
+     * Sets the camera offset
+     * @param offset The new camera offset vector
+     */
+    public setOffset(offset: BABYLON.Vector3): void {
+        this.offset.copyFrom(offset);
     }
 
     /**

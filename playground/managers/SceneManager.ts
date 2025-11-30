@@ -14,6 +14,7 @@ import { CollectiblesManager } from './CollectiblesManager';
 import { InventoryManager } from './InventoryManager';
 import { NodeMaterialManager } from './NodeMaterialManager';
 import { BehaviorManager } from './BehaviorManager';
+import { CameraManager } from './CameraManager';
 import type { Character } from '../types/character';
 import type { Environment, LightConfig, PointLightConfig, DirectionalLightConfig, SpotLightConfig, HemisphericLightConfig, RectangularAreaLightConfig, ColliderType } from '../types/environment';
 import { SkyManager } from './SkyManager';
@@ -88,6 +89,9 @@ export class SceneManager {
 
         // Connect the character controller to the camera controller
         this.characterController.setCameraController(this.smoothFollowController);
+        
+        // Initialize CameraManager
+        CameraManager.initialize(this.smoothFollowController);
         
         // Initialize HUD
         HUDManager.initialize(this.scene, this.characterController);
@@ -870,6 +874,8 @@ export class SceneManager {
         if (this.smoothFollowController) {
             this.smoothFollowController.dispose();
         }
+        
+        CameraManager.dispose();
         
         // Dispose cached character meshes
         this.characterCache.forEach(meshes => {
