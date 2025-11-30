@@ -54,8 +54,14 @@ export class SceneManager {
         this.setupPhysics();
         this.setupSky();
         await this.setupEffects();
-        await this.loadEnvironment("Level Test");
+        
+        // Initialize character controller and BehaviorManager BEFORE loading environment
+        // This ensures BehaviorManager is ready when behaviors are registered
         this.setupCharacter();
+        
+        // Load environment (which registers behaviors - now safe since BehaviorManager is initialized)
+        await this.loadEnvironment("Level Test");
+        
         this.loadCharacterModel();
         await this.setupEnvironmentItems();
         
@@ -325,6 +331,15 @@ export class SceneManager {
                         // Apply environment-specific settings if provided
                         if (particleSystem != null && particle.updateSpeed !== undefined) {
                             particleSystem.updateSpeed = particle.updateSpeed;
+                        }
+
+                        // Register behavior if configured
+                        if (particleSystem != null && "behavior" in particle) {
+                            const behavior = particle.behavior;
+                            if (behavior !== undefined) {
+                                const identifier = "instanceName" in particle && particle.instanceName !== undefined ? particle.instanceName : `particle_${particle.name}_${particle.position.x}_${particle.position.y}_${particle.position.z}`;
+                                BehaviorManager.registerInstance(identifier, particleSystem, behavior, particle.position);
+                            }
                         }
                     }
                 } catch (_error) {

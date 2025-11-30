@@ -21,6 +21,19 @@ export type BehaviorKind = "glow";
 export type TriggerKind = "proximity";
 
 /**
+ * Action type for adjustCredits
+ */
+export interface AdjustCreditsAction {
+    readonly actionType: "adjustCredits";
+    readonly amount: number;
+}
+
+/**
+ * Discriminated union for behavior actions
+ */
+export type BehaviorAction = AdjustCreditsAction;
+
+/**
  * Configuration for proximity-based trigger
  */
 export interface ProximityTriggerConfig {
@@ -30,6 +43,7 @@ export interface ProximityTriggerConfig {
     readonly triggerOutOfRange?: boolean; // When true, applies behavior when character is OUTSIDE radius
     readonly edgeColor?: BABYLON.Color4;
     readonly edgeWidth?: number;
+    readonly action?: BehaviorAction; // Optional action to execute when triggered
 }
 
 /**

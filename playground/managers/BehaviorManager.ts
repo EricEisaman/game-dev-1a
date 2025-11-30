@@ -3,18 +3,22 @@
 // ============================================================================
 
 import type { CharacterController } from '../controllers/CharacterController';
-import type { BehaviorConfig, CheckPeriod, ProximityTriggerConfig } from '../types/behaviors';
+import type { BehaviorConfig, CheckPeriod, ProximityTriggerConfig, BehaviorAction } from '../types/behaviors';
 import { EffectsManager } from './EffectsManager';
+import { CollectiblesManager } from './CollectiblesManager';
 
 /**
  * Internal tracking structure for behavior instances
  */
 interface BehaviorInstance {
     readonly identifier: string;
-    readonly mesh: BABYLON.AbstractMesh;
+    readonly mesh: BABYLON.AbstractMesh | null;
+    readonly particleSystem: BABYLON.IParticleSystem | null;
+    readonly position: BABYLON.Vector3 | null;
     readonly config: BehaviorConfig;
     behaviorActive: boolean;
     lastCheckTime: number;
+    lastActionTime: number;
 }
 
 export class BehaviorManager {
@@ -36,17 +40,26 @@ export class BehaviorManager {
     /**
      * Registers an instance with a behavior configuration
      */
-    public static registerInstance(identifier: string, mesh: BABYLON.AbstractMesh, behaviorConfig: BehaviorConfig): void {
+    public static registerInstance(
+        identifier: string, 
+        target: BABYLON.AbstractMesh | BABYLON.IParticleSystem, 
+        behaviorConfig: BehaviorConfig,
+        position?: BABYLON.Vector3
+    ): void {
         if (!this.scene) {
             return;
         }
 
+        const isMesh = target instanceof BABYLON.AbstractMesh;
         const instance: BehaviorInstance = {
             identifier,
-            mesh,
+            mesh: isMesh ? target : null,
+            particleSystem: isMesh ? null : target,
+            position: position ?? null,
             config: behaviorConfig,
             behaviorActive: false,
-            lastCheckTime: Date.now()
+            lastCheckTime: Date.now(),
+            lastActionTime: 0
         };
 
         this.instances.set(identifier, instance);
@@ -59,7 +72,7 @@ export class BehaviorManager {
         const instance = this.instances.get(identifier);
         if (instance) {
             if (instance.behaviorActive) {
-                this.removeBehavior(instance);
+                this.removeEffects(instance);
             }
             this.instances.delete(identifier);
         }
@@ -74,7 +87,7 @@ export class BehaviorManager {
         // Remove all active behaviors
         this.instances.forEach(instance => {
             if (instance.behaviorActive) {
-                this.removeBehavior(instance);
+                this.removeEffects(instance);
             }
         });
 
@@ -117,68 +130,73 @@ export class BehaviorManager {
         const currentTime = Date.now();
 
         this.instances.forEach(instance => {
-            const shouldCheck = this.shouldCheckInstance(instance, currentTime);
-            if (!shouldCheck) {
-                return;
-            }
-
-            instance.lastCheckTime = currentTime;
-
+            // Always check trigger every frame to detect enter/leave proximity
             const triggerResult = this.evaluateTrigger(instance);
             
             if (triggerResult && !instance.behaviorActive) {
-                this.applyBehavior(instance);
+                // Entering proximity - apply effects and execute action immediately
+                this.applyEffects(instance);
+                this.executeActionIfNeeded(instance, currentTime, true);
+                instance.behaviorActive = true;
+                instance.lastCheckTime = currentTime;
+            } else if (triggerResult && instance.behaviorActive) {
+                // Already in proximity - execute action based on its own timing
+                // Action execution timing is independent of trigger check timing
+                this.executeActionIfNeeded(instance, currentTime, false);
+                instance.lastCheckTime = currentTime;
             } else if (!triggerResult && instance.behaviorActive) {
-                this.removeBehavior(instance);
+                // Leaving proximity - remove effects
+                this.removeEffects(instance);
+                instance.behaviorActive = false;
             }
         });
-    }
-
-    /**
-     * Determines if an instance should be checked based on its check period
-     */
-    private static shouldCheckInstance(instance: BehaviorInstance, currentTime: number): boolean {
-        const checkPeriod = this.getCheckPeriod(instance.config);
-        
-        if (checkPeriod.type === "everyFrame") {
-            return true;
-        }
-
-        const elapsed = currentTime - instance.lastCheckTime;
-        return elapsed >= checkPeriod.milliseconds;
     }
 
     /**
      * Gets the check period for a behavior config, defaulting to "everyFrame"
      */
     private static getCheckPeriod(config: BehaviorConfig): CheckPeriod {
-        if (config.triggerKind === "proximity") {
-            return config.checkPeriod ?? { type: "everyFrame" };
-        }
-        return { type: "everyFrame" };
+        const proximityConfig: ProximityTriggerConfig = config;
+        return proximityConfig.checkPeriod ?? { type: "everyFrame" };
     }
 
     /**
      * Evaluates the trigger condition for an instance
      */
     private static evaluateTrigger(instance: BehaviorInstance): boolean {
-        if (instance.config.triggerKind === "proximity") {
-            return this.evaluateProximityTrigger(instance);
-        }
-        return false;
+        return this.evaluateProximityTrigger(instance);
     }
 
     /**
      * Evaluates proximity trigger condition
      */
     private static evaluateProximityTrigger(instance: BehaviorInstance): boolean {
-        if (!this.characterController || instance.config.triggerKind !== "proximity") {
+        if (!this.characterController) {
             return false;
         }
 
-        const config = instance.config;
+        const config: ProximityTriggerConfig = instance.config;
         const characterPosition = this.characterController.getPosition();
-        const instancePosition = instance.mesh.position;
+        
+        let instancePosition: BABYLON.Vector3;
+        if (instance.mesh) {
+            instancePosition = instance.mesh.position;
+        } else if (instance.position) {
+            // Use stored position for particle systems
+            instancePosition = instance.position;
+        } else if (instance.particleSystem) {
+            // Fallback to reading from emitter if position not stored
+            const emitter = instance.particleSystem.emitter;
+            if (emitter instanceof BABYLON.Vector3) {
+                instancePosition = emitter;
+            } else if (emitter instanceof BABYLON.AbstractMesh) {
+                instancePosition = emitter.position;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
 
         const distance = BABYLON.Vector3.Distance(characterPosition, instancePosition);
         const isWithinRadius = distance <= config.radius;
@@ -191,40 +209,67 @@ export class BehaviorManager {
     }
 
     /**
-     * Applies the behavior to an instance
+     * Applies visual effects to an instance (called once when entering proximity)
      */
-    private static applyBehavior(instance: BehaviorInstance): void {
-        if (instance.config.triggerKind === "proximity") {
-            this.applyGlowBehavior(instance);
+    private static applyEffects(instance: BehaviorInstance): void {
+        const config: ProximityTriggerConfig = instance.config;
+        
+        // Apply glow behavior if mesh is available
+        if (instance.mesh) {
+            const edgeColor = config.edgeColor ?? new BABYLON.Color4(1, 0, 0, 1);
+            const edgeWidth = config.edgeWidth ?? 5;
+            EffectsManager.applyGlow(instance.mesh.name, edgeColor, edgeWidth);
         }
     }
 
     /**
-     * Applies glow behavior to an instance
+     * Removes visual effects from an instance (called when leaving proximity)
      */
-    private static applyGlowBehavior(instance: BehaviorInstance): void {
-        if (instance.config.triggerKind !== "proximity") {
+    private static removeEffects(instance: BehaviorInstance): void {
+        if (instance.mesh) {
+            EffectsManager.removeGlow(instance.mesh.name);
+        }
+    }
+
+    /**
+     * Checks if action should execute and executes it if needed
+     * Called periodically while in proximity
+     * @param forceImmediate If true, execute immediately regardless of check period (for first entry)
+     */
+    private static executeActionIfNeeded(instance: BehaviorInstance, currentTime: number, forceImmediate: boolean): void {
+        const config: ProximityTriggerConfig = instance.config;
+        if (!config.action) {
             return;
         }
 
-        const config: ProximityTriggerConfig = instance.config;
-        const edgeColor = config.edgeColor ?? new BABYLON.Color4(1, 0, 0, 1);
-        const edgeWidth = config.edgeWidth ?? 5;
-
-        const result = EffectsManager.applyGlow(instance.mesh.name, edgeColor, edgeWidth);
-        if (result.success) {
-            instance.behaviorActive = true;
+        const checkPeriod = this.getCheckPeriod(instance.config);
+        
+        // Check if action should execute based on check period
+        if (checkPeriod.type === "interval") {
+            if (forceImmediate) {
+                // Execute immediately on first entry into proximity
+                this.executeAction(instance, config.action);
+                instance.lastActionTime = currentTime;
+            } else {
+                // Execute periodically based on interval while in proximity
+                const elapsed = currentTime - instance.lastActionTime;
+                if (elapsed >= checkPeriod.milliseconds) {
+                    this.executeAction(instance, config.action);
+                    instance.lastActionTime = currentTime;
+                }
+            }
+        } else {
+            // For everyFrame, execute every frame while in proximity
+            this.executeAction(instance, config.action);
+            instance.lastActionTime = currentTime;
         }
     }
 
     /**
-     * Removes the behavior from an instance
+     * Executes an action for a behavior instance
      */
-    private static removeBehavior(instance: BehaviorInstance): void {
-        if (instance.config.triggerKind === "proximity") {
-            EffectsManager.removeGlow(instance.mesh.name);
-            instance.behaviorActive = false;
-        }
+    private static executeAction(_instance: BehaviorInstance, action: BehaviorAction): void {
+        CollectiblesManager.adjustCredits(action.amount);
     }
 }
 

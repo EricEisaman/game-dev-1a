@@ -184,7 +184,17 @@ export const ASSETS = {
                 {
                     name: "Magic Sparkles",
                     position: new BABYLON.Vector3(-2, 0, -8), // Left of player start
-                    updateSpeed: 0.007
+                    updateSpeed: 0.007,
+                    instanceName: "magic-sparkles-particle",
+                    behavior: {
+                        triggerKind: "proximity",
+                        radius: 3,
+                        checkPeriod: { type: "interval", milliseconds: 5000 },
+                        action: {
+                            actionType: "adjustCredits",
+                            amount: -5
+                        }
+                    } satisfies import('../types/behaviors').BehaviorConfig
                 }
             ],
             items: [

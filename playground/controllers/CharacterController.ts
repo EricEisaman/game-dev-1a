@@ -730,6 +730,11 @@ export class CharacterController {
     public setPlayerMesh(mesh: BABYLON.AbstractMesh): void {
         this.playerMesh = mesh;
         mesh.scaling.setAll(CONFIG.ANIMATION.PLAYER_SCALE);
+        
+        // Hide display capsule when real character model is loaded
+        if (mesh !== this.displayCapsule) {
+            this.displayCapsule.isVisible = false;
+        }
     }
 
     public getPlayerMesh(): BABYLON.AbstractMesh | null {

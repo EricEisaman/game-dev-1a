@@ -35,6 +35,8 @@ export interface EnvironmentParticle {
     readonly name: string; // Name of the particle snippet to use
     readonly position: BABYLON.Vector3; // Position where the particle should be created
     readonly updateSpeed?: number; // Optional update speed for the particle system
+    readonly instanceName?: string; // Optional instance name for behavior registration
+    readonly behavior?: import('./behaviors').BehaviorConfig; // Optional behavior configuration
 }
 
 export interface BackgroundMusicConfig {
