@@ -118,6 +118,7 @@ export interface Environment {
     readonly backgroundMusic?: BackgroundMusicConfig; // Optional looping non-positional BGM
     readonly ambientSounds?: readonly AmbientSoundConfig[]; // Optional positional ambient sounds
     readonly lights?: readonly LightConfig[]; // Optional environment-specific lights
+    readonly cameraOffset?: BABYLON.Vector3; // Optional camera offset for this environment
 }
 
 // Forward declarations for circular dependencies

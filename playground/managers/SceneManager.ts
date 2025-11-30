@@ -360,6 +360,11 @@ export class SceneManager {
                     playerMesh.setEnabled(true);
                 }
             }
+
+            // Apply environment-specific camera offset if configured
+            if (environment.cameraOffset !== undefined) {
+                CameraManager.setOffset(environment.cameraOffset);
+            }
         } catch (_error) {
             // Ignore environment loading errors for playground compatibility
             // Re-enable character even if there was an error
