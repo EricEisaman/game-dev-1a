@@ -15,7 +15,7 @@ export class CollectiblesManager {
     private static characterController: CharacterController | null = null;
     private static collectibles: Map<string, BABYLON.AbstractMesh> = new Map();
     private static collectibleBodies: Map<string, BABYLON.PhysicsAggregate> = new Map();
-    private static collectionSound: BABYLON.Sound | null = null;
+    private static collectionSound: BABYLON.StaticSound | null = null;
     private static totalCredits: number = 0;
     private static collectionObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
     private static collectedItems: Set<string> = new Set();
@@ -68,12 +68,9 @@ export class CollectiblesManager {
         // Wait for physics to be properly initialized
         await this.waitForPhysicsInitialization();
 
-        // Create collection sound (using default sound for now)
-        this.collectionSound = new BABYLON.Sound(
+        this.collectionSound = await BABYLON.CreateSoundAsync(
             "collectionSound",
             "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/sounds/effects/collect.m4a",
-            this.scene,
-            undefined,
             { volume: 0.7 }
         );
 
