@@ -6,6 +6,7 @@ import type { CharacterController } from '../controllers/CharacterController';
 import type { BehaviorConfig, CheckPeriod, ProximityTriggerConfig, BehaviorAction } from '../types/behaviors';
 import { EffectsManager } from './EffectsManager';
 import { CollectiblesManager } from './CollectiblesManager';
+import { switchToEnvironment } from '../utils/switch-environment';
 
 /**
  * Internal tracking structure for behavior instances
@@ -269,7 +270,11 @@ export class BehaviorManager {
      * Executes an action for a behavior instance
      */
     private static executeAction(_instance: BehaviorInstance, action: BehaviorAction): void {
-        CollectiblesManager.adjustCredits(action.amount);
+        if(action.actionType == "adjustCredits") {
+            CollectiblesManager.adjustCredits(action.amount);
+        } else if(action.actionType == "portal") {
+            switchToEnvironment(action.target);
+        }
     }
 }
 

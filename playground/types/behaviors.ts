@@ -29,9 +29,17 @@ export interface AdjustCreditsAction {
 }
 
 /**
+ * Action type for portal
+ */
+export interface PortalAction {
+    readonly actionType: "portal";
+    readonly target: string;
+}
+
+/**
  * Discriminated union for behavior actions
  */
-export type BehaviorAction = AdjustCreditsAction;
+export type BehaviorAction = AdjustCreditsAction | PortalAction;
 
 /**
  * Configuration for proximity-based trigger

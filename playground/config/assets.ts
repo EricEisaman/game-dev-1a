@@ -152,12 +152,6 @@ export const ASSETS = {
                 { name: "Cube.005", mass: 0.1, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX },
                 { name: "Cube.006", mass: 0.01, scale: 1, role: OBJECT_ROLE.PIVOT_BEAM },
                 { name: "Cube.007", mass: 0, scale: 1, role: OBJECT_ROLE.DYNAMIC_BOX }
-                // Example boulder configurations with rounded colliders:
-                // Note: Use OBJECT_ROLE.DYNAMIC for objects with any collider type (SPHERE, CONVEX_HULL, etc.)
-                // OBJECT_ROLE.DYNAMIC_BOX is kept for backward compatibility but DYNAMIC is preferred for rounded colliders
-                // { name: "Boulder", mass: 2.0, scale: 1, role: OBJECT_ROLE.DYNAMIC, colliderType: "SPHERE" }, // Use SPHERE for spherical boulders
-                // { name: "Boulder.001", mass: 2.0, scale: 1, role: OBJECT_ROLE.DYNAMIC, colliderType: "CONVEX_HULL" }, // Use CONVEX_HULL for irregular rounded shapes
-                // { name: "Boulder.002", mass: 1.5, scale: 1, role: OBJECT_ROLE.DYNAMIC, colliderType: "CAPSULE" }, // Use CAPSULE for elongated rounded objects
             ],
             sky: {
                 TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/cartoon-river-with-orange-sky.jpg",
@@ -194,7 +188,7 @@ export const ASSETS = {
                             actionType: "adjustCredits",
                             amount: -5
                         }
-                    } satisfies import('../types/behaviors').BehaviorConfig
+                    } satisfies BehaviorConfig
                 }
             ],
             items: [
@@ -353,6 +347,31 @@ export const ASSETS = {
                 ]
             },
             {
+                name: "Cave Portal",
+                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/portal.glb",
+                collectible: false,
+                creditValue: 0,
+                minImpulseForCollection: 0.3,
+                inventory: false,
+                instances: [
+                    {
+                    position: new BABYLON.Vector3(55.5, 9.6, 65.6),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 500,
+                    friction: 0.9,
+                    behavior: {
+                        triggerKind: "proximity",
+                        radius: 3,
+                        action: {
+                        actionType: "portal",
+                            target: "The Cave"
+                        }
+                    } satisfies BehaviorConfig
+                    }
+                ]
+                },
+            {
                 name: "Boulder",
                 url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/boulder.glb",
                 collectible: false,
@@ -427,12 +446,16 @@ export const ASSETS = {
             ]
         },
         {
-            name: "Firefox Reality",
-            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/firefoxReality/firefox_reality.glb",
+            name: "RV Life",
+            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/rv_life.glb",
             lightmap: "",
-            scale: 1.5,
+            scale: 2.3,
             lightmappedMeshes: [],
             physicsObjects: [],
+            backgroundMusic: {
+                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/audio/bgm/HappyBDayJosh.mp3",
+                volume: 0.1
+            },
             sky: {
                 TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/orange-desert-night.png",
                 ROTATION_Y: 0,
@@ -440,7 +463,101 @@ export const ASSETS = {
                 TYPE: "SPHERE" satisfies SkyType
             },
             spawnPoint: new BABYLON.Vector3(0, 5, 0), // Higher spawn point for Firefox Reality
-            spawnRotation: new BABYLON.Vector3(0, 0, 0)
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
+            items: [
+            {
+                name: "Present",
+                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/b_day_present.glb",
+                collectible: true,
+                creditValue: 500,
+                minImpulseForCollection: 0.3,
+                inventory: false,
+                instances: [
+                {
+                    position: new BABYLON.Vector3(5, 2, 3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(-5, 2, 3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(5, 2, -3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(-5, 2, -3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(7, 2, 3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(-7, 2, 3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(7, 2, -3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                },
+                {
+                    position: new BABYLON.Vector3(-7, 2, -3),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 10,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                }
+                ]
+            },
+            {
+                name: "Cake",
+                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/birthday_cake.glb",
+                collectible: false,
+                creditValue: 500,
+                minImpulseForCollection: 0.3,
+                inventory: false,
+                instances: [
+                {
+                    position: new BABYLON.Vector3(5, 2, 1),
+                    scale: 1.0,
+                    rotation: new BABYLON.Vector3(0, 0, 0),
+                    mass: 100,
+                    colliderType: "CONVEX_HULL",
+                    friction: 0.9
+                }
+                ]
+            }
+            ]
         },
         {
             name: "Monochrome",
@@ -476,11 +593,11 @@ export const ASSETS = {
             spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
-            name: "Island Town",
+            name: "The Cave",
             locked: true,
-            model: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/models/environments/islandTown/island_town.glb",
+            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/the_cave.glb",
             lightmap: "",
-            scale: 5,
+            scale: 6,
             lightmappedMeshes: [],
             physicsObjects: [],
             sky: {
@@ -489,8 +606,17 @@ export const ASSETS = {
                 BLUR: 0.2,
                 TYPE: "SPHERE" satisfies SkyType
             },
-            spawnPoint: new BABYLON.Vector3(0, 77, -20),
-            spawnRotation: new BABYLON.Vector3(0, 0, 0)
+            spawnPoint: new BABYLON.Vector3(0, 2, 0),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
+            lights: [
+                {
+                lightType: "HEMISPHERIC" satisfies LightType,
+                name: "TheCaveHemisphericLight",
+                direction: new BABYLON.Vector3(0, 1, 0),
+                diffuseColor: new BABYLON.Color3(0.95, 0.95, 0.98),
+                intensity: 0.0
+                }
+            ],
         }
     ] satisfies readonly Environment[]
 } as const;
