@@ -29,7 +29,7 @@ export class SceneManager {
     private readonly camera: BABYLON.TargetCamera;
     private characterController: CharacterController | null = null;
     private smoothFollowController: SmoothFollowCameraController | null = null;
-    private currentEnvironment: string = ASSETS.ENVIRONMENTS.find(env => env.isDefault)?.name || ASSETS.ENVIRONMENTS[0].name;
+    private currentEnvironment: string = ASSETS.ENVIRONMENTS.find(env => env['isDefault'])?.name || ASSETS.ENVIRONMENTS[0].name;
     
     // Character caching for performance
     private characterCache: Map<string, BABYLON.AbstractMesh[]> = new Map();
