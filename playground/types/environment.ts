@@ -105,6 +105,7 @@ export type LightConfig = PointLightConfig | DirectionalLightConfig | SpotLightC
 export interface Environment {
     readonly name: string;
     readonly model: string;
+    isDefault?: boolean;
     readonly lightmap: string;
     readonly scale: number;
     readonly lightmappedMeshes: readonly LightmappedMesh[];

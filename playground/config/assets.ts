@@ -121,7 +121,7 @@ export const ASSETS = {
             radius: 0.95,
             speed: {
                 inAir: 30.0,
-                onGround: 25.0, 
+                onGround: 25.0,
                 boostMultiplier: 8.0
             },
             jumpHeight: 11, // Lower jumps
@@ -319,84 +319,84 @@ export const ASSETS = {
                 }
             ],
             items: [
-            {
-                name: "Gamma Crystal",
-                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/gamma_crystal.glb",
-                collectible: true,
-                creditValue: 500,
-                minImpulseForCollection: 0.3,
-                inventory: true,
-                thumbnail: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/gamma-crystal.png",
-                itemEffectKind: "gamma",
-                instances: [
                 {
-                    position: new BABYLON.Vector3(-15, 0.9, 5),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
-                    friction: 0.9,
-                    instanceName: "crystal-1"
-                },
-                {
-                    position: new BABYLON.Vector3(-28, 0.9, 5),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
-                    friction: 0.9
-                }
-                ]
-            },
-            {
-                name: "Cave Portal",
-                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/portal.glb",
-                collectible: false,
-                creditValue: 0,
-                minImpulseForCollection: 0.3,
-                inventory: false,
-                instances: [
-                    {
-                    position: new BABYLON.Vector3(55.5, 9.6, 65.6),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
-                    friction: 0.9,
-                    behavior: {
-                        triggerKind: "proximity",
-                        radius: 3,
-                        action: {
-                        actionType: "portal",
-                            target: "The Cave"
+                    name: "Gamma Crystal",
+                    url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/gamma_crystal.glb",
+                    collectible: true,
+                    creditValue: 500,
+                    minImpulseForCollection: 0.3,
+                    inventory: true,
+                    thumbnail: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/gamma-crystal.png",
+                    itemEffectKind: "gamma",
+                    instances: [
+                        {
+                            position: new BABYLON.Vector3(-15, 0.9, 5),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 500,
+                            friction: 0.9,
+                            instanceName: "crystal-1"
+                        },
+                        {
+                            position: new BABYLON.Vector3(-28, 0.9, 5),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 500,
+                            friction: 0.9
                         }
-                    } satisfies BehaviorConfig
-                    }
-                ]
-                },
-            {
-                name: "Boulder",
-                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/boulder.glb",
-                collectible: false,
-                creditValue: 500,
-                minImpulseForCollection: 0.3,
-                inventory: false,
-                instances: [
-                {
-                    position: new BABYLON.Vector3(47, 29, -28),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
+                    ]
                 },
                 {
-                    position: new BABYLON.Vector3(48, 31, -20),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 500,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
+                    name: "Cave Portal",
+                    url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/portal.glb",
+                    collectible: false,
+                    creditValue: 0,
+                    minImpulseForCollection: 0.3,
+                    inventory: false,
+                    instances: [
+                        {
+                            position: new BABYLON.Vector3(55.5, 9.6, 65.6),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 500,
+                            friction: 0.9,
+                            behavior: {
+                                triggerKind: "proximity",
+                                radius: 3,
+                                action: {
+                                    actionType: "portal",
+                                    target: "The Cave"
+                                }
+                            } satisfies BehaviorConfig
+                        }
+                    ]
+                },
+                {
+                    name: "Boulder",
+                    url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/boulder.glb",
+                    collectible: false,
+                    creditValue: 500,
+                    minImpulseForCollection: 0.3,
+                    inventory: false,
+                    instances: [
+                        {
+                            position: new BABYLON.Vector3(47, 29, -28),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 500,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(48, 31, -20),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 500,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        }
+                    ]
                 }
-                ]
-            }
             ]
         },
         {
@@ -465,98 +465,98 @@ export const ASSETS = {
             spawnPoint: new BABYLON.Vector3(0, 5, 0), // Higher spawn point for Firefox Reality
             spawnRotation: new BABYLON.Vector3(0, 0, 0),
             items: [
-            {
-                name: "Present",
-                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/b_day_present.glb",
-                collectible: true,
-                creditValue: 500,
-                minImpulseForCollection: 0.3,
-                inventory: false,
-                instances: [
                 {
-                    position: new BABYLON.Vector3(5, 2, 3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
+                    name: "Present",
+                    url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/b_day_present.glb",
+                    collectible: true,
+                    creditValue: 500,
+                    minImpulseForCollection: 0.3,
+                    inventory: false,
+                    instances: [
+                        {
+                            position: new BABYLON.Vector3(5, 2, 3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(-5, 2, 3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(5, 2, -3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(-5, 2, -3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(7, 2, 3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(-7, 2, 3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(7, 2, -3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        },
+                        {
+                            position: new BABYLON.Vector3(-7, 2, -3),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 10,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        }
+                    ]
                 },
                 {
-                    position: new BABYLON.Vector3(-5, 2, 3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                },
-                {
-                    position: new BABYLON.Vector3(5, 2, -3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                },
-                {
-                    position: new BABYLON.Vector3(-5, 2, -3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                },
-                {
-                    position: new BABYLON.Vector3(7, 2, 3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                },
-                {
-                    position: new BABYLON.Vector3(-7, 2, 3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                },
-                {
-                    position: new BABYLON.Vector3(7, 2, -3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                },
-                {
-                    position: new BABYLON.Vector3(-7, 2, -3),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 10,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
+                    name: "Cake",
+                    url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/birthday_cake.glb",
+                    collectible: false,
+                    creditValue: 500,
+                    minImpulseForCollection: 0.3,
+                    inventory: false,
+                    instances: [
+                        {
+                            position: new BABYLON.Vector3(5, 2, 1),
+                            scale: 1.0,
+                            rotation: new BABYLON.Vector3(0, 0, 0),
+                            mass: 100,
+                            colliderType: "CONVEX_HULL",
+                            friction: 0.9
+                        }
+                    ]
                 }
-                ]
-            },
-            {
-                name: "Cake",
-                url: "https://raw.githubusercontent.com/EricEisaman/assets/main/items/birthday_cake.glb",
-                collectible: false,
-                creditValue: 500,
-                minImpulseForCollection: 0.3,
-                inventory: false,
-                instances: [
-                {
-                    position: new BABYLON.Vector3(5, 2, 1),
-                    scale: 1.0,
-                    rotation: new BABYLON.Vector3(0, 0, 0),
-                    mass: 100,
-                    colliderType: "CONVEX_HULL",
-                    friction: 0.9
-                }
-                ]
-            }
             ]
         },
         {
@@ -593,6 +593,33 @@ export const ASSETS = {
             spawnRotation: new BABYLON.Vector3(0, 0, 0)
         },
         {
+            name: "Snow Town",
+            isDefault: true,
+            locked: false,
+            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/snow_town.glb",
+            lightmap: "",
+            scale: 0.3,
+            lightmappedMeshes: [],
+            physicsObjects: [],
+            sky: {
+                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/light-blue-sky-over-grassy-plain.png",
+                ROTATION_Y: 0,
+                BLUR: 0.2,
+                TYPE: "SPHERE" satisfies SkyType
+            },
+            spawnPoint: new BABYLON.Vector3(-37, -15, 34),
+            spawnRotation: new BABYLON.Vector3(0, 0, 0),
+            lights: [
+                {
+                    lightType: "HEMISPHERIC" satisfies LightType,
+                    name: "SnowTownHemisphericLight",
+                    direction: new BABYLON.Vector3(0, 1, 0),
+                    diffuseColor: new BABYLON.Color3(0.95, 0.95, 0.98),
+                    intensity: 0.5
+                }
+            ],
+        },
+        {
             name: "The Cave",
             locked: true,
             model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/the_cave.glb",
@@ -610,11 +637,11 @@ export const ASSETS = {
             spawnRotation: new BABYLON.Vector3(0, 0, 0),
             lights: [
                 {
-                lightType: "HEMISPHERIC" satisfies LightType,
-                name: "TheCaveHemisphericLight",
-                direction: new BABYLON.Vector3(0, 1, 0),
-                diffuseColor: new BABYLON.Color3(0.95, 0.95, 0.98),
-                intensity: 0.0
+                    lightType: "HEMISPHERIC" satisfies LightType,
+                    name: "TheCaveHemisphericLight",
+                    direction: new BABYLON.Vector3(0, 1, 0),
+                    diffuseColor: new BABYLON.Color3(0.95, 0.95, 0.98),
+                    intensity: 0.0
                 }
             ],
         }

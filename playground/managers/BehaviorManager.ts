@@ -42,8 +42,8 @@ export class BehaviorManager {
      * Registers an instance with a behavior configuration
      */
     public static registerInstance(
-        identifier: string, 
-        target: BABYLON.AbstractMesh | BABYLON.IParticleSystem, 
+        identifier: string,
+        target: BABYLON.AbstractMesh | BABYLON.IParticleSystem,
         behaviorConfig: BehaviorConfig,
         position?: BABYLON.Vector3
     ): void {
@@ -84,7 +84,7 @@ export class BehaviorManager {
      */
     public static dispose(): void {
         this.stopUpdateLoop();
-        
+
         // Remove all active behaviors
         this.instances.forEach(instance => {
             if (instance.behaviorActive) {
@@ -133,7 +133,7 @@ export class BehaviorManager {
         this.instances.forEach(instance => {
             // Always check trigger every frame to detect enter/leave proximity
             const triggerResult = this.evaluateTrigger(instance);
-            
+
             if (triggerResult && !instance.behaviorActive) {
                 // Entering proximity - apply effects and execute action immediately
                 this.applyEffects(instance);
@@ -178,7 +178,7 @@ export class BehaviorManager {
 
         const config: ProximityTriggerConfig = instance.config;
         const characterPosition = this.characterController.getPosition();
-        
+
         let instancePosition: BABYLON.Vector3;
         if (instance.mesh) {
             instancePosition = instance.mesh.position;
@@ -201,11 +201,11 @@ export class BehaviorManager {
 
         const distance = BABYLON.Vector3.Distance(characterPosition, instancePosition);
         const isWithinRadius = distance <= config.radius;
-        
+
         if (config.triggerOutOfRange === true) {
             return !isWithinRadius;
         }
-        
+
         return isWithinRadius;
     }
 
@@ -214,7 +214,7 @@ export class BehaviorManager {
      */
     private static applyEffects(instance: BehaviorInstance): void {
         const config: ProximityTriggerConfig = instance.config;
-        
+
         // Apply glow behavior if mesh is available
         if (instance.mesh) {
             const edgeColor = config.edgeColor ?? new BABYLON.Color4(1, 0, 0, 1);
@@ -244,7 +244,7 @@ export class BehaviorManager {
         }
 
         const checkPeriod = this.getCheckPeriod(instance.config);
-        
+
         // Check if action should execute based on check period
         if (checkPeriod.type === "interval") {
             if (forceImmediate) {
@@ -270,9 +270,9 @@ export class BehaviorManager {
      * Executes an action for a behavior instance
      */
     private static executeAction(_instance: BehaviorInstance, action: BehaviorAction): void {
-        if(action.actionType == "adjustCredits") {
+        if (action.actionType == "adjustCredits") {
             CollectiblesManager.adjustCredits(action.amount);
-        } else if(action.actionType == "portal") {
+        } else if (action.actionType == "portal") {
             switchToEnvironment(action.target);
         }
     }

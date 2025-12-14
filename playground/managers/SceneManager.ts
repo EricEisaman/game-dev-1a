@@ -29,7 +29,7 @@ export class SceneManager {
     private readonly camera: BABYLON.TargetCamera;
     private characterController: CharacterController | null = null;
     private smoothFollowController: SmoothFollowCameraController | null = null;
-    private currentEnvironment: string = "Level Test"; // Track current environment
+    private currentEnvironment: string = ASSETS.ENVIRONMENTS.find(env => env.isDefault)?.name || ASSETS.ENVIRONMENTS[0].name;
     
     // Character caching for performance
     private characterCache: Map<string, BABYLON.AbstractMesh[]> = new Map();
@@ -60,7 +60,7 @@ export class SceneManager {
         this.setupCharacter();
         
         // Load environment (which registers behaviors - now safe since BehaviorManager is initialized)
-        await this.loadEnvironment("Level Test");
+        await this.loadEnvironment(this.currentEnvironment);
         
         this.loadCharacterModel();
         await this.setupEnvironmentItems();
