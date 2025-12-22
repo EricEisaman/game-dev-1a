@@ -72,6 +72,7 @@ export class CharacterController {
             scene
         );
         this.displayCapsule.isVisible = CONFIG.DEBUG.CAPSULE_VISIBLE;
+        this.displayCapsule.setEnabled(false); // Disable immediately to prevent visibility on load
 
         // Initialize player mesh (will be replaced by loaded model)
         this.playerMesh = this.displayCapsule;

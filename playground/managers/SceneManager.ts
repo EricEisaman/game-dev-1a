@@ -30,6 +30,7 @@ export class SceneManager {
     private characterController: CharacterController | null = null;
     private smoothFollowController: SmoothFollowCameraController | null = null;
     private currentEnvironment: string = ASSETS.ENVIRONMENTS.find(env => env['isDefault'])?.name || ASSETS.ENVIRONMENTS[0].name;
+    private environmentLoaded = false;
     
     // Character caching for performance
     private characterCache: Map<string, BABYLON.AbstractMesh[]> = new Map();
@@ -59,16 +60,18 @@ export class SceneManager {
         // This ensures BehaviorManager is ready when behaviors are registered
         this.setupCharacter();
         
-        // Load environment (which registers behaviors - now safe since BehaviorManager is initialized)
-        await this.loadEnvironment(this.currentEnvironment);
-        
-        this.loadCharacterModel();
-        await this.setupEnvironmentItems();
-        
         // Initialize inventory system
         if (this.characterController) {
             InventoryManager.initialize(this.scene, this.characterController);
         }
+    }
+
+    /**
+     * Completes the scene initialization
+     * Environment loading is deferred to switchToEnvironment to allow cutscenes to play
+     */
+    public completeInitialization(): void {
+        // Initialization is complete - environment will be loaded via switchToEnvironment
     }
 
     private setupLighting(): void {
@@ -114,7 +117,7 @@ export class SceneManager {
         this.smoothFollowController.forceActivateSmoothFollow();
     }
 
-    private loadCharacterModel(character?: Character, preservedPosition?: BABYLON.Vector3 | null): void {
+    public loadCharacterModel(character?: Character, preservedPosition?: BABYLON.Vector3 | null): void {
         // Load the specified character or the first character from the CHARACTERS array
         const characterToLoad = character ?? ASSETS.CHARACTERS[0];
         this.loadCharacter(characterToLoad, preservedPosition);
@@ -241,6 +244,10 @@ export class SceneManager {
         return this.currentEnvironment;
     }
 
+    public isEnvironmentLoaded(): boolean {
+        return this.environmentLoaded;
+    }
+
     public async loadEnvironment(environmentName: string): Promise<void> {
         // Find the environment by name
         const environment = ASSETS.ENVIRONMENTS.find(env => env.name === environmentName);
@@ -364,6 +371,7 @@ export class SceneManager {
 
             // Update current environment tracking
             this.currentEnvironment = environmentName;
+            this.environmentLoaded = true;
             
             // Set up environment items for the new environment
             await this.setupEnvironmentItems();

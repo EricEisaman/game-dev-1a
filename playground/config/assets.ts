@@ -279,6 +279,11 @@ export const ASSETS = {
         },
         {
             name: "Mushroom Village",
+            cutScene: {
+                type: "image",
+                visualUrl: "https://raw.githubusercontent.com/EricEisaman/assets/main/images/MushroomVillage.jpg",
+                audioUrl: "https://raw.githubusercontent.com/EricEisaman/assets/main/audio/bgm/HappyCinematic.mp3"
+            },
             model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/mushroom_village.glb",
             lightmap: "",
             scale: 3.0,
@@ -401,6 +406,10 @@ export const ASSETS = {
         },
         {
             name: "Flat City",
+            cutScene: {
+                type: "video",
+                visualUrl: "https://raw.githubusercontent.com/EricEisaman/assets/main/videos/FlatCity.mp4"
+            },
             model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/city-flat.glb",
             lightmap: "",
             scale: 1.0,
@@ -591,33 +600,6 @@ export const ASSETS = {
             },
             spawnPoint: new BABYLON.Vector3(0, 15, -20),
             spawnRotation: new BABYLON.Vector3(0, 0, 0)
-        },
-        {
-            name: "Snow Town",
-            isDefault: true,
-            locked: false,
-            model: "https://raw.githubusercontent.com/EricEisaman/assets/main/environment/snow_town.glb",
-            lightmap: "",
-            scale: 0.3,
-            lightmappedMeshes: [],
-            physicsObjects: [],
-            sky: {
-                TEXTURE_URL: "https://raw.githubusercontent.com/EricEisaman/game-dev-1a/main/assets/images/skies/light-blue-sky-over-grassy-plain.png",
-                ROTATION_Y: 0,
-                BLUR: 0.2,
-                TYPE: "SPHERE" satisfies SkyType
-            },
-            spawnPoint: new BABYLON.Vector3(-37, -15, 34),
-            spawnRotation: new BABYLON.Vector3(0, 0, 0),
-            lights: [
-                {
-                    lightType: "HEMISPHERIC" satisfies LightType,
-                    name: "SnowTownHemisphericLight",
-                    direction: new BABYLON.Vector3(0, 1, 0),
-                    diffuseColor: new BABYLON.Color3(0.95, 0.95, 0.98),
-                    intensity: 0.5
-                }
-            ],
         },
         {
             name: "The Cave",

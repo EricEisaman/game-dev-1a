@@ -20,6 +20,14 @@ export interface LightmappedMesh {
 
 export type ColliderType = "BOX" | "SPHERE" | "CAPSULE" | "CYLINDER" | "CONVEX_HULL" | "MESH";
 
+export type CutSceneType = "image" | "video";
+
+export interface CutScene {
+    readonly type: CutSceneType;
+    readonly visualUrl: string;
+    readonly audioUrl?: string;
+}
+
 export interface PhysicsObject {
     readonly name: string;
     readonly mass: number;
@@ -122,6 +130,7 @@ export interface Environment {
     readonly ambientSounds?: readonly AmbientSoundConfig[]; // Optional positional ambient sounds
     readonly lights?: readonly LightConfig[]; // Optional environment-specific lights
     readonly cameraOffset?: BABYLON.Vector3; // Optional camera offset for this environment
+    readonly cutScene?: CutScene; // Optional cutscene to play when switching to this environment
 }
 
 // Forward declarations for circular dependencies

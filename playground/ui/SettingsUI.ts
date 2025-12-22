@@ -10,6 +10,9 @@ import type { SceneManager } from '../managers/SceneManager';
 import { CharacterLock } from '../utils/character-lock';
 import { EnvironmentLock } from '../utils/environment-lock';
 import { HUDManager } from '../managers/HUDManager';
+import { CutSceneManager } from '../managers/CutSceneManager';
+import { EffectsManager } from '../managers/EffectsManager';
+import type { CutScene } from '../types/environment';
 
 export class SettingsUI {
     private static settingsButton: HTMLDivElement | null = null;
@@ -752,6 +755,17 @@ export class SettingsUI {
     }
 
     /**
+     * Gets the scene from the scene manager if available
+     * @returns The scene or null if scene manager is not initialized
+     */
+    public static getScene(): BABYLON.Scene | null {
+        if (this.sceneManager) {
+            return this.sceneManager.getScene();
+        }
+        return null;
+    }
+
+    /**
      * Gets the last selected environment name
      * @returns Last selected environment name or null if none
      */
@@ -759,12 +773,58 @@ export class SettingsUI {
         return this.lastSelectedEnvironmentName;
     }
 
-    public static async changeEnvironment(environmentName: string): Promise<void> {
+    public static async changeEnvironment(environmentName: string, skipCutscene: boolean = false): Promise<void> {
         if (this.sceneManager) {
             // Check if the environment is actually different from current
+            // Also check if environment has been loaded (to handle initial load case)
             const currentEnvironment = this.sceneManager.getCurrentEnvironment();
-            if (currentEnvironment === environmentName) {
+            const environmentLoaded = this.sceneManager.isEnvironmentLoaded();
+            if (currentEnvironment === environmentName && environmentLoaded) {
                 return; // No change needed
+            }
+
+            // Check for cutscene before switching environments (unless already played)
+            if (!skipCutscene) {
+                const foundEnv = ASSETS.ENVIRONMENTS.find(env => env.name === environmentName);
+                if (foundEnv) {
+                    const cutSceneProperty = foundEnv['cutScene'];
+                    if (cutSceneProperty) {
+                        const cutSceneData = cutSceneProperty;
+                        if (typeof cutSceneData === 'object' &&
+                            cutSceneData !== null &&
+                            'type' in cutSceneData &&
+                            'visualUrl' in cutSceneData) {
+                            const csType = cutSceneData.type;
+                            const csVisualUrl = cutSceneData.visualUrl;
+                            if ((csType === "image" || csType === "video") &&
+                                typeof csVisualUrl === 'string') {
+                                const scene = this.sceneManager.getScene();
+                                if (scene) {
+                                    // Stop old background music before playing cutscene to avoid awkward fade after cutscene
+                                    try {
+                                        await EffectsManager.stopAndDisposeBackgroundMusic(500);
+                                    } catch {
+                                        // Ignore errors stopping background music
+                                    }
+                                    
+                                    const cutScene: CutScene = {
+                                        type: csType,
+                                        visualUrl: csVisualUrl,
+                                        audioUrl: 'audioUrl' in cutSceneData && 
+                                            typeof cutSceneData.audioUrl === 'string'
+                                            ? cutSceneData.audioUrl
+                                            : undefined
+                                    };
+                                    try {
+                                        await CutSceneManager.playCutScene(scene, cutScene);
+                                    } catch {
+                                        // Cutscene failed, continue with environment switch
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Only update lastSelectedEnvironmentName if switching to a different environment
