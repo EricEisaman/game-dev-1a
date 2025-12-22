@@ -13,12 +13,25 @@ export interface SkyConfig {
     readonly TYPE: SkyType;
 }
 
-export interface ParticleSnippet {
+export type ParticleSnippetType = "legacy" | "nodes";
+
+export interface LegacyParticleSnippet {
+    readonly type: "legacy";
     readonly name: string;
     readonly description: string;
     readonly snippetId: string;
     readonly category: "fire" | "magic" | "nature" | "tech" | "cosmic";
 }
+
+export interface NodesParticleSnippet {
+    readonly type: "nodes";
+    readonly name: string;
+    readonly description: string;
+    readonly snippetId: string;
+    readonly category: "fire" | "magic" | "nature" | "tech" | "cosmic";
+}
+
+export type ParticleSnippet = LegacyParticleSnippet | NodesParticleSnippet;
 
 export interface SoundEffect {
     readonly name: string;

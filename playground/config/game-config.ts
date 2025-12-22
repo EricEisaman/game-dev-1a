@@ -60,60 +60,70 @@ export const CONFIG: GameConfig = {
     EFFECTS: {
         PARTICLE_SNIPPETS: [
             {
+                type: "legacy",
                 name: "Fire Trail",
                 description: "Realistic fire particle system with heat distortion",
                 category: "fire",
                 snippetId: "HYB2FR"
             },
             {
+                type: "legacy",
                 name: "Magic Sparkles",
                 description: "Enchanting sparkle effect with rainbow colors",
                 category: "magic",
                 snippetId: "T54JV7"
             },
             {
+                type: "legacy",
                 name: "Dust Storm",
                 description: "Atmospheric dust particles with wind effect",
                 category: "nature",
                 snippetId: "X8Y9Z1"
             },
             {
+                type: "legacy",
                 name: "Energy Field",
                 description: "Sci-fi energy field with electric arcs",
                 category: "tech",
                 snippetId: "A2B3C4"
             },
             {
+                type: "legacy",
                 name: "Stardust",
                 description: "Cosmic stardust with twinkling effect",
                 category: "cosmic",
                 snippetId: "D5E6F7"
             },
             {
+                type: "legacy",
                 name: "Smoke Trail",
                 description: "Realistic smoke with fade effect",
                 category: "nature",
                 snippetId: "G8H9I0"
             },
             {
+                type: "legacy",
                 name: "Portal Effect",
                 description: "Mystical portal with swirling particles",
                 category: "magic",
                 snippetId: "J1K2L3"
             },
             {
+                type: "legacy",
                 name: "Laser Beam",
                 description: "Sci-fi laser beam with energy core",
                 category: "tech",
                 snippetId: "M4N5O6"
             },
             {
+                type: "legacy",
                 name: "Nebula Cloud",
                 description: "Cosmic nebula with colorful gas clouds",
                 category: "cosmic",
                 snippetId: "P7Q8R9"
             },
             {
+                type: "legacy",
                 name: "Explosion",
                 description: "Dramatic explosion with debris",
                 category: "fire",

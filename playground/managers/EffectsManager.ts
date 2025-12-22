@@ -151,8 +151,48 @@
             }
 
             try {
-                // Parse the snippet from the online editor
-                const particleSystem = await BABYLON.ParticleHelper.ParseFromSnippetAsync(snippet.snippetId, this.scene);
+                let particleSystem: BABYLON.IParticleSystem | null = null;
+
+                // Handle different particle system types using discriminated union
+                if (snippet.type === "legacy") {
+                    // Parse legacy particle system from snippet
+                    particleSystem = await BABYLON.ParticleHelper.ParseFromSnippetAsync(snippet.snippetId, this.scene);
+                } else if (snippet.type === "nodes") {
+                    // Parse node particle system set from snippet
+                    const nodeParticleSystemSet = await BABYLON.NodeParticleSystemSet.ParseFromSnippetAsync(snippet.snippetId);
+                    const particleSystemSet = await nodeParticleSystemSet.buildAsync(this.scene);
+                    particleSystemSet.start();
+                    
+                    // Get the first particle system from the set to return
+                    // Check if systems property exists and has elements
+                    if ('systems' in particleSystemSet) {
+                        const systemsProperty = particleSystemSet['systems'];
+                        if (Array.isArray(systemsProperty) && systemsProperty.length > 0) {
+                            const firstSystem = systemsProperty[0];
+                            // Verify firstSystem has required IParticleSystem properties
+                            if (firstSystem && 
+                                'start' in firstSystem && 
+                                'stop' in firstSystem && 
+                                'emitter' in firstSystem &&
+                                'name' in firstSystem) {
+                                // TypeScript should accept this as IParticleSystem based on property checks
+                                particleSystem = firstSystem;
+                            } else {
+                                return null;
+                            }
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+
+                if (!particleSystem) {
+                    return null;
+                }
 
                 if (emitter) {
                     particleSystem.emitter = emitter;

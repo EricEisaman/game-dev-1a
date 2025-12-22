@@ -2,6 +2,8 @@
 // CONFIGURATION TYPE DEFINITIONS
 // ============================================================================
 
+import type { ParticleSnippet, SoundEffect } from './effects';
+
 export interface CharacterSpeed {
     readonly WALK: number;
     readonly RUN: number;
@@ -63,19 +65,6 @@ export interface EffectsConfig {
     readonly SOUND_EFFECTS: readonly SoundEffect[];
 }
 
-export interface ParticleSnippet {
-    readonly name: string;
-    readonly description: string;
-    readonly snippetId: string;
-    readonly category: "fire" | "magic" | "nature" | "tech" | "cosmic";
-}
-
-export interface SoundEffect {
-    readonly name: string;
-    readonly url: string;
-    readonly volume: number;
-    readonly loop: boolean;
-}
 
 export interface HUDConfig {
     readonly POSITION: HUDPosition;
